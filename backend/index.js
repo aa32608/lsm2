@@ -211,6 +211,29 @@ app.post("/api/paypal/capture", async (req, res) => {
 
     const captureData = await captureResponse.json();
 
+    // Recoverable error: INSTRUMENT_DECLINED
+    if (
+      captureData?.name === "UNPROCESSABLE_ENTITY" &&
+      Array.isArray(captureData.details) &&
+      captureData.details.some((d) => d?.issue === "INSTRUMENT_DECLINED")
+    ) {
+      console.warn("⚠️ Instrument declined, prompting payer to choose another method");
+      const redirectLink =
+        (captureData.links || []).find(
+          (l) => l.rel === "redirect" || l.rel === "payer-action" || l.rel === "approve"
+        )?.href || null;
+      // Keep listing pending to allow retry
+      await db.ref(`listings/${listingId}`).update({ status: "pending_payment" });
+      return res.status(400).json({
+        ok: false,
+        recoverable: true,
+        issue: "INSTRUMENT_DECLINED",
+        redirect: redirectLink,
+        message:
+          "The instrument was declined. The payer must choose another funding source or re-approve the payment.",
+      });
+    }
+
     if (
       captureData.name === "UNPROCESSABLE_ENTITY" &&
       captureData.details?.[0]?.issue === "ORDER_ALREADY_CAPTURED"

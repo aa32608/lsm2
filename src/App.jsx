@@ -852,6 +852,18 @@ export default function App() {
           socialLink: "",
           imagePreview: null,
         });
+      } else if (json.recoverable && json.issue === "INSTRUMENT_DECLINED") {
+        if (json.redirect) {
+          try {
+            window.open(json.redirect, "_blank");
+          } catch {}
+        }
+        showMessage(
+          t("paymentRetry") ||
+            "Payment declined by funding source. Please choose another method or re-approve.",
+          "error"
+        );
+        await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
         showMessage(t("paymentFailed") + " " + JSON.stringify(json.error), "error");
       }
@@ -920,6 +932,18 @@ export default function App() {
         setExtendTarget(null);
         setPaymentModalOpen(false);
         setPaymentIntent(null);
+      } else if (json.recoverable && json.issue === "INSTRUMENT_DECLINED") {
+        if (json.redirect) {
+          try {
+            window.open(json.redirect, "_blank");
+          } catch {}
+        }
+        showMessage(
+          t("paymentRetry") ||
+            "Payment declined by funding source. Please choose another method or re-approve.",
+          "error"
+        );
+        await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
         showMessage(
           (t("extendFailed") || "Extend payment failed:") +
@@ -2694,7 +2718,7 @@ export default function App() {
 
                           <div className="explore-results-area">
                             {filtered.length > 0 ? (
-                              <><div className={`listing-grid-${viewMode}`}>
+                              <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
                                 {pagedFiltered.map((l) => (
                                   <article
                                     key={l.id}
@@ -2840,7 +2864,7 @@ export default function App() {
                                       </svg>
                                     </div>
                                   </div>
-                                </div></>
+                                </div></div>
                             ) : (
                               <div className="explore-empty-state">
                                 <div className="empty-state-icon">🔍</div>
