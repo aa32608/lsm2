@@ -214,6 +214,9 @@ export default function App() {
   // Wrapper to scroll to top when tab changes
   const setSelectedTab = useCallback((tab) => {
     setSelectedTabState(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set("tab", tab);
+    window.history.replaceState({}, "", url.toString());
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
@@ -272,6 +275,8 @@ export default function App() {
   const [catFilter, setCatFilter] = useState("");
   const [locFilter, setLocFilter] = useState("");
   const [sortBy, setSortBy] = useState("topRated");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [showMapPicker, setShowMapPicker] = useState(false);
   
   /* My Listings filters */
@@ -357,6 +362,51 @@ export default function App() {
       setInitialListingId(listingId);
     }
   }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab) setSelectedTabState(tab);
+    const qParam = params.get("q") || "";
+    const catParam = params.get("category") || "";
+    const locParam = params.get("city") || "";
+    const sortParam = params.get("sort") || "";
+    const viewParam = params.get("view") || "";
+    const pageParam = parseInt(params.get("page") || "1", 10);
+    const pageSizeParam = parseInt(params.get("pageSize") || "12", 10);
+    setQ(qParam);
+    setCatFilter(catParam);
+    setLocFilter(locParam);
+    if (sortParam) setSortBy(sortParam);
+    if (viewParam) setViewMode(viewParam);
+    if (!isNaN(pageParam) && pageParam > 0) setPage(pageParam);
+    if (!isNaN(pageSizeParam) && pageSizeParam > 0) setPageSize(pageSizeParam);
+  }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", selectedTab);
+    if (selectedTab === "allListings") {
+      if (q) params.set("q", q); else params.delete("q");
+      if (catFilter) params.set("category", catFilter); else params.delete("category");
+      if (locFilter) params.set("city", locFilter); else params.delete("city");
+      if (sortBy) params.set("sort", sortBy); else params.delete("sort");
+      if (viewMode) params.set("view", viewMode); else params.delete("view");
+      params.set("page", String(page));
+      params.set("pageSize", String(pageSize));
+    } else {
+      params.delete("q");
+      params.delete("category");
+      params.delete("city");
+      params.delete("sort");
+      params.delete("view");
+      params.delete("page");
+      params.delete("pageSize");
+    }
+    const next = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, "", next);
+  }, [selectedTab, q, catFilter, locFilter, sortBy, viewMode, page, pageSize]);
+  useEffect(() => {
+    setPage(1);
+  }, [q, catFilter, locFilter, sortBy, pageSize, selectedTab]);
 
   useEffect(() => {
     if (!initialListingId || !listings.length) return;
@@ -1002,6 +1052,14 @@ export default function App() {
     if (sortBy === "az") arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return arr;
   }, [verifiedListings, q, catFilter, locFilter, sortBy, feedbackAverages, t]);
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / pageSize)),
+    [filtered.length, pageSize]
+  );
+  const pagedFiltered = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
 
   // Helper function to calculate days until expiration
   const getDaysUntilExpiry = (expiresAt) => {
@@ -2362,7 +2420,7 @@ export default function App() {
                             <p className="explore-page-subtitle">
                               {filtered.length === 0 
                                 ? t("noListingsFound")
-                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel") || "available"}`
+                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel") || "available"} • Page ${page} of ${totalPages}`
                               }
                             </p>
                           </div>
@@ -2636,136 +2694,153 @@ export default function App() {
 
                           <div className="explore-results-area">
                             {filtered.length > 0 ? (
-                              <div className={`listing-grid-${viewMode}`}>
-                              {filtered.map((l) => (
-                                <article
-                                  key={l.id}
-                                  className="listing-card explore-card-modern"
-                                  onClick={() => {
-                                    setSelectedListing(l);
-                                    const url = new URL(window.location.href);
-                                    url.searchParams.set("listing", l.id);
-                                    window.history.replaceState({}, "", url.toString());
-                                  }}
-                                >
-                                  <header className="listing-header listing-header-dense">
-                                    <div className="listing-title-wrap">
-                                      <div className="listing-title-row">
-                                        <span className="listing-icon-bubble">
-                                          {categoryIcons[l.category] || "🏷️"}
-                                        </span>
-                                        <div>
-                                          <h3 className="listing-title">{l.name}</h3>
-                                          <div className="listing-meta pill-row-tight">
-                                            <span className="pill pill-category">{t(l.category) || l.category}</span>
-                                            <span className="pill pill-location">📍 {l.location}</span>
-                                            {l.expiresAt && (
-                                              <span className="pill pill-ghost subtle-pill">
-                                                ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
-                                              </span>
-                                            )}
+                              <><div className={`listing-grid-${viewMode}`}>
+                                {pagedFiltered.map((l) => (
+                                  <article
+                                    key={l.id}
+                                    className="listing-card explore-card-modern"
+                                    onClick={() => {
+                                      setSelectedListing(l);
+                                      const url = new URL(window.location.href);
+                                      url.searchParams.set("listing", l.id);
+                                      window.history.replaceState({}, "", url.toString());
+                                    } }
+                                  >
+                                    <header className="listing-header listing-header-dense">
+                                      <div className="listing-title-wrap">
+                                        <div className="listing-title-row">
+                                          <span className="listing-icon-bubble">
+                                            {categoryIcons[l.category] || "🏷️"}
+                                          </span>
+                                          <div>
+                                            <h3 className="listing-title">{l.name}</h3>
+                                            <div className="listing-meta pill-row-tight">
+                                              <span className="pill pill-category">{t(l.category) || l.category}</span>
+                                              <span className="pill pill-location">📍 {l.location}</span>
+                                              {l.expiresAt && (
+                                                <span className="pill pill-ghost subtle-pill">
+                                                  ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
+                                                </span>
+                                              )}
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
+
+                                      <div className="listing-badges dense-badges">
+                                        {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
+                                        <span className="badge verified">✓ {t("verified")}</span>
+                                      </div>
+                                    </header>
+
+                                    <div className="listing-card-body">
+                                      <p className="listing-description listing-description-clamp listing-description-preview">
+                                        {getDescriptionPreview(l.description, 180)}
+                                      </p>
+
+                                      {(() => {
+                                        const stats = getListingStats(l);
+                                        return (
+                                          <div className="listing-stats spaced">
+                                            <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
+                                            <span className="stat-chip">💬 {stats.feedbackCount}</span>
+                                            <span className="stat-chip subtle">🔥 {stats.engagement}</span>
+                                            {l.tags && (
+                                              <span className="pill pill-tags">
+                                                {l.tags.split(",")[0]?.trim()}
+                                                {l.tags.split(",").length > 1 ? " +" : ""}
+                                              </span>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
 
-                                    <div className="listing-badges dense-badges">
-                                      {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
-                                      <span className="badge verified">✓ {t("verified")}</span>
-                                    </div>
-                                  </header>
+                                    <div
+                                      className="listing-footer-row"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div className="listing-footer-left">
+                                        {l.contact && (
+                                          <span className="pill pill-contact ghost-pill">
+                                            📞 {l.contact}
+                                          </span>
+                                        )}
+                                        {l.socialLink && (
+                                          <span className="pill pill-ghost subtle-pill">
+                                            🔗 {t("websiteLabel")}
+                                          </span>
+                                        )}
+                                      </div>
 
-                                  <div className="listing-card-body">
-                                    <p className="listing-description listing-description-clamp listing-description-preview">
-                                      {getDescriptionPreview(l.description, 180)}
-                                    </p>
-
-                                    {(() => {
-                                      const stats = getListingStats(l);
-                                      return (
-                                        <div className="listing-stats spaced">
-                                          <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                          <span className="stat-chip">💬 {stats.feedbackCount}</span>
-                                          <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-                                          {l.tags && (
-                                            <span className="pill pill-tags">
-                                              {l.tags.split(",")[0]?.trim()}
-                                              {l.tags.split(",").length > 1 ? " +" : ""}
-                                            </span>
-                                          )}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-
-                                  <div
-                                    className="listing-footer-row"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <div className="listing-footer-left">
-                                      {l.contact && (
-                                        <span className="pill pill-contact ghost-pill">
-                                          📞 {l.contact}
-                                        </span>
-                                      )}
-                                      {l.socialLink && (
-                                        <span className="pill pill-ghost subtle-pill">
-                                          🔗 {t("websiteLabel")}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div className="listing-actions compact">
-                                      <button
-                                        className="icon-btn"
-                                        type="button"
-                                        onClick={() => window.open(`tel:${l.contact}`)}
-                                      >
-                                        📞
-                                      </button>
-                                      <button
-                                        className="icon-btn"
-                                        type="button"
-                                        onClick={() =>
-                                          window.open(
+                                      <div className="listing-actions compact">
+                                        <button
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => window.open(`tel:${l.contact}`)}
+                                        >
+                                          📞
+                                        </button>
+                                        <button
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => window.open(
                                             `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
                                               l.name || ""
                                             )}`
-                                          )
-                                        }
-                                      >
-                                        ✉️
-                                      </button>
-                                      <button
-                                        className="icon-btn"
-                                        type="button"
-                                        onClick={() => {
-                                          navigator.clipboard?.writeText(l.contact || "");
-                                          showMessage(t("copied"), "success");
-                                        }}
-                                      >
-                                        📋
-                                      </button>
-                                      <button
-                                        className="icon-btn"
-                                        type="button"
-                                        onClick={() => handleShareListing(l)}
-                                      >
-                                        🔗
-                                      </button>
-                                      <button
-                                        className="icon-btn"
-                                        type="button"
-                                        onClick={() => toggleFav(l.id)}
-                                      >
-                                        {favorites.includes(l.id) ? "★" : "☆"}
-                                      </button>
+                                          )}
+                                        >
+                                          ✉️
+                                        </button>
+                                        <button
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => {
+                                            navigator.clipboard?.writeText(l.contact || "");
+                                            showMessage(t("copied"), "success");
+                                          } }
+                                        >
+                                          📋
+                                        </button>
+                                        <button
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => handleShareListing(l)}
+                                        >
+                                          🔗
+                                        </button>
+                                        <button
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => toggleFav(l.id)}
+                                        >
+                                          {favorites.includes(l.id) ? "★" : "☆"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </article>
+                                ))}
+
+                              </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                                  <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                    <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button>
+                                    <span className="small-muted">Page {page} of {totalPages}</span>
+                                    <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</button>
+                                  </div>
+                                  <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                    <span className="small-muted">{t("resultsPerPage") || "Per page"}</span>
+                                    <div className="filter-select-wrapper">
+                                      <select className="filter-select-field" value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value, 10))}>
+                                        <option value="6">6</option>
+                                        <option value="12">12</option>
+                                        <option value="24">24</option>
+                                      </select>
+                                      <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                      </svg>
                                     </div>
                                   </div>
-                                </article>
-                              ))}
-
-                              </div>
+                                </div></>
                             ) : (
                               <div className="explore-empty-state">
                                 <div className="empty-state-icon">🔍</div>
