@@ -848,14 +848,14 @@ const translations = {
     quickActions: "Veprime të shpejta",
         // Home section - simplified
     homeSimpleTitle: "Gjej mjeshtër, shitës ose shërbim në qytetin tënd",
-    homeSimpleSubtitle: "Posto një oglas të vogël me numër telefoni dhe qytet, ose kërko çfarë ofrojnë të tjerët.",
-    homeSimpleCtaPost: "Posto oglas",
-    homeSimpleCtaBrowse: "Shfleto oglaset",
+    homeSimpleSubtitle: "Posto një listim të vogël me numër telefoni dhe qytet, ose kërko çfarë ofrojnë të tjerët.",
+    homeSimpleCtaPost: "Posto listim",
+    homeSimpleCtaBrowse: "Shfleto listimet",
     homeSimpleTrustLine: "Pa komisione, flisni direkt në telefon ose Viber.",
     homePopularCategoriesTitle: "Kategoritë më të përdorura",
     homePopularCitiesTitle: "Qytetet e njohura",
     homeHowItWorksTitle: "Si funksionon",
-    homeHowItWorksStep1: "Posto oglas me numër telefoni, qytet dhe përshkrim të shkurtër.",
+    homeHowItWorksStep1: "Posto listim me numër telefoni, qytet dhe përshkrim të shkurtër.",
     homeHowItWorksStep2: "Njerëzit të thërrasin ose të shkruajnë në Viber / WhatsApp.",
     homeHowItWorksStep3: "Ata lënë vlerësime që të tjerët të dinë kush është i besueshëm.",
 
