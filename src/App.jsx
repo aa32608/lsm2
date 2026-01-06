@@ -277,7 +277,6 @@ export default function App() {
   const [sortBy, setSortBy] = useState("topRated");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [showMapPicker, setShowMapPicker] = useState(false);
   
   /* My Listings filters */
@@ -374,7 +373,6 @@ export default function App() {
     const viewParam = params.get("view") || "";
     const pageParam = parseInt(params.get("page") || "1", 10);
     const pageSizeParam = parseInt(params.get("pageSize") || "12", 10);
-    const favOnlyParam = params.get("fav") === "1";
     setQ(qParam);
     setCatFilter(catParam);
     setLocFilter(locParam);
@@ -382,7 +380,6 @@ export default function App() {
     if (viewParam) setViewMode(viewParam);
     if (!isNaN(pageParam) && pageParam > 0) setPage(pageParam);
     if (!isNaN(pageSizeParam) && pageSizeParam > 0) setPageSize(pageSizeParam);
-    setFavoritesOnly(favOnlyParam);
   }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -395,7 +392,6 @@ export default function App() {
       if (viewMode) params.set("view", viewMode); else params.delete("view");
       params.set("page", String(page));
       params.set("pageSize", String(pageSize));
-      if (favoritesOnly) params.set("fav", "1"); else params.delete("fav");
     } else {
       params.delete("q");
       params.delete("category");
@@ -407,7 +403,7 @@ export default function App() {
     }
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, "", next);
-  }, [selectedTab, q, catFilter, locFilter, sortBy, viewMode, page, pageSize, favoritesOnly]);
+  }, [selectedTab, q, catFilter, locFilter, sortBy, viewMode, page, pageSize]);
   useEffect(() => {
     setPage(1);
   }, [q, catFilter, locFilter, sortBy, pageSize, selectedTab]);
@@ -1062,7 +1058,6 @@ export default function App() {
     }
     if (catFilter) arr = arr.filter((l) => (t(l.category) || l.category) === catFilter);
     if (locFilter) arr = arr.filter((l) => l.location === locFilter);
-    if (favoritesOnly) arr = arr.filter((l) => favorites.includes(l.id));
     if (sortBy === "topRated") {
       arr.sort((a, b) => {
         const aStats = feedbackAverages[a.id] || {};
@@ -1098,7 +1093,6 @@ export default function App() {
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     return days;
   };
-
 
   const myListingsRaw = useMemo(() => listings.filter((l) => l.userId === user?.uid), [listings, user]);
   
@@ -1171,13 +1165,6 @@ export default function App() {
     () => myListingsRaw.filter((l) => l.status !== "verified").length,
     [myListingsRaw]
   );
-  const [myPage, setMyPage] = useState(1);
-  const [myPageSize, setMyPageSize] = useState(8);
-  const myTotalPages = useMemo(() => Math.max(1, Math.ceil(myListings.length / myPageSize)), [myListings.length, myPageSize]);
-  const myPagedListings = useMemo(() => {
-    const start = (myPage - 1) * myPageSize;
-    return myListings.slice(start, start + myPageSize);
-  }, [myListings, myPage, myPageSize]);
 
   const getFeedbackForListing = useCallback(
     (listingId) => feedbackStore[listingId]?.entries || [],
@@ -1381,7 +1368,6 @@ export default function App() {
   const Header = () => (
     <header className="header">
       <div className="header-inner">
-
         <button
           className="icon-btn mobile-menu-btn"
           onClick={() => setSidebarOpen(true)}
@@ -1448,7 +1434,7 @@ export default function App() {
               {t("login")}
             </button>
           )}
-          </div>
+        </div>
       </div>
     </header>
   );
@@ -1787,11 +1773,10 @@ export default function App() {
         {/* Main content container */}
         <div className="container">
           {/* Routes */}
-          {selectedTab !== "main" && (
+          {selectedTab !== "main" ? (
             <div className="dashboard">
               {/* Dashboard content */}
               <main className="dashboard-content">
-
                 <div className="panel">
                   <div className="dashboard-topbar">
                     <div className="dashboard-meta">
@@ -1810,7 +1795,7 @@ export default function App() {
                         </button>
                       )}
                     </div>
-                    </div>
+                  </div>
 
                   <div className="tab-panel unified-panel">
                     {selectedTab === "myListings" && (
@@ -1833,1690 +1818,1702 @@ export default function App() {
                             )}
                           </div>
                         </div>
+
                         <div className="my-listings-toolbar">
                           <div className="my-listings-stats">
                             <div className="stat-chip positive">
                               <span className="stat-label">✅ {t("verified")}</span>
                               <span className="stat-value">{myVerifiedCount}</span>
                             </div>
-                              {myPendingCount > 0 && (
-                                <div className="stat-chip subtle">
-                                  <span className="stat-label">⏳ {t("pending")}</span>
-                                  <span className="stat-value">{myPendingCount}</span>
+                            {myPendingCount > 0 && (
+                              <div className="stat-chip subtle">
+                                <span className="stat-label">⏳ {t("pending")}</span>
+                                <span className="stat-value">{myPendingCount}</span>
+                              </div>
+                            )}
+                            {(() => {
+                              const expiringSoon = myListingsRaw.filter(l => {
+                                const days = getDaysUntilExpiry(l.expiresAt);
+                                return days !== null && days > 0 && days <= 7;
+                              }).length;
+                              return expiringSoon > 0 ? (
+                                <div className="stat-chip warning">
+                                  <span className="stat-label">⚠️ {t("expiringSoon") || "Expiring soon"}</span>
+                                  <span className="stat-value">{expiringSoon}</span>
                                 </div>
-                              )}
-                              {(() => {
-                                const expiringSoon = myListingsRaw.filter(l => {
-                                  const days = getDaysUntilExpiry(l.expiresAt);
-                                  return days !== null && days > 0 && days <= 7;
-                                }).length;
-                                return expiringSoon > 0 ? (
-                                  <div className="stat-chip warning">
-                                    <span className="stat-label">⚠️ {t("expiringSoon") || "Expiring soon"}</span>
-                                    <span className="stat-value">{expiringSoon}</span>
-                                  </div>
-                                ) : null;
-                              })()}
-                              {(() => {
-                                const totalReviews = myListingsRaw.reduce((sum, l) => {
-                                  const stats = getListingStats(l);
-                                  return sum + (stats.feedbackCount || 0);
-                                }, 0);
-                                return totalReviews > 0 ? (
-                                  <div className="stat-chip info">
-                                    <span className="stat-label">💬 {t("reviews") || "Reviews"}</span>
-                                    <span className="stat-value">{totalReviews}</span>
-                                  </div>
-                                ) : null;
-                              })()}
-                            </div>
-                            <div className="my-listings-actions">
-                              <button
-                                className="btn btn-ghost small"
-                                onClick={() => setSelectedTab("allListings")}
-                                type="button"
-                              >
-                                🔍 {t("explore") || "Browse listings"}
-                              </button>
-                              <button
-                                className="btn small"
-                                onClick={() => {
-                                  setSelectedTab("myListings");
-                                  setShowPostForm(true);
-                                } }
-                                type="button"
-                              >
-                                ➕ {t("submitListing") || "Create listing"}
-                              </button>
-                            </div>
+                              ) : null;
+                            })()}
+                            {(() => {
+                              const totalReviews = myListingsRaw.reduce((sum, l) => {
+                                const stats = getListingStats(l);
+                                return sum + (stats.feedbackCount || 0);
+                              }, 0);
+                              return totalReviews > 0 ? (
+                                <div className="stat-chip info">
+                                  <span className="stat-label">💬 {t("reviews") || "Reviews"}</span>
+                                  <span className="stat-value">{totalReviews}</span>
+                                </div>
+                              ) : null;
+                            })()}
                           </div>
+                          <div className="my-listings-actions">
+                            <button
+                              className="btn btn-ghost small"
+                              onClick={() => setSelectedTab("allListings")}
+                              type="button"
+                            >
+                              🔍 {t("explore") || "Browse listings"}
+                            </button>
+                            <button
+                              className="btn small"
+                              onClick={() => {
+                                setSelectedTab("myListings");
+                                setShowPostForm(true);
+                              }}
+                              type="button"
+                            >
+                              ➕ {t("submitListing") || "Create listing"}
+                            </button>
+                          </div>
+                        </div>
 
-                          {/* My Listings Filters & Sort */}
-                          {myListingsRaw.length > 0 && (
-                            <div className="my-listings-filters-bar">
-                              <div className="my-listings-filters-left">
-                                <input
-                                  type="search"
-                                  className="input my-listings-search-input"
-                                  placeholder={t("searchPlaceholder") || "Search your listings..."}
-                                  value={myListingsSearch}
-                                  onChange={(e) => setMyListingsSearch(e.target.value)} />
-                                <select
-                                  className="select my-listings-filter-select"
-                                  value={myListingsStatusFilter}
-                                  onChange={(e) => setMyListingsStatusFilter(e.target.value)}
-                                >
-                                  <option value="all">{t("allStatuses") || "All statuses"}</option>
-                                  <option value="verified">{t("verified")}</option>
-                                  <option value="pending">{t("pending")}</option>
-                                </select>
-                                <select
-                                  className="select my-listings-filter-select"
-                                  value={myListingsExpiryFilter}
-                                  onChange={(e) => setMyListingsExpiryFilter(e.target.value)}
-                                >
-                                  <option value="all">{t("allExpiry") || "All"}</option>
-                                  <option value="expiring">{t("expiringSoon") || "Expiring soon"}</option>
-                                  <option value="active">{t("active") || "Active"}</option>
-                                  <option value="expired">{t("expired") || "Expired"}</option>
-                                </select>
-                              </div>
-                              <div className="my-listings-filters-right">
-                                <select
-                                  className="select my-listings-sort-select"
-                                  value={myListingsSort}
-                                  onChange={(e) => setMyListingsSort(e.target.value)}
-                                >
-                                  <option value="newest">{t("sortNewest")}</option>
-                                  <option value="oldest">{t("sortOldest") || "Oldest first"}</option>
-                                  <option value="expiring">{t("sortExpiring")}</option>
-                                  <option value="az">{t("sortAZ")}</option>
-                                </select>
-                                {(myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
-                                  <button
-                                    className="btn btn-ghost small"
-                                    onClick={() => {
-                                      setMyListingsSearch("");
-                                      setMyListingsStatusFilter("all");
-                                      setMyListingsExpiryFilter("all");
-                                    } }
-                                    type="button"
-                                  >
-                                    {t("clearAll") || "Clear all"}
-                                  </button>
-                                )}
-                              </div>
+                        {/* My Listings Filters & Sort */}
+                        {myListingsRaw.length > 0 && (
+                          <div className="my-listings-filters-bar">
+                            <div className="my-listings-filters-left">
+                              <input
+                                type="search"
+                                className="input my-listings-search-input"
+                                placeholder={t("searchPlaceholder") || "Search your listings..."}
+                                value={myListingsSearch}
+                                onChange={(e) => setMyListingsSearch(e.target.value)}
+                              />
+                              <select
+                                className="select my-listings-filter-select"
+                                value={myListingsStatusFilter}
+                                onChange={(e) => setMyListingsStatusFilter(e.target.value)}
+                              >
+                                <option value="all">{t("allStatuses") || "All statuses"}</option>
+                                <option value="verified">{t("verified")}</option>
+                                <option value="pending">{t("pending")}</option>
+                              </select>
+                              <select
+                                className="select my-listings-filter-select"
+                                value={myListingsExpiryFilter}
+                                onChange={(e) => setMyListingsExpiryFilter(e.target.value)}
+                              >
+                                <option value="all">{t("allExpiry") || "All"}</option>
+                                <option value="expiring">{t("expiringSoon") || "Expiring soon"}</option>
+                                <option value="active">{t("active") || "Active"}</option>
+                                <option value="expired">{t("expired") || "Expired"}</option>
+                              </select>
                             </div>
-                          )}
-
-                          {myListings.length === 0 ? (
-                            <div className="empty my-listings-empty">
-                              <div className="empty-icon">📭</div>
-                              <p className="empty-text">
-                                {myListingsRaw.length === 0
-                                  ? t("noListingsYet")
-                                  : (myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all")
-                                    ? t("noListingsMatchFilters") || "No listings match your filters. Try adjusting your search."
-                                    : t("noListingsYet")}
-                              </p>
-                              {myListingsRaw.length > 0 && (myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
+                            <div className="my-listings-filters-right">
+                              <select
+                                className="select my-listings-sort-select"
+                                value={myListingsSort}
+                                onChange={(e) => setMyListingsSort(e.target.value)}
+                              >
+                                <option value="newest">{t("sortNewest")}</option>
+                                <option value="oldest">{t("sortOldest") || "Oldest first"}</option>
+                                <option value="expiring">{t("sortExpiring")}</option>
+                                <option value="az">{t("sortAZ")}</option>
+                              </select>
+                              {(myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
                                 <button
-                                  className="btn small"
+                                  className="btn btn-ghost small"
                                   onClick={() => {
                                     setMyListingsSearch("");
                                     setMyListingsStatusFilter("all");
                                     setMyListingsExpiryFilter("all");
-                                  } }
+                                  }}
                                   type="button"
                                 >
-                                  {t("clearFilters") || "Clear filters"}
+                                  {t("clearAll") || "Clear all"}
                                 </button>
                               )}
                             </div>
-                          ) : (
-                            <div className="results-stack">
-                              <div className="listing-grid my-listings-grid responsive-grid">
-                                {myPagedListings.map((l) => (
-                                  <article key={l.id} className="listing-card my-listing-card elevated">
-                                    <header className="listing-header my-listing-header rich-header">
-                                      <div className="listing-icon-bubble">{categoryIcons[l.category] || "🏷️"}</div>
-                                      <div className="listing-header-main">
-                                        <div className="listing-title-row spaced">
-                                          <h3 className="listing-title">{l.name}</h3>
-                                          <span
-                                            className={`status-chip ${l.status === "verified" ? "status-chip-verified" : "status-chip-pending"}`}
+                          </div>
+                        )}
+
+                        {myListings.length === 0 ? (
+                          <div className="empty my-listings-empty">
+                            <div className="empty-icon">📭</div>
+                            <p className="empty-text">
+                              {myListingsRaw.length === 0 
+                                ? t("noListingsYet")
+                                : (myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all")
+                                  ? t("noListingsMatchFilters") || "No listings match your filters. Try adjusting your search."
+                                  : t("noListingsYet")
+                              }
+                            </p>
+                            {myListingsRaw.length > 0 && (myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
+                              <button
+                                className="btn small"
+                                onClick={() => {
+                                  setMyListingsSearch("");
+                                  setMyListingsStatusFilter("all");
+                                  setMyListingsExpiryFilter("all");
+                                }}
+                                type="button"
+                              >
+                                {t("clearFilters") || "Clear filters"}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="listing-grid my-listings-grid responsive-grid">
+                            {myListings.map((l) => (
+                              <article key={l.id} className="listing-card my-listing-card elevated">
+                                <header className="listing-header my-listing-header rich-header">
+                                  <div className="listing-icon-bubble">{categoryIcons[l.category] || "🏷️"}</div>
+                                  <div className="listing-header-main">
+                                    <div className="listing-title-row spaced">
+                                      <h3 className="listing-title">{l.name}</h3>
+                                      <span
+                                        className={`status-chip ${l.status === "verified" ? "status-chip-verified" : "status-chip-pending"}`}
+                                      >
+                                        {l.status === "verified" ? `✅ ${t("verified")}` : `⏳ ${t("pending")}`}
+                                      </span>
+                                    </div>
+                                    <div className="listing-meta-row pill-row-tight">
+                                      <span className="pill pill-category">
+                                        {categoryIcons[l.category] || "🏷️"} {t(l.category) || l.category}
+                                      </span>
+                                      {l.location && (
+                                        <span className="pill pill-location">
+                                          📍 {l.location}
+                                        </span>
+                                      )}
+                                      {l.createdAt && (
+                                        <span className="pill pill-soft pill-date">
+                                          📅 {new Date(l.createdAt).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {(() => {
+                                      const days = getDaysUntilExpiry(l.expiresAt);
+                                      const isExpiringSoon = days !== null && days > 0 && days <= 7;
+                                      const isExpired = days !== null && days <= 0;
+                                      return (
+                                        <div className={`listing-expiry-info ${isExpiringSoon ? "expiring-soon" : ""} ${isExpired ? "expired" : ""}`}>
+                                          {l.expiresAt ? (
+                                            <>
+                                              <span className="expiry-label">{t("expires")}:</span>
+                                              <span className="expiry-date">{new Date(l.expiresAt).toLocaleDateString()}</span>
+                                              {days !== null && (
+                                                <span className={`expiry-days ${isExpiringSoon ? "warning" : ""} ${isExpired ? "expired-text" : ""}`}>
+                                                  {isExpired 
+                                                    ? ` ⚠️ ${t("expired") || "Expired"}`
+                                                    : isExpiringSoon 
+                                                      ? ` ⏰ ${days} ${days === 1 ? t("day") || "day" : t("days") || "days"} ${t("remaining") || "left"}`
+                                                      : ` (${days} ${days === 1 ? t("day") || "day" : t("days") || "days"})`
+                                                  }
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <span className="expiry-date">{t("noExpiry") || "No expiration"}</span>
+                                          )}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                  {(() => {
+                                    const stats = getListingStats(l);
+                                    return (
+                                      <div className="listing-score-pill">
+                                        <span className="score-main">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
+                                        <span className="score-sub">{stats.feedbackCount} {t("reviews") || "reviews"}</span>
+                                      </div>
+                                    );
+                                  })()}
+                                </header>
+
+                                <div className="listing-card-body-enhanced">
+                                  <p className="listing-description clamp-3 enhanced-copy">
+                                    {getDescriptionPreview(l.description, 120)}
+                                  </p>
+
+                                  {(() => {
+                                    const stats = getListingStats(l);
+                                    return (
+                                      <div className="listing-stats ribboned">
+                                        <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
+                                        <span className="stat-chip">💬 {stats.feedbackCount}</span>
+                                        <span className="stat-chip subtle">🔥 {stats.engagement}</span>
+                                        {l.offerprice && (
+                                          <span className="pill pill-price subtle-pill">💶 {l.offerprice}</span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {(l.tags || l.contact) && (
+                                    <div className="my-listing-highlights rich-highlights">
+                                      {l.tags && (
+                                        <span className="pill pill-tags">🏷️ {l.tags.split(",")[0]?.trim() || l.tags}</span>
+                                      )}
+                                      {l.contact && (
+                                        <span className="pill pill-contact">📞 {l.contact}</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="my-listing-footer framed-footer">
+                                  <div className="listing-actions-primary">
+                                    <button
+                                      className="btn btn-primary small"
+                                      onClick={() => {
+                                        setSelectedListing(l);
+                                        const url = new URL(window.location.href);
+                                        url.searchParams.set("listing", l.id);
+                                        window.history.replaceState({}, "", url.toString());
+                                      }}
+                                    >
+                                      👁️ {t("view") || "View"}
+                                    </button>
+                                    <button
+                                      className="btn small"
+                                      onClick={() => openEdit(l)}
+                                    >
+                                      ✏️ {t("edit")}
+                                    </button>
+                                    <button
+                                      className="btn small btn-extend"
+                                      onClick={() => startExtendFlow(l)}
+                                    >
+                                      ⏰ {t("extend")}
+                                    </button>
+                                  </div>
+                                  <div className="listing-actions-secondary">
+                                    <button
+                                      className="btn btn-ghost small icon-only"
+                                      onClick={() => window.open(`tel:${l.contact}`)}
+                                      title={t("call")}
+                                    >
+                                      📞
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost small icon-only"
+                                      onClick={() =>
+                                        window.open(
+                                          `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
+                                            l.name || ""
+                                          )}`
+                                        )
+                                      }
+                                      title={t("emailAction")}
+                                    >
+                                      ✉️
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost small icon-only"
+                                      onClick={() => {
+                                        navigator.clipboard?.writeText(l.contact || "");
+                                        showMessage(t("copied"), "success");
+                                      }}
+                                      title={t("copy")}
+                                    >
+                                      📋
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost small icon-only"
+                                      type="button"
+                                      onClick={() => handleShareListing(l)}
+                                      title={t("share")}
+                                    >
+                                      🔗
+                                    </button>
+                                    <button
+                                      className="btn btn-ghost small icon-only btn-delete"
+                                      onClick={() => confirmDelete(l.id)}
+                                      title={t("del")}
+                                    >
+                                      🗑️
+                                    </button>
+                                  </div>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+
+                    {selectedTab === "account" && (
+                      <div className="section account-shell">
+                        {/* Account Header */}
+                        <div className="account-header-section">
+                          <div className="account-header-content">
+                            <h2 className="account-page-title">👤 {t("account")}</h2>
+                            <p className="account-page-subtitle">
+                              {t("accountSubtitle")}
+                            </p>
+                          </div>
+                          <div className="account-header-actions">
+                            <button className="btn btn-ghost small" onClick={() => setSelectedTab("allListings")}>
+                              🧭 {t("explore")}
+                            </button>
+                            <button className="btn small" onClick={() => setShowPostForm(true)}>
+                              ➕ {t("submitListing")}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Quick Stats */}
+                        <div className="account-quick-stats">
+                          {[
+                              { 
+                                icon: "📁", 
+                                label: t("myListings"), 
+                                value: myListingsRaw.length, 
+                                hint: `${myVerifiedCount} ${t("verified")}`,
+                                color: "blue"
+                              },
+                              { 
+                                icon: "⭐", 
+                                label: t("favorites"), 
+                                value: favorites.length, 
+                                hint: t("reputation"),
+                                color: "yellow"
+                              },
+                              { 
+                                icon: "📅", 
+                                label: t("memberSince"), 
+                                value: user?.metadata?.creationTime
+                                  ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                                  : "—",
+                                hint: t("accountSince"),
+                                color: "purple"
+                              },
+                            ].map((stat) => (
+                              <div key={stat.label} className={`account-stat-card-enhanced stat-${stat.color}`}>
+                                <div className="stat-icon">{stat.icon}</div>
+                                <div className="stat-content">
+                                  <p className="stat-label">{stat.label}</p>
+                                  <p className="stat-value">{stat.value}</p>
+                                  {stat.hint && <p className="stat-note">{stat.hint}</p>}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+
+                        <div className="account-panels">
+                          <div className="account-column">
+                            {/* Profile Information Card */}
+                            <div className="card account-card-enhanced">
+                              <div className="account-card-header">
+                                <h3 className="account-card-title">📋 {t("profileInfo")}</h3>
+                                <p className="account-card-subtitle">{t("accountDetails")}</p>
+                              </div>
+                              
+                              <div className="account-info-list">
+                                <div className="account-info-item">
+                                  <div className="account-info-item-icon">✉️</div>
+                                  <div className="account-info-item-content">
+                                    <p className="account-info-label">{t("emailLabel")}</p>
+                                    <p className="account-info-value">{user?.email || "—"}</p>
+                                    {user?.emailVerified ? (
+                                      <span className="account-info-badge verified">✅ {t("verified")}</span>
+                                    ) : (
+                                      <span className="account-info-badge not-verified">⏳ {t("pendingVerification")}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="account-info-item">
+                                  <div className="account-info-item-icon">📞</div>
+                                  <div className="account-info-item-content">
+                                    <p className="account-info-label">{t("phoneNumber")}</p>
+                                    <p className="account-info-value">
+                                      {accountPhone || (
+                                        <span className="account-info-placeholder">{t("addPhoneNumber")}</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                <div className="account-info-item">
+                                  <div className="account-info-item-icon">📅</div>
+                                  <div className="account-info-item-content">
+                                    <p className="account-info-label">{t("accountSince")}</p>
+                                    <p className="account-info-value">
+                                      {user?.metadata?.creationTime
+                                        ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { 
+                                            year: 'numeric', 
+                                            month: 'long', 
+                                            day: 'numeric' 
+                                          })
+                                        : "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {!user?.emailVerified && (
+                                <div className="account-alert-enhanced">
+                                  <div className="account-alert-icon">⚠️</div>
+                                  <div className="account-alert-content">
+                                    <p className="account-alert-title">{t("verifyYourEmail")}</p>
+                                    <p className="account-alert-sub">{t("verifyEmailHint")}</p>
+                                    <div className="account-alert-actions">
+                                      <button
+                                        className="btn btn-ghost small"
+                                        onClick={async () => {
+                                          try {
+                                            if (user) {
+                                              await sendEmailVerification(user);
+                                              showMessage(t("verificationSent"), "success");
+                                            }
+                                          } catch (err) {
+                                            showMessage(t("verificationError") + " " + err.message, "error");
+                                          }
+                                        }}
+                                      >
+                                        {t("resendVerificationEmail")}
+                                      </button>
+                                      <button
+                                        className="btn small"
+                                        onClick={() => {
+                                          setAuthMode("verify");
+                                          setShowAuthModal(true);
+                                        }}
+                                      >
+                                        {t("iVerified")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Quick Links Card */}
+                            <div className="card account-card-enhanced account-quick-links">
+                              <div className="account-card-header">
+                                <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
+                              </div>
+                              <div className="account-quick-links-list">
+                                <button 
+                                  className="account-quick-link-item"
+                                  onClick={() => setSelectedTab("myListings")}
+                                >
+                                  <span className="quick-link-icon">📁</span>
+                                  <div className="quick-link-content">
+                                    <p className="quick-link-title">{t("myListings")}</p>
+                                    <p className="quick-link-subtitle">{myListingsRaw.length} {t("listingsLabel")}</p>
+                                  </div>
+                                  <span className="quick-link-arrow">→</span>
+                                </button>
+                                <button 
+                                  className="account-quick-link-item"
+                                  onClick={() => setSelectedTab("allListings")}
+                                >
+                                  <span className="quick-link-icon">🔍</span>
+                                  <div className="quick-link-content">
+                                    <p className="quick-link-title">{t("explore")}</p>
+                                    <p className="quick-link-subtitle">{t("browseListingsHint")}</p>
+                                  </div>
+                                  <span className="quick-link-arrow">→</span>
+                                </button>
+                                <button 
+                                  className="account-quick-link-item"
+                                  onClick={() => setShowPostForm(true)}
+                                >
+                                  <span className="quick-link-icon">➕</span>
+                                  <div className="quick-link-content">
+                                    <p className="quick-link-title">{t("submitListing")}</p>
+                                    <p className="quick-link-subtitle">{t("createListingHint")}</p>
+                                  </div>
+                                  <span className="quick-link-arrow">→</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="account-column">
+                            {/* Security Settings Card */}
+                            <div className="card account-card-enhanced account-security-section">
+                              <div className="account-card-header">
+                                <h3 className="account-card-title">🔒 {t("securitySettings")}</h3>
+                                <p className="account-card-subtitle">{t("securitySettingsText")}</p>
+                              </div>
+
+                              {/* Change Email Form */}
+                              <div className="account-form-section">
+                                <div className="account-form-section-header">
+                                  <h4 className="account-form-section-title">✉️ {t("changeEmail")}</h4>
+                                  <p className="account-form-section-desc">{t("updateEmailDesc")}</p>
+                                </div>
+                                <form className="account-form-enhanced" onSubmit={handleChangeEmail}>
+                                  <div className="account-form-field">
+                                    <label className="account-form-label">{t("newEmail")}</label>
+                                    <input
+                                      type="email"
+                                      className="input account-form-input"
+                                      value={emailForm.newEmail}
+                                      onChange={(e) => setEmailForm((f) => ({ ...f, newEmail: e.target.value }))}
+                                      placeholder={t("newEmailPlaceholder")}
+                                    />
+                                  </div>
+                                  <div className="account-form-field">
+                                    <label className="account-form-label">{t("currentPassword")}</label>
+                                    <input
+                                      type="password"
+                                      className="input account-form-input"
+                                      value={emailForm.currentPassword}
+                                      onChange={(e) => setEmailForm((f) => ({ ...f, currentPassword: e.target.value }))}
+                                      placeholder={t("currentPasswordPlaceholder")}
+                                    />
+                                  </div>
+                                  <div className="account-form-actions">
+                                    <button type="submit" className="btn small" disabled={savingEmail}>
+                                      {savingEmail ? t("saving") : t("saveEmail")}
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+
+                              {/* Divider */}
+                              <div className="account-form-divider"></div>
+
+                              {/* Change Password Form */}
+                              <div className="account-form-section">
+                                <div className="account-form-section-header">
+                                  <h4 className="account-form-section-title">🔑 {t("changePassword")}</h4>
+                                  <p className="account-form-section-desc">{t("securitySettings") || "Update your password"}</p>
+                                </div>
+                                <form className="account-form-enhanced" onSubmit={handleChangePassword}>
+                                  <div className="account-form-field">
+                                    <label className="account-form-label">{t("currentPassword")}</label>
+                                    <input
+                                      type="password"
+                                      className="input account-form-input"
+                                      value={passwordForm.currentPassword}
+                                      onChange={(e) =>
+                                        setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))
+                                      }
+                                      placeholder={t("currentPasswordPlaceholder")}
+                                    />
+                                  </div>
+                                  <div className="account-form-field">
+                                    <label className="account-form-label">{t("newPassword")}</label>
+                                    <input
+                                      type="password"
+                                      className="input account-form-input"
+                                      value={passwordForm.newPassword}
+                                      onChange={(e) =>
+                                        setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))
+                                      }
+                                      placeholder={t("newPasswordPlaceholder")}
+                                    />
+                                  </div>
+                                  <div className="account-form-field">
+                                    <label className="account-form-label">{t("repeatNewPassword")}</label>
+                                    <input
+                                      type="password"
+                                      className="input account-form-input"
+                                      value={passwordForm.repeatNewPassword}
+                                      onChange={(e) =>
+                                        setPasswordForm((f) => ({ ...f, repeatNewPassword: e.target.value }))
+                                      }
+                                      placeholder={t("repeatNewPasswordPlaceholder")}
+                                    />
+                                  </div>
+                                  <div className="account-form-actions">
+                                    <button type="submit" className="btn small" disabled={savingPassword}>
+                                      {savingPassword ? t("saving") : t("savePassword")}
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedTab === "allListings" && (
+                      <div className="section explore-section-new">
+                        {/* Simplified Header */}
+                        <div className="explore-top-bar">
+                          <div className="explore-header-content">
+                            <h2 className="explore-page-title">🔍 {t("explore")}</h2>
+                            <p className="explore-page-subtitle">
+                              {filtered.length === 0 
+                                ? t("noListingsFound")
+                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel") || "available"} • Page ${page} of ${totalPages}`
+                              }
+                            </p>
+                          </div>
+                          <div className="explore-top-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost view-toggle-btn"
+                              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                              title={viewMode === "grid" ? t("switchToListView") : t("switchToGridView")}
+                            >
+                              {viewMode === "grid" ? "☰" : "⊞"}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost filter-toggle-btn-desktop"
+                              onClick={() => setFiltersOpen((v) => !v)}
+                              aria-expanded={filtersOpen}
+                            >
+                              {filtersOpen ? "✕ " : "🔍 "}
+                              {t("filters")}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Active Filters Bar */}
+                        {(q || catFilter || locFilter) && (
+                          <div className="active-filters-bar">
+                            <span className="active-filters-label">{t("activeFilters")}:</span>
+                            <div className="active-filters-chips">
+                              {q && (
+                                <span className="active-filter-chip">
+                                  {t("search")}: "{q}"
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setQ("")}
+                                    aria-label={t("removeFilter")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                              {catFilter && (
+                                <span className="active-filter-chip">
+                                  {t("category")}: {catFilter}
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setCatFilter("")}
+                                    aria-label={t("removeFilter")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                              {locFilter && (
+                                <span className="active-filter-chip">
+                                  {t("location")}: {locFilter}
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setLocFilter("")}
+                                    aria-label={t("removeFilter")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className="btn-clear-all-filters"
+                                onClick={() => {
+                                  setQ("");
+                                  setCatFilter("");
+                                  setLocFilter("");
+                                  setSortBy("topRated");
+                                }}
+                              >
+                                {t("clearAll")}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Mobile Toolbar */}
+                        <div className="explore-mobile-toolbar">
+                          <button
+                            type="button"
+                            className="btn btn-ghost filter-toggle-btn"
+                            onClick={() => setFiltersOpen((v) => !v)}
+                            aria-expanded={filtersOpen}
+                          >
+                            {filtersOpen ? "✕ " : "🔍 "}
+                            {filtersOpen ? t("hideFilters") : t("showFilters")}
+                          </button>
+                          <select
+                            className="select sort-select-mobile"
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                          >
+                            <option value="topRated">{t("sortTopRated")}</option>
+                            <option value="newest">{t("sortNewest")}</option>
+                            <option value="expiring">{t("sortExpiring")}</option>
+                            <option value="az">{t("sortAZ")}</option>
+                          </select>
+                          <button
+                            type="button"
+                            className="btn btn-ghost view-toggle-btn"
+                            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                          >
+                            {viewMode === "grid" ? "☰" : "⊞"}
+                          </button>
+                        </div>
+
+                        <div className={`explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`}>
+                          {/* FILTER BOTTOM SHEET - COMPLETELY DIFFERENT APPROACH */}
+                          {filtersOpen && (
+                            <>
+                              <div 
+                                className="filter-sheet-backdrop"
+                                onClick={() => setFiltersOpen(false)}
+                                aria-label={t("closeFilters")}
+                              />
+                              <div className="filter-sheet-wrapper">
+                                <div className="filter-sheet-handle" onClick={() => setFiltersOpen(false)}>
+                                  <div className="filter-sheet-handle-bar"></div>
+                                </div>
+                                <div className="filter-sheet-content">
+                                  <div className="filter-sheet-header">
+                                    <div className="filter-sheet-header-left">
+                                      <div className="filter-sheet-icon">🔍</div>
+                                      <div>
+                                        <h2 className="filter-sheet-title">{t("filters")}</h2>
+                                        <p className="filter-sheet-subtitle">{t("filterSubtitle")}</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="filter-sheet-close"
+                                      onClick={() => setFiltersOpen(false)}
+                                      aria-label={t("closeFilters")}
+                                    >
+                                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24" }}>
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                      </svg>
+                                    </button>
+                                  </div>
+
+                                  <div className="filter-sheet-scroll">
+                                    <div className="filter-group">
+                                      <div className="filter-group-header">
+                                        <span className="filter-group-icon">🔎</span>
+                                        <span className="filter-group-title">{t("search")}</span>
+                                      </div>
+                                      <div className="filter-group-content">
+                                        <div className="filter-search-box">
+                                          <svg className="filter-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ minWidth: "24" }}>
+                                            <circle cx="11" cy="11" r="8"></circle>
+                                            <path d="m21 21-4.35-4.35"></path>
+                                          </svg>
+                                          <input
+                                            type="search"
+                                            className="filter-search-input"
+                                            placeholder={t("searchPlaceholder")}
+                                            value={q}
+                                            onChange={(e) => setQ(e.target.value)}
+                                          />
+                                          {q && (
+                                            <button
+                                              type="button"
+                                              className="filter-search-clear"
+                                              onClick={() => setQ("")}
+                                              aria-label={t("clearSearch")}
+                                            >
+                                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ minWidth: "24" }}>
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                              </svg>
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="filter-group">
+                                      <div className="filter-group-header">
+                                        <span className="filter-group-icon">📂</span>
+                                        <span className="filter-group-title">{t("category")}</span>
+                                      </div>
+                                      <div className="filter-group-content">
+                                        <div className="filter-options-grid">
+                                          {categories.map((cat) => {
+                                            const label = t(cat);
+                                            const active = catFilter === label;
+                                            return (
+                                              <button
+                                                key={cat}
+                                                type="button"
+                                                className={`filter-option-card ${active ? "is-selected" : ""}`}
+                                                onClick={() => setCatFilter(active ? "" : label)}
+                                              >
+                                                <div className="filter-option-icon">{categoryIcons[cat]}</div>
+                                                <div className="filter-option-label">{label}</div>
+                                                {active && (
+                                                  <div className="filter-option-check">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
+                                                      <polyline points="20 6 9 17 4 12"></polyline>
+                                                    </svg>
+                                                  </div>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="filter-group">
+                                      <div className="filter-group-header">
+                                        <span className="filter-group-icon">📍</span>
+                                        <span className="filter-group-title">{t("location")}</span>
+                                      </div>
+                                      <div className="filter-group-content">
+                                        <div className="filter-select-wrapper">
+                                          <select
+                                            className="filter-select-field"
+                                            value={locFilter}
+                                            onChange={(e) => setLocFilter(e.target.value)}
                                           >
-                                            {l.status === "verified" ? `✅ ${t("verified")}` : `⏳ ${t("pending")}`}
-                                          </span>
+                                            <option value="">{t("allLocations")}</option>
+                                            {allLocations.map((l) => (
+                                              <option key={l} value={l}>{l}</option>
+                                            ))}
+                                          </select>
+                                          <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                          </svg>
                                         </div>
-                                        <div className="listing-meta-row pill-row-tight">
-                                          <span className="pill pill-category">
-                                            {categoryIcons[l.category] || "🏷️"} {t(l.category) || l.category}
-                                          </span>
-                                          {l.location && (
-                                            <span className="pill pill-location">
-                                              📍 {l.location}
-                                            </span>
-                                          )}
-                                          {l.createdAt && (
-                                            <span className="pill pill-soft pill-date">
-                                              📅 {new Date(l.createdAt).toLocaleDateString()}
-                                            </span>
-                                          )}
+                                      </div>
+                                    </div>
+
+                                    <div className="filter-group">
+                                      <div className="filter-group-header">
+                                        <span className="filter-group-icon">🔄</span>
+                                        <span className="filter-group-title">{t("sortBy")}</span>
+                                      </div>
+                                      <div className="filter-group-content">
+                                        <div className="filter-select-wrapper">
+                                          <select
+                                            className="filter-select-field"
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value)}
+                                          >
+                                            <option value="topRated">⭐ {t("sortTopRated")}</option>
+                                            <option value="newest">🆕 {t("sortNewest")}</option>
+                                            <option value="expiring">⏰ {t("sortExpiring")}</option>
+                                            <option value="az">🔤 {t("sortAZ")}</option>
+                                          </select>
+                                          <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                          </svg>
                                         </div>
-                                        {(() => {
-                                          const days = getDaysUntilExpiry(l.expiresAt);
-                                          const isExpiringSoon = days !== null && days > 0 && days <= 7;
-                                          const isExpired = days !== null && days <= 0;
-                                          return (
-                                            <div className={`listing-expiry-info ${isExpiringSoon ? "expiring-soon" : ""} ${isExpired ? "expired" : ""}`}>
-                                              {l.expiresAt ? (
-                                                <>
-                                                  <span className="expiry-label">{t("expires")}:</span>
-                                                  <span className="expiry-date">{new Date(l.expiresAt).toLocaleDateString()}</span>
-                                                  {days !== null && (
-                                                    <span className={`expiry-days ${isExpiringSoon ? "warning" : ""} ${isExpired ? "expired-text" : ""}`}>
-                                                      {isExpired
-                                                        ? ` ⚠️ ${t("expired") || "Expired"}`
-                                                        : isExpiringSoon
-                                                          ? ` ⏰ ${days} ${days === 1 ? t("day") || "day" : t("days") || "days"} ${t("remaining") || "left"}`
-                                                          : ` (${days} ${days === 1 ? t("day") || "day" : t("days") || "days"})`}
-                                                    </span>
-                                                  )}
-                                                </>
-                                              ) : (
-                                                <span className="expiry-date">{t("noExpiry") || "No expiration"}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          <div className="explore-results-area">
+                            {filtered.length > 0 ? (
+                              <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
+                                {pagedFiltered.map((l) => (
+                                  <article
+                                    key={l.id}
+                                    className="listing-card explore-card-modern"
+                                    onClick={() => {
+                                      setSelectedListing(l);
+                                      const url = new URL(window.location.href);
+                                      url.searchParams.set("listing", l.id);
+                                      window.history.replaceState({}, "", url.toString());
+                                    } }
+                                  >
+                                    <header className="listing-header listing-header-dense">
+                                      <div className="listing-title-wrap">
+                                        <div className="listing-title-row">
+                                          <span className="listing-icon-bubble">
+                                            {categoryIcons[l.category] || "🏷️"}
+                                          </span>
+                                          <div>
+                                            <h3 className="listing-title">{l.name}</h3>
+                                            <div className="listing-meta pill-row-tight">
+                                              <span className="pill pill-category">{t(l.category) || l.category}</span>
+                                              <span className="pill pill-location">📍 {l.location}</span>
+                                              {l.expiresAt && (
+                                                <span className="pill pill-ghost subtle-pill">
+                                                  ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
+                                                </span>
                                               )}
                                             </div>
-                                          );
-                                        })()}
-                                      </div>
-                                      {(() => {
-                                        const stats = getListingStats(l);
-                                        return (
-                                          <div className="listing-score-pill">
-                                            <span className="score-main">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                            <span className="score-sub">{stats.feedbackCount} {t("reviews") || "reviews"}</span>
                                           </div>
-                                        );
-                                      })()}
+                                        </div>
+                                      </div>
+
+                                      <div className="listing-badges dense-badges">
+                                        {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
+                                        <span className="badge verified">✓ {t("verified")}</span>
+                                      </div>
                                     </header>
 
-                                    <div className="listing-card-body-enhanced">
-                                      <p className="listing-description clamp-3 enhanced-copy">
-                                        {getDescriptionPreview(l.description, 120)}
+                                    <div className="listing-card-body">
+                                      <p className="listing-description listing-description-clamp listing-description-preview">
+                                        {getDescriptionPreview(l.description, 180)}
                                       </p>
 
                                       {(() => {
                                         const stats = getListingStats(l);
                                         return (
-                                          <div className="listing-stats ribboned">
+                                          <div className="listing-stats spaced">
                                             <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
                                             <span className="stat-chip">💬 {stats.feedbackCount}</span>
                                             <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-                                            {l.offerprice && (
-                                              <span className="pill pill-price subtle-pill">💶 {l.offerprice}</span>
+                                            {l.tags && (
+                                              <span className="pill pill-tags">
+                                                {l.tags.split(",")[0]?.trim()}
+                                                {l.tags.split(",").length > 1 ? " +" : ""}
+                                              </span>
                                             )}
                                           </div>
                                         );
                                       })()}
+                                    </div>
 
-                                      {(l.tags || l.contact) && (
-                                        <div className="my-listing-highlights rich-highlights">
-                                          {l.tags && (
-                                            <span className="pill pill-tags">🏷️ {l.tags.split(",")[0]?.trim() || l.tags}</span>
-                                          )}
-                                          {l.contact && (
-                                            <span className="pill pill-contact">📞 {l.contact}</span>
-                                          )}
-                                        </div>
-                                      )}
-
-                                    <div className="my-listing-footer framed-footer">
-                                      <div className="listing-actions-primary">
-                                        <button
-                                          className="btn btn-primary small"
-                                          onClick={() => {
-                                            setSelectedListing(l);
-                                            const url = new URL(window.location.href);
-                                            url.searchParams.set("listing", l.id);
-                                            window.history.replaceState({}, "", url.toString());
-                                          } }
-                                        >
-                                          👁️ {t("view") || "View"}
-                                        </button>
-                                        <button
-                                          className="btn small"
-                                          onClick={() => openEdit(l)}
-                                        >
-                                          ✏️ {t("edit")}
-                                        </button>
-                                        <button
-                                          className="btn small btn-extend"
-                                          onClick={() => startExtendFlow(l)}
-                                        >
-                                          ⏰ {t("extend")}
-                                        </button>
+                                    <div
+                                      className="listing-footer-row"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <div className="listing-footer-left">
+                                        {l.contact && (
+                                          <span className="pill pill-contact ghost-pill">
+                                            📞 {l.contact}
+                                          </span>
+                                        )}
+                                        {l.socialLink && (
+                                          <span className="pill pill-ghost subtle-pill">
+                                            🔗 {t("websiteLabel")}
+                                          </span>
+                                        )}
                                       </div>
-                                      <div className="listing-actions-secondary">
+
+                                      <div className="listing-actions compact">
                                         <button
-                                          className="btn btn-ghost small icon-only"
+                                          className="icon-btn"
+                                          type="button"
                                           onClick={() => window.open(`tel:${l.contact}`)}
-                                          title={t("call")}
                                         >
                                           📞
                                         </button>
                                         <button
-                                          className="btn btn-ghost small icon-only"
+                                          className="icon-btn"
+                                          type="button"
                                           onClick={() => window.open(
                                             `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
                                               l.name || ""
                                             )}`
                                           )}
-                                          title={t("emailAction")}
                                         >
                                           ✉️
                                         </button>
                                         <button
-                                          className="btn btn-ghost small icon-only"
+                                          className="icon-btn"
+                                          type="button"
                                           onClick={() => {
                                             navigator.clipboard?.writeText(l.contact || "");
                                             showMessage(t("copied"), "success");
                                           } }
-                                          title={t("copy")}
                                         >
                                           📋
                                         </button>
                                         <button
-                                          className="btn btn-ghost small icon-only"
+                                          className="icon-btn"
                                           type="button"
                                           onClick={() => handleShareListing(l)}
-                                          title={t("share")}
                                         >
                                           🔗
                                         </button>
                                         <button
-                                          className="btn btn-ghost small icon-only btn-delete"
-                                          onClick={() => confirmDelete(l.id)}
-                                          title={t("del")}
+                                          className="icon-btn"
+                                          type="button"
+                                          onClick={() => toggleFav(l.id)}
                                         >
-                                          🗑️
+                                          {favorites.includes(l.id) ? "★" : "☆"}
                                         </button>
                                       </div>
                                     </div>
-                                  </div>
                                   </article>
                                 ))}
-                              </div>
-                              <div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                                <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                  <button className="btn btn-ghost small" disabled={myPage <= 1} onClick={() => setMyPage((p) => Math.max(1, p - 1))}>←</button>
-                                  <span className="small-muted">Page {myPage} of {myTotalPages}</span>
-                                  <button className="btn btn-ghost small" disabled={myPage >= myTotalPages} onClick={() => setMyPage((p) => Math.min(myTotalPages, p + 1))}>→</button>
-                                </div>
-                                <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                  <span className="small-muted">{t("resultsPerPage") || "Per page"}</span>
-                                  <div className="filter-select-wrapper">
-                                    <select className="filter-select-field" value={myPageSize} onChange={(e) => { setMyPageSize(parseInt(e.target.value, 10)); setMyPage(1); } }>
-                                      <option value="4">4</option>
-                                      <option value="8">8</option>
-                                      <option value="16">16</option>
-                                    </select>
-                                    <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                      <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
+
+                              </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+                                  <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                    <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button>
+                                    <span className="small-muted">Page {page} of {totalPages}</span>
+                                    <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</button>
                                   </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                    {selectedTab === "account" && (
-                      <div className="section account-shell">
-                              {/* Account Header */}
-                              <div className="account-header-section">
-                                <div className="account-header-content">
-                                  <h2 className="account-page-title">👤 {t("account")}</h2>
-                                  <p className="account-page-subtitle">
-                                    {t("accountSubtitle")}
-                                  </p>
-                                </div>
-                                <div className="account-header-actions">
-                                  <button className="btn btn-ghost small" onClick={() => setSelectedTab("allListings")}>
-                                    🧭 {t("explore")}
-                                  </button>
-                                  <button className="btn small" onClick={() => setShowPostForm(true)}>
-                                    ➕ {t("submitListing")}
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Quick Stats */}
-                              <div className="account-quick-stats">
-                                {[
-                                  {
-                                    icon: "📁",
-                                    label: t("myListings"),
-                                    value: myListingsRaw.length,
-                                    hint: `${myVerifiedCount} ${t("verified")}`,
-                                    color: "blue"
-                                  },
-                                  {
-                                    icon: "⭐",
-                                    label: t("favorites"),
-                                    value: favorites.length,
-                                    hint: t("reputation"),
-                                    color: "yellow"
-                                  },
-                                  {
-                                    icon: "📅",
-                                    label: t("memberSince"),
-                                    value: user?.metadata?.creationTime
-                                      ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                                      : "—",
-                                    hint: t("accountSince"),
-                                    color: "purple"
-                                  },
-                                ].map((stat) => (
-                                  <div key={stat.label} className={`account-stat-card-enhanced stat-${stat.color}`}>
-                                    <div className="stat-icon">{stat.icon}</div>
-                                    <div className="stat-content">
-                                      <p className="stat-label">{stat.label}</p>
-                                      <p className="stat-value">{stat.value}</p>
-                                      {stat.hint && <p className="stat-note">{stat.hint}</p>}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-
-                              <div className="account-panels">
-                                <div className="account-column">
-                                  {/* Profile Information Card */}
-                                  <div className="card account-card-enhanced">
-                                    <div className="account-card-header">
-                                      <h3 className="account-card-title">📋 {t("profileInfo")}</h3>
-                                      <p className="account-card-subtitle">{t("accountDetails")}</p>
-                                    </div>
-
-                                    <div className="account-info-list">
-                                      <div className="account-info-item">
-                                        <div className="account-info-item-icon">✉️</div>
-                                        <div className="account-info-item-content">
-                                          <p className="account-info-label">{t("emailLabel")}</p>
-                                          <p className="account-info-value">{user?.email || "—"}</p>
-                                          {user?.emailVerified ? (
-                                            <span className="account-info-badge verified">✅ {t("verified")}</span>
-                                          ) : (
-                                            <span className="account-info-badge not-verified">⏳ {t("pendingVerification")}</span>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="account-info-item">
-                                        <div className="account-info-item-icon">📞</div>
-                                        <div className="account-info-item-content">
-                                          <p className="account-info-label">{t("phoneNumber")}</p>
-                                          <p className="account-info-value">
-                                            {accountPhone || (
-                                              <span className="account-info-placeholder">{t("addPhoneNumber")}</span>
-                                            )}
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      <div className="account-info-item">
-                                        <div className="account-info-item-icon">📅</div>
-                                        <div className="account-info-item-content">
-                                          <p className="account-info-label">{t("accountSince")}</p>
-                                          <p className="account-info-value">
-                                            {user?.metadata?.creationTime
-                                              ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'long',
-                                                day: 'numeric'
-                                              })
-                                              : "—"}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {!user?.emailVerified && (
-                                      <div className="account-alert-enhanced">
-                                        <div className="account-alert-icon">⚠️</div>
-                                        <div className="account-alert-content">
-                                          <p className="account-alert-title">{t("verifyYourEmail")}</p>
-                                          <p className="account-alert-sub">{t("verifyEmailHint")}</p>
-                                          <div className="account-alert-actions">
-                                            <button
-                                              className="btn btn-ghost small"
-                                              onClick={async () => {
-                                                try {
-                                                  if (user) {
-                                                    await sendEmailVerification(user);
-                                                    showMessage(t("verificationSent"), "success");
-                                                  }
-                                                } catch (err) {
-                                                  showMessage(t("verificationError") + " " + err.message, "error");
-                                                }
-                                              } }
-                                            >
-                                              {t("resendVerificationEmail")}
-                                            </button>
-                                            <button
-                                              className="btn small"
-                                              onClick={() => {
-                                                setAuthMode("verify");
-                                                setShowAuthModal(true);
-                                              } }
-                                            >
-                                              {t("iVerified")}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Quick Links Card */}
-                                  <div className="card account-card-enhanced account-quick-links">
-                                    <div className="account-card-header">
-                                      <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
-                                    </div>
-                                    <div className="account-quick-links-list">
-                                      <button
-                                        className="account-quick-link-item"
-                                        onClick={() => setSelectedTab("myListings")}
-                                      >
-                                        <span className="quick-link-icon">📁</span>
-                                        <div className="quick-link-content">
-                                          <p className="quick-link-title">{t("myListings")}</p>
-                                          <p className="quick-link-subtitle">{myListingsRaw.length} {t("listingsLabel")}</p>
-                                        </div>
-                                        <span className="quick-link-arrow">→</span>
-                                      </button>
-                                      <button
-                                        className="account-quick-link-item"
-                                        onClick={() => setSelectedTab("allListings")}
-                                      >
-                                        <span className="quick-link-icon">🔍</span>
-                                        <div className="quick-link-content">
-                                          <p className="quick-link-title">{t("explore")}</p>
-                                          <p className="quick-link-subtitle">{t("browseListingsHint")}</p>
-                                        </div>
-                                        <span className="quick-link-arrow">→</span>
-                                      </button>
-                                      <button
-                                        className="account-quick-link-item"
-                                        onClick={() => setShowPostForm(true)}
-                                      >
-                                        <span className="quick-link-icon">➕</span>
-                                        <div className="quick-link-content">
-                                          <p className="quick-link-title">{t("submitListing")}</p>
-                                          <p className="quick-link-subtitle">{t("createListingHint")}</p>
-                                        </div>
-                                        <span className="quick-link-arrow">→</span>
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="account-column">
-                                  {/* Security Settings Card */}
-                                  <div className="card account-card-enhanced account-security-section">
-                                    <div className="account-card-header">
-                                      <h3 className="account-card-title">🔒 {t("securitySettings")}</h3>
-                                      <p className="account-card-subtitle">{t("securitySettingsText")}</p>
-                                    </div>
-
-                                    {/* Change Email Form */}
-                                    <div className="account-form-section">
-                                      <div className="account-form-section-header">
-                                        <h4 className="account-form-section-title">✉️ {t("changeEmail")}</h4>
-                                        <p className="account-form-section-desc">{t("updateEmailDesc")}</p>
-                                      </div>
-                                      <form className="account-form-enhanced" onSubmit={handleChangeEmail}>
-                                        <div className="account-form-field">
-                                          <label className="account-form-label">{t("newEmail")}</label>
-                                          <input
-                                            type="email"
-                                            className="input account-form-input"
-                                            value={emailForm.newEmail}
-                                            onChange={(e) => setEmailForm((f) => ({ ...f, newEmail: e.target.value }))}
-                                            placeholder={t("newEmailPlaceholder")} />
-                                        </div>
-                                        <div className="account-form-field">
-                                          <label className="account-form-label">{t("currentPassword")}</label>
-                                          <input
-                                            type="password"
-                                            className="input account-form-input"
-                                            value={emailForm.currentPassword}
-                                            onChange={(e) => setEmailForm((f) => ({ ...f, currentPassword: e.target.value }))}
-                                            placeholder={t("currentPasswordPlaceholder")} />
-                                        </div>
-                                        <div className="account-form-actions">
-                                          <button type="submit" className="btn small" disabled={savingEmail}>
-                                            {savingEmail ? t("saving") : t("saveEmail")}
-                                          </button>
-                                        </div>
-                                      </form>
-                                    </div>
-
-                                    {/* Divider */}
-                                    <div className="account-form-divider"></div>
-
-                                    {/* Change Password Form */}
-                                    <div className="account-form-section">
-                                      <div className="account-form-section-header">
-                                        <h4 className="account-form-section-title">🔑 {t("changePassword")}</h4>
-                                        <p className="account-form-section-desc">{t("securitySettings") || "Update your password"}</p>
-                                      </div>
-                                      <form className="account-form-enhanced" onSubmit={handleChangePassword}>
-                                        <div className="account-form-field">
-                                          <label className="account-form-label">{t("currentPassword")}</label>
-                                          <input
-                                            type="password"
-                                            className="input account-form-input"
-                                            value={passwordForm.currentPassword}
-                                            onChange={(e) => setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))}
-                                            placeholder={t("currentPasswordPlaceholder")} />
-                                        </div>
-                                        <div className="account-form-field">
-                                          <label className="account-form-label">{t("newPassword")}</label>
-                                          <input
-                                            type="password"
-                                            className="input account-form-input"
-                                            value={passwordForm.newPassword}
-                                            onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
-                                            placeholder={t("newPasswordPlaceholder")} />
-                                        </div>
-                                        <div className="account-form-field">
-                                          <label className="account-form-label">{t("repeatNewPassword")}</label>
-                                          <input
-                                            type="password"
-                                            className="input account-form-input"
-                                            value={passwordForm.repeatNewPassword}
-                                            onChange={(e) => setPasswordForm((f) => ({ ...f, repeatNewPassword: e.target.value }))}
-                                            placeholder={t("repeatNewPasswordPlaceholder")} />
-                                        </div>
-                                        <div className="account-form-actions">
-                                          <button type="submit" className="btn small" disabled={savingPassword}>
-                                            {savingPassword ? t("saving") : t("savePassword")}
-                                          </button>
-                                        </div>
-                                      </form>
-                                    </div>
-                                  </div>
-                                  <div className="card account-card-enhanced">
-                                    <div className="account-card-header">
-                                      <h3 className="account-card-title">⭐ {t("favorites")}</h3>
-                                    </div>
-                                    {(() => {
-                                      const favs = listings.filter((l) => favorites.includes(l.id));
-                                      if (favs.length === 0) {
-                                        return (
-                                          <div className="empty account-empty">
-                                            <div className="empty-icon">⭐</div>
-                                            <p className="empty-text">{t("noListingsYet")}</p>
-                                            <div className="empty-actions">
-                                              <button
-                                                className="btn small"
-                                                onClick={() => setSelectedTab("allListings")}
-                                                type="button"
-                                              >
-                                                🔍 {t("explore")}
-                                              </button>
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                      return (
-                                        <div className="listing-grid favorites-grid responsive-grid">
-                                          {favs.slice(0, 8).map((l) => (
-                                            <article key={l.id} className="listing-card favorite-card elevated">
-                                              <header className="listing-header listing-header-dense">
-                                                <div className="listing-title-wrap">
-                                                  <div className="listing-title-row">
-                                                    <span className="listing-icon-bubble">
-                                                      {categoryIcons[l.category] || "🏷️"}
-                                                    </span>
-                                                    <div>
-                                                      <h3 className="listing-title">{l.name}</h3>
-                                                      <div className="listing-meta pill-row-tight">
-                                                        <span className="pill pill-category">
-                                                          {t(l.category) || l.category}
-                                                        </span>
-                                                        {l.location && (
-                                                          <span className="pill pill-location">📍 {l.location}</span>
-                                                        )}
-                                                        {l.offerprice && (
-                                                          <span className="pill pill-price subtle-pill">💶 {l.offerprice}</span>
-                                                        )}
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                              </header>
-                                              <div className="listing-card-body-enhanced">
-                                                <p className="listing-description clamp-3 enhanced-copy">
-                                                  {getDescriptionPreview(l.description, 120)}
-                                                </p>
-                                              </div>
-                                              <div className="listing-footer quick-actions-row">
-                                                <div className="quick-actions">
-                                                  <button
-                                                    className="btn btn-ghost small"
-                                                    type="button"
-                                                    onClick={() => {
-                                                      setSelectedListing(l);
-                                                      const url = new URL(window.location.href);
-                                                      url.searchParams.set("listing", l.id);
-                                                      window.history.replaceState({}, "", url.toString());
-                                                    } }
-                                                  >
-                                                    👁️ {t("view") || "View"}
-                                                  </button>
-                                                  <button
-                                                    className="btn btn-ghost small"
-                                                    type="button"
-                                                    onClick={() => window.open(`tel:${l.contact}`)}
-                                                    title={t("call")}
-                                                  >
-                                                    📞
-                                                  </button>
-                                                  <button
-                                                    className="btn btn-ghost small"
-                                                    type="button"
-                                                    onClick={() => {
-                                                      navigator.clipboard?.writeText(l.contact || "");
-                                                      showMessage(t("copied"), "success");
-                                                    } }
-                                                    title={t("copy")}
-                                                  >
-                                                    📋
-                                                  </button>
-                                                  <button
-                                                    className="btn btn-ghost small"
-                                                    type="button"
-                                                    onClick={() => handleShareListing(l)}
-                                                    title={t("share")}
-                                                  >
-                                                    🔗
-                                                  </button>
-                                                  <button
-                                                    className="btn small"
-                                                    type="button"
-                                                    onClick={() => toggleFav(l.id)}
-                                                  >
-                                                    {favorites.includes(l.id) ? "★" : "☆"} {t("favorite") || "Favorite"}
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            </article>
-                                          ))}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                    {selectedTab === "allListings" && (
-                      <div className="section explore-section-new">
-                              {/* Simplified Header */}
-                              <div className="explore-top-bar">
-                                <div className="explore-header-content">
-                                  <h2 className="explore-page-title">🔍 {t("explore")}</h2>
-                                  <p className="explore-page-subtitle">
-                                    {filtered.length === 0
-                                      ? t("noListingsFound")
-                                      : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel") || "available"} • Page ${page} of ${totalPages}`}
-                                  </p>
-                                </div>
-                                <div className="explore-top-actions">
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost view-toggle-btn"
-                                    onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                                    title={viewMode === "grid" ? t("switchToListView") : t("switchToGridView")}
-                                  >
-                                    {viewMode === "grid" ? "☰" : "⊞"}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost filter-toggle-btn-desktop"
-                                    onClick={() => setFiltersOpen((v) => !v)}
-                                    aria-expanded={filtersOpen}
-                                  >
-                                    {filtersOpen ? "✕ " : "🔍 "}
-                                    {t("filters")}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={`btn btn-ghost ${favoritesOnly ? "active" : ""}`}
-                                    onClick={() => setFavoritesOnly((v) => !v)}
-                                    title={t("favoritesOnly") || "Favorites only"}
-                                  >
-                                    ⭐ {t("favoritesOnly") || "Favorites only"}
-                                  </button>
-                                  <div className="lang-select" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                    <span className="small-muted">{t("language") || "Language"}</span>
+                                  <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                                    <span className="small-muted">{t("resultsPerPage") || "Per page"}</span>
                                     <div className="filter-select-wrapper">
-                                      <select
-                                        className="filter-select-field"
-                                        value={lang}
-                                        onChange={(e) => setLang(e.target.value)}
-                                      >
-                                        <option value="en">EN</option>
-                                        <option value="sq">SQ</option>
-                                        <option value="mk">MK</option>
+                                      <select className="filter-select-field" value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value, 10))}>
+                                        <option value="6">6</option>
+                                        <option value="12">12</option>
+                                        <option value="24">24</option>
                                       </select>
                                       <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                         <polyline points="6 9 12 15 18 9"></polyline>
                                       </svg>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-
-                              {/* Active Filters Bar */}
-                              {(q || catFilter || locFilter || favoritesOnly) && (
-                                <div className="active-filters-bar">
-                                  <span className="active-filters-label">{t("activeFilters")}:</span>
-                                  <div className="active-filters-chips">
-                                    {q && (
-                                      <span className="active-filter-chip">
-                                        {t("search")}: "{q}"
-                                        <button
-                                          type="button"
-                                          className="filter-chip-remove"
-                                          onClick={() => setQ("")}
-                                          aria-label={t("removeFilter")}
-                                        >
-                                          ✕
-                                        </button>
-                                      </span>
-                                    )}
-                                    {catFilter && (
-                                      <span className="active-filter-chip">
-                                        {t("category")}: {catFilter}
-                                        <button
-                                          type="button"
-                                          className="filter-chip-remove"
-                                          onClick={() => setCatFilter("")}
-                                          aria-label={t("removeFilter")}
-                                        >
-                                          ✕
-                                        </button>
-                                      </span>
-                                    )}
-                                    {locFilter && (
-                                      <span className="active-filter-chip">
-                                        {t("location")}: {locFilter}
-                                        <button
-                                          type="button"
-                                          className="filter-chip-remove"
-                                          onClick={() => setLocFilter("")}
-                                          aria-label={t("removeFilter")}
-                                        >
-                                          ✕
-                                        </button>
-                                      </span>
-                                    )}
-                                    {favoritesOnly && (
-                                      <span className="active-filter-chip">
-                                        ⭐ {t("favoritesOnly") || "Favorites only"}
-                                        <button
-                                          type="button"
-                                          className="filter-chip-remove"
-                                          onClick={() => setFavoritesOnly(false)}
-                                          aria-label={t("removeFilter")}
-                                        >
-                                          ✕
-                                        </button>
-                                      </span>
-                                    )}
-                                    <button
-                                      type="button"
-                                      className="btn-clear-all-filters"
-                                      onClick={() => {
-                                        setQ("");
-                                        setCatFilter("");
-                                        setLocFilter("");
-                                        setSortBy("topRated");
-                                        setFavoritesOnly(false);
-                                      } }
-                                    >
-                                      {t("clearAll")}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Mobile Toolbar */}
-                              <div className="explore-mobile-toolbar">
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost filter-toggle-btn"
-                                  onClick={() => setFiltersOpen((v) => !v)}
-                                  aria-expanded={filtersOpen}
-                                >
-                                  {filtersOpen ? "✕ " : "🔍 "}
-                                  {filtersOpen ? t("hideFilters") : t("showFilters")}
-                                </button>
-                                <select
-                                  className="select sort-select-mobile"
-                                  value={sortBy}
-                                  onChange={(e) => setSortBy(e.target.value)}
-                                >
-                                  <option value="topRated">{t("sortTopRated")}</option>
-                                  <option value="newest">{t("sortNewest")}</option>
-                                  <option value="expiring">{t("sortExpiring")}</option>
-                                  <option value="az">{t("sortAZ")}</option>
-                                </select>
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost view-toggle-btn"
-                                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                                >
-                                  {viewMode === "grid" ? "☰" : "⊞"}
-                                </button>
-                              </div>
-
-                              <div className={`explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`}>
-                                {/* FILTER BOTTOM SHEET - COMPLETELY DIFFERENT APPROACH */}
-                                {filtersOpen && (
-                                  <>
-                                    <div
-                                      className="filter-sheet-backdrop"
-                                      onClick={() => setFiltersOpen(false)}
-                                      aria-label={t("closeFilters")} />
-                                    <div className="filter-sheet-wrapper">
-                                      <div className="filter-sheet-handle" onClick={() => setFiltersOpen(false)}>
-                                        <div className="filter-sheet-handle-bar"></div>
-                                      </div>
-                                      <div className="filter-sheet-content">
-                                        <div className="filter-sheet-header">
-                                          <div className="filter-sheet-header-left">
-                                            <div className="filter-sheet-icon">🔍</div>
-                                            <div>
-                                              <h2 className="filter-sheet-title">{t("filters")}</h2>
-                                              <p className="filter-sheet-subtitle">{t("filterSubtitle")}</p>
-                                            </div>
-                                          </div>
-                                          <button
-                                            type="button"
-                                            className="filter-sheet-close"
-                                            onClick={() => setFiltersOpen(false)}
-                                            aria-label={t("closeFilters")}
-                                          >
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24" }}>
-                                              <line x1="18" y1="6" x2="6" y2="18"></line>
-                                              <line x1="6" y1="6" x2="18" y2="18"></line>
-                                            </svg>
-                                          </button>
-                                        </div>
-
-                                        <div className="filter-sheet-scroll">
-                                          <div className="filter-group">
-                                            <div className="filter-group-header">
-                                              <span className="filter-group-icon">🔎</span>
-                                              <span className="filter-group-title">{t("search")}</span>
-                                            </div>
-                                            <div className="filter-group-content">
-                                              <div className="filter-search-box">
-                                                <svg className="filter-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ minWidth: "24" }}>
-                                                  <circle cx="11" cy="11" r="8"></circle>
-                                                  <path d="m21 21-4.35-4.35"></path>
-                                                </svg>
-                                                <input
-                                                  type="search"
-                                                  className="filter-search-input"
-                                                  placeholder={t("searchPlaceholder")}
-                                                  value={q}
-                                                  onChange={(e) => setQ(e.target.value)} />
-                                                {q && (
-                                                  <button
-                                                    type="button"
-                                                    className="filter-search-clear"
-                                                    onClick={() => setQ("")}
-                                                    aria-label={t("clearSearch")}
-                                                  >
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ minWidth: "24" }}>
-                                                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                    </svg>
-                                                  </button>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="filter-group">
-                                            <div className="filter-group-header">
-                                              <span className="filter-group-icon">📂</span>
-                                              <span className="filter-group-title">{t("category")}</span>
-                                            </div>
-                                            <div className="filter-group-content">
-                                              <div className="filter-options-grid">
-                                                {categories.map((cat) => {
-                                                  const label = t(cat);
-                                                  const active = catFilter === label;
-                                                  return (
-                                                    <button
-                                                      key={cat}
-                                                      type="button"
-                                                      className={`filter-option-card ${active ? "is-selected" : ""}`}
-                                                      onClick={() => setCatFilter(active ? "" : label)}
-                                                    >
-                                                      <div className="filter-option-icon">{categoryIcons[cat]}</div>
-                                                      <div className="filter-option-label">{label}</div>
-                                                      {active && (
-                                                        <div className="filter-option-check">
-                                                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
-                                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                                          </svg>
-                                                        </div>
-                                                      )}
-                                                    </button>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="filter-group">
-                                            <div className="filter-group-header">
-                                              <span className="filter-group-icon">📍</span>
-                                              <span className="filter-group-title">{t("location")}</span>
-                                            </div>
-                                            <div className="filter-group-content">
-                                              <div className="filter-select-wrapper">
-                                                <select
-                                                  className="filter-select-field"
-                                                  value={locFilter}
-                                                  onChange={(e) => setLocFilter(e.target.value)}
-                                                >
-                                                  <option value="">{t("allLocations")}</option>
-                                                  {allLocations.map((l) => (
-                                                    <option key={l} value={l}>{l}</option>
-                                                  ))}
-                                                </select>
-                                                <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                  <polyline points="6 9 12 15 18 9"></polyline>
-                                                </svg>
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          <div className="filter-group">
-                                            <div className="filter-group-header">
-                                              <span className="filter-group-icon">🔄</span>
-                                              <span className="filter-group-title">{t("sortBy")}</span>
-                                            </div>
-                                            <div className="filter-group-content">
-                                              <div className="filter-select-wrapper">
-                                                <select
-                                                  className="filter-select-field"
-                                                  value={sortBy}
-                                                  onChange={(e) => setSortBy(e.target.value)}
-                                                >
-                                                  <option value="topRated">⭐ {t("sortTopRated")}</option>
-                                                  <option value="newest">🆕 {t("sortNewest")}</option>
-                                                  <option value="expiring">⏰ {t("sortExpiring")}</option>
-                                                  <option value="az">🔤 {t("sortAZ")}</option>
-                                                </select>
-                                                <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                  <polyline points="6 9 12 15 18 9"></polyline>
-                                                </svg>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </>
+                                </div></div>
+                            ) : (
+                              <div className="explore-empty-state">
+                                <div className="empty-state-icon">🔍</div>
+                                <h3 className="empty-state-title">{t("noListingsFound")}</h3>
+                                <p className="empty-state-text">
+                                  {q || catFilter || locFilter 
+                                    ? t("tryDifferentFilters")
+                                    : t("noListingsAvailable")
+                                  }
+                                </p>
+                                {(q || catFilter || locFilter) && (
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => {
+                                      setQ("");
+                                      setCatFilter("");
+                                      setLocFilter("");
+                                    }}
+                                  >
+                                    {t("clearFilters")}
+                                  </button>
                                 )}
-
-                                <div className="explore-results-area">
-                                  {filtered.length > 0 ? (
-                                    <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
-                                      {pagedFiltered.map((l) => (
-                                        <article
-                                          key={l.id}
-                                          className="listing-card explore-card-modern"
-                                          onClick={() => {
-                                            setSelectedListing(l);
-                                            const url = new URL(window.location.href);
-                                            url.searchParams.set("listing", l.id);
-                                            window.history.replaceState({}, "", url.toString());
-                                          } }
-                                        >
-                                          <header className="listing-header listing-header-dense">
-                                            <div className="listing-title-wrap">
-                                              <div className="listing-title-row">
-                                                <span className="listing-icon-bubble">
-                                                  {categoryIcons[l.category] || "🏷️"}
-                                                </span>
-                                                <div>
-                                                  <h3 className="listing-title">{l.name}</h3>
-                                                  <div className="listing-meta pill-row-tight">
-                                                    <span className="pill pill-category">{t(l.category) || l.category}</span>
-                                                    <span className="pill pill-location">📍 {l.location}</span>
-                                                    {l.expiresAt && (
-                                                      <span className="pill pill-ghost subtle-pill">
-                                                        ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            <div className="listing-badges dense-badges">
-                                              {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
-                                              <span className="badge verified">✓ {t("verified")}</span>
-                                            </div>
-                                          </header>
-
-                                          <div className="listing-card-body">
-                                            <p className="listing-description listing-description-clamp listing-description-preview">
-                                              {getDescriptionPreview(l.description, 180)}
-                                            </p>
-
-                                            {(() => {
-                                              const stats = getListingStats(l);
-                                              return (
-                                                <div className="listing-stats spaced">
-                                                  <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                                  <span className="stat-chip">💬 {stats.feedbackCount}</span>
-                                                  <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-                                                  {l.tags && (
-                                                    <span className="pill pill-tags">
-                                                      {l.tags.split(",")[0]?.trim()}
-                                                      {l.tags.split(",").length > 1 ? " +" : ""}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              );
-                                            })()}
-                                          </div>
-
-                                          <div
-                                            className="listing-footer-row"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <div className="listing-footer-left">
-                                              {l.contact && (
-                                                <span className="pill pill-contact ghost-pill">
-                                                  📞 {l.contact}
-                                                </span>
-                                              )}
-                                              {l.socialLink && (
-                                                <span className="pill pill-ghost subtle-pill">
-                                                  🔗 {t("websiteLabel")}
-                                                </span>
-                                              )}
-                                            </div>
-
-                                            <div className="listing-actions compact">
-                                              <button
-                                                className="icon-btn"
-                                                type="button"
-                                                onClick={() => window.open(`tel:${l.contact}`)}
-                                              >
-                                                📞
-                                              </button>
-                                              <button
-                                                className="icon-btn"
-                                                type="button"
-                                                onClick={() => window.open(
-                                                  `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
-                                                    l.name || ""
-                                                  )}`
-                                                )}
-                                              >
-                                                ✉️
-                                              </button>
-                                              <button
-                                                className="icon-btn"
-                                                type="button"
-                                                onClick={() => {
-                                                  navigator.clipboard?.writeText(l.contact || "");
-                                                  showMessage(t("copied"), "success");
-                                                } }
-                                              >
-                                                📋
-                                              </button>
-                                              <button
-                                                className="icon-btn"
-                                                type="button"
-                                                onClick={() => handleShareListing(l)}
-                                              >
-                                                🔗
-                                              </button>
-                                              <button
-                                                className="icon-btn"
-                                                type="button"
-                                                onClick={() => toggleFav(l.id)}
-                                              >
-                                                {favorites.includes(l.id) ? "★" : "☆"}
-                                              </button>
-                                            </div>
-                                          </div>
-                                        </article>
-                                      ))}
-
-                                    </div>
-                                      <div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                                        <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                          <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button>
-                                          <span className="small-muted">Page {page} of {totalPages}</span>
-                                          <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</button>
-                                        </div>
-                                        <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                          <span className="small-muted">{t("resultsPerPage") || "Per page"}</span>
-                                          <div className="filter-select-wrapper">
-                                            <select className="filter-select-field" value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value, 10))}>
-                                              <option value="6">6</option>
-                                              <option value="12">12</option>
-                                              <option value="24">24</option>
-                                            </select>
-                                            <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                              <polyline points="6 9 12 15 18 9"></polyline>
-                                            </svg>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="explore-empty-state">
-                                      <div className="empty-state-icon">🔍</div>
-                                      <h3 className="empty-state-title">{t("noListingsFound")}</h3>
-                                      <p className="empty-state-text">
-                                        {q || catFilter || locFilter
-                                          ? t("tryDifferentFilters")
-                                          : t("noListingsAvailable")}
-                                      </p>
-                                      {(q || catFilter || locFilter) && (
-                                        <button
-                                          className="btn btn-primary"
-                                          onClick={() => {
-                                            setQ("");
-                                            setCatFilter("");
-                                            setLocFilter("");
-                                          } }
-                                        >
-                                          {t("clearFilters")}
-                                        </button>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
                               </div>
-                            </div>
-                    )}
+                            )}
                           </div>
+                        </div>
+                      </div>
                     )}
-                        </div>
-                        </div>
-                      </main>
-                    </div>
-                  )}
+                  </div>
                 </div>
-                {/* Home section temporarily disabled */}
-              <AnimatePresence>
-                {showPostForm && user && user.emailVerified && (
-                  <Motion.div
-                    className="modal-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+              </main>
+            </div>
+          ) : (
+            /* Home (Submit + Quick Browse) */
+            <div className="main-grid">
+              {/* ====== SUBMIT SECTION ====== */}
+              {user && user.emailVerified && !showPostForm && (
+                <button
+                  type="button"
+                  className="floating-post-btn"
+                  onClick={() => {
+                    setShowPostForm(true);
+                    setForm((f) => ({ ...f, step: 1 }));
+                  }}
+                >
+                  ➕ {t("submitListing")}
+                </button>
+               )}
+
+              {user && !user.emailVerified && (
+                <div className="verify-banner">
+                  <div>
+                    <strong>{t("verifyYourEmail")}</strong>
+                    <div className="verify-banner-sub">{t("verifyEmailHint")}</div>
+                  </div>
+                  <button
+                    className="btn btn-ghost small"
+                    onClick={() => {
+                      setShowAuthModal(true);
+                      setAuthMode("verify");
+                    }}
+                  >
+                    {t("verifyYourEmail")}
+                  </button>
+                </div>
+              )}
+
+              {/* ====== MOMENTUM SECTION ====== */}
+              <section className="home-feature-grid">
+                <div className="card feature-card feature-card--primary">
+                  <div className="feature-card__head">
+                    <p className="eyebrow subtle">{t("getStartedFast")}</p>
+                    <h2 className="section-title">✨ {t("heroTitle")}</h2>
+                    <p className="section-subtitle-small">
+                      {t("spotlightHintHero")}
+                    </p>
+                  </div>
+                  <div className="feature-points">
+                    <div className="feature-point">
+                      <div className="feature-icon">🚀</div>
+                      <div>
+                        <h4>{t("submitListing")}</h4>
+                        <p>{t("submitListingDesc")}</p>
+                      </div>
+                    </div>
+                    <div className="feature-point">
+                      <div className="feature-icon">🧭</div>
+                      <div>
+                        <h4>{t("explore")}</h4>
+                        <p>{t("exploreHint")}</p>
+                      </div>
+                    </div>
+                    <div className="feature-point">
+                      <div className="feature-icon">🛡️</div>
+                      <div>
+                        <h4>{t("verified")}</h4>
+                        <p>{t("verifiedHint")}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="feature-actions">
+                    <button className="btn" onClick={() => setSelectedTab("allListings")}>
+                      🔍 {t("browseMarketplace")}
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setShowPostForm(true);
+                        setForm((f) => ({ ...f, step: 1 }));
+                      }}
+                    >
+                      ➕ {t("postService")}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="card feature-card">
+                  <div className="feature-card__head">
+                    <p className="eyebrow subtle">{t("verified")}</p>
+                    <h3 className="section-title-small">🔒 {t("trustSafetyLane")}</h3>
+                    <p className="section-subtitle-small">
+                      {t("trustSafetyLaneDesc")}
+                    </p>
+                  </div>
+                  <ul className="feature-list">
+                    <li>✔️ {t("phoneVerified")}: {phoneVerifiedCount}</li>
+                    <li>✔️ {t("listingsLabel")}: {activeListingCount}</li>
+                    <li>✔️ {t("categorySpotlight")}: {featuredCategoryOrder.slice(0, 3).map((cat) => t(cat)).join(", ")}</li>
+                  </ul>
+                  <div className="feature-badges">
+                    <span className="pill pill-soft">📬 {t("homeDigest")}</span>
+                    <span className="pill pill-soft">📍 {mkSpotlightCities[0]}</span>
+                  </div>
+                </div>
+
+                <div className="card feature-card">
+                  <div className="feature-card__head">
+                    <p className="eyebrow subtle">{t("featured")}</p>
+                    <h3 className="section-title-small">🧭 {t("localMissions")}</h3>
+                    <p className="section-subtitle-small">
+                      {t("localMissionsDesc")}
+                    </p>
+                  </div>
+                  <div className="mission-list">
+                    <div className="mission-item">
+                      <span className="mission-icon">🌟</span>
+                      <div>
+                        <h4>{t("updateListing")}</h4>
+                        <p>{t("updateListingHint")}</p>
+                      </div>
+                    </div>
+                    <div className="mission-item">
+                      <span className="mission-icon">🤝</span>
+                      <div>
+                        <h4>{t("share")}</h4>
+                        <p>{t("shareLinkHint")}</p>
+                      </div>
+                    </div>
+                    <div className="mission-item">
+                      <span className="mission-icon">🎯</span>
+                      <div>
+                        <h4>{t("categorySpotlight")}</h4>
+                        <p>{t("pickCityChip")}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {showPostForm && user && user.emailVerified && (
+            <Motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPostForm(false)}
+            >
+              <Motion.aside
+                className="modal post-form-drawer"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ x: "100%", opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: "100%", opacity: 0 }}
+                transition={{ type: "tween", duration: 0.3 }}
+              >
+                <div className="modal-header">
+                  <h3 className="modal-title">📝 {t("submitListing")}</h3>
+                  <button
+                    className="icon-btn"
                     onClick={() => setShowPostForm(false)}
                   >
-                    <Motion.aside
-                      className="modal post-form-drawer"
-                      onClick={(e) => e.stopPropagation()}
-                      initial={{ x: "100%", opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ x: "100%", opacity: 0 }}
-                      transition={{ type: "tween", duration: 0.3 }}
-                    >
-                      <div className="modal-header">
-                        <h3 className="modal-title">📝 {t("submitListing")}</h3>
-                        <button
-                          className="icon-btn"
-                          onClick={() => setShowPostForm(false)}
+                    ✕
+                  </button>
+                </div>
+        
+                <div className="modal-body" style={{ maxHeight: "80vh", overflowY: "auto" }}>
+                {user && user.emailVerified ? (
+                  <section className="card form-section">
+                    <h2 className="section-title">📝 {t("submitListing")}</h2>
+                
+                    {/* Step indicators */}
+                    <div className="plan-grid" style={{ marginBottom: 12 }}>
+                      {[1, 2, 3].map((s) => (
+                        <div
+                          key={s}
+                          className={`plan-option ${form.step === s ? "selected" : ""}`}
+                          style={{ cursor: "default" }}
                         >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className="modal-body" style={{ maxHeight: "80vh", overflowY: "auto" }}>
-                        {user && user.emailVerified ? (
-                          <section className="card form-section">
-                            <h2 className="section-title">📝 {t("submitListing")}</h2>
-
-                            {/* Step indicators */}
-                            <div className="plan-grid" style={{ marginBottom: 12 }}>
-                              {[1, 2, 3].map((s) => (
-                                <div
-                                  key={s}
-                                  className={`plan-option ${form.step === s ? "selected" : ""}`}
-                                  style={{ cursor: "default" }}
-                                >
-                                  <div className="plan-content">
-                                    <div className="plan-duration">
-                                      {s === 1
-                                        ? t("stepBasic")
-                                        : s === 2
-                                          ? t("stepDetails")
-                                          : t("stepPlanPreview")}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                          <div className="plan-content">
+                            <div className="plan-duration">
+                              {s === 1
+                                ? t("stepBasic")
+                                : s === 2
+                                ? t("stepDetails")
+                                : t("stepPlanPreview")}
                             </div>
-
-                            {/* Step 1 */}
-                            {form.step === 1 && (
-                              <form
-                                className="form"
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  if (!form.name || !form.category || !form.locationCity)
-                                    return showMessage(t("fillAllFields"), "error");
-                                  setForm({ ...form, step: 2 });
-                                } }
-                              >
-                                <input
-                                  className="input"
-                                  placeholder={t("name")}
-                                  value={form.name}
-                                  onChange={(e) => setForm({
-                                    ...form,
-                                    name: stripDangerous(e.target.value).slice(0, 100),
-                                  })}
-                                  maxLength="100"
-                                  required />
-
-                                <select
-                                  className="select category-dropdown"
-                                  value={form.category}
-                                  onChange={(e) => setForm({ ...form, category: e.target.value })}
-                                  required
-                                >
-                                  <option value="">{t("selectCategory")}</option>
-                                  {categories.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                      {t(cat)}
-                                    </option>
-                                  ))}
-                                </select>
-
-                                {/* Location picker with map modal */}
-                                <div className="location-picker">
-                                  {/* City selector from MK_CITIES */}
-                                  <select
-                                    className="select city-dropdown"
-                                    value={form.locationCity}
-                                    onChange={(e) => setForm({
-                                      ...form,
-                                      locationCity: e.target.value || "",
-                                    })}
-                                    required
-                                  >
-                                    <option value="">{t("selectCity") || "Select city"}</option>
-                                    {MK_CITIES.map((city) => (
-                                      <option key={city} value={city}>
-                                        {city}
-                                      </option>
-                                    ))}
-                                  </select>
-
-                                  {/* Optional extra details: town / village / neighborhood etc. */}
-                                  <input
-                                    className="input"
-                                    placeholder={t("locationExtra") || "Town / village / neighborhood (optional)"}
-                                    maxLength="100"
-                                    value={form.locationExtra}
-                                    onChange={(e) => {
-                                      const extra = stripDangerous(e.target.value).slice(0, 100);
-                                      setForm({
-                                        ...form,
-                                        locationExtra: extra,
-                                      });
-                                    } } />
-
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost small"
-                                    style={{ marginTop: 6 }}
-                                    onClick={() => setShowMapPicker(true)}
-                                  >
-                                    {t("chooseOnMap") || "Choose on map"}
-                                  </button>
-                                </div>
-
-                                <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
-                                  <button type="submit" className="btn">
-                                    {t("continue")}
-                                  </button>
-                                </div>
-                              </form>
-                            )}
-
-                            {/* Step 2 */}
-                            {form.step === 2 && (
-                              <form
-                                className="form"
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  const phoneForListing = accountPhone || form.contact;
-                                  if (!form.description || !phoneForListing)
-                                    return showMessage(t("addPhoneInAccount") || t("fillAllFields"), "error");
-                                  if (!validatePhone(phoneForListing))
-                                    return showMessage(t("enterValidPhone"), "error");
-                                  setForm({ ...form, contact: phoneForListing, step: 3 });
-                                } }
-                              >
-                                <textarea
-                                  className="textarea"
-                                  placeholder={t("description")}
-                                  value={form.description}
-                                  onChange={(e) => setForm({
-                                    ...form,
-                                    description: stripDangerous(e.target.value).slice(0, 1000),
-                                  })}
-                                  maxLength="1000"
-                                  required />
-
-                                <div className="contact-summary">
-                                  <div className="contact-summary-main">
-                                    <span className="field-label">{t("contact")}</span>
-                                    <p className="contact-number">
-                                      {accountPhone || t("addPhoneInAccount") || "Add a phone number in your account"}
-                                    </p>
-                                    <p className="contact-hint">
-                                      {t("contactAutofill") || "We use your account phone for trust and safety."}
-                                    </p>
-                                  </div>
-                                  <div className="contact-summary-actions">
-                                    <button
-                                      type="button"
-                                      className="btn btn-ghost small"
-                                      onClick={() => {
-                                        if (accountPhone) {
-                                          setForm((f) => ({ ...f, contact: accountPhone }));
-                                          showMessage(t("phoneSynced") || "Using your account phone number.", "success");
-                                        } else {
-                                          setSelectedTab("account");
-                                          showMessage(t("addPhoneInAccount") || "Add your phone in account settings first.", "error");
-                                        }
-                                      } }
-                                    >
-                                      {accountPhone ? t("useAccountPhone") || "Use account phone" : t("goToAccount") || "Go to account"}
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Offer price range + currency */}
-                                <div className="offer-price-range">
-                                  <label className="field-label">{t("offerPriceLabel")}</label>
-                                  <div className="offer-range-row">
-                                    <input
-                                      className="input"
-                                      type="number"
-                                      min="0"
-                                      placeholder={t("minPrice")}
-                                      value={form.offerMin}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/[^\d.,]/g, "");
-                                        const updated = { ...form, offerMin: val };
-                                        updated.offerprice = formatOfferPrice(
-                                          updated.offerMin,
-                                          updated.offerMax,
-                                          updated.offerCurrency
-                                        );
-                                        setForm(updated);
-                                      } } />
-                                    <span>—</span>
-                                    <input
-                                      className="input"
-                                      type="number"
-                                      min="0"
-                                      placeholder={t("maxPrice")}
-                                      value={form.offerMax}
-                                      onChange={(e) => {
-                                        const val = e.target.value.replace(/[^\d.,]/g, "");
-                                        const updated = { ...form, offerMax: val };
-                                        updated.offerprice = formatOfferPrice(
-                                          updated.offerMin,
-                                          updated.offerMax,
-                                          updated.offerCurrency
-                                        );
-                                        setForm(updated);
-                                      } } />
-                                    <select
-                                      className="select"
-                                      value={form.offerCurrency}
-                                      onChange={(e) => {
-                                        const updated = { ...form, offerCurrency: e.target.value };
-                                        updated.offerprice = formatOfferPrice(
-                                          updated.offerMin,
-                                          updated.offerMax,
-                                          updated.offerCurrency
-                                        );
-                                        setForm(updated);
-                                      } }
-                                    >
-                                      {currencyOptions.map((cur) => (
-                                        <option key={cur} value={cur}>
-                                          {cur}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                </div>
-
-                                <input
-                                  className="input"
-                                  placeholder={t("tagsPlaceholder")}
-                                  value={form.tags}
-                                  onChange={(e) => setForm({
-                                    ...form,
-                                    tags: stripDangerous(e.target.value).slice(0, 64),
-                                  })}
-                                  maxLength="64" />
-
-                                <input
-                                  className="input"
-                                  placeholder={t("socialPlaceholder")}
-                                  value={form.socialLink}
-                                  onChange={(e) => setForm({
-                                    ...form,
-                                    socialLink: stripDangerous(e.target.value).slice(0, 200),
-                                  })}
-                                  maxLength="200" />
-
-                                <input
-                                  className="input"
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleImageUpload} />
-
-                                {form.imagePreview && (
-                                  <img
-                                    src={form.imagePreview}
-                                    alt="preview"
-                                    style={{
-                                      width: "100%",
-                                      borderRadius: 12,
-                                      border: "1px solid #e5e7eb",
-                                      marginTop: 8,
-                                    }} />
-                                )}
-
-                                <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
-                                  <button
-                                    type="button"
-                                    className="btn btn-ghost"
-                                    onClick={() => setForm({ ...form, step: 1 })}
-                                  >
-                                    {t("back")}
-                                  </button>
-                                  <button type="submit" className="btn">
-                                    {t("continue")}
-                                  </button>
-                                </div>
-                              </form>
-                            )}
-
-                            {/* Step 3 */}
-                            {form.step === 3 && (
-                              <form className="form" onSubmit={handleSubmit}>
-                                <div className="plan-selector">
-                                  <label className="plan-label">{t("selectDuration")}</label>
-                                  <div className="plan-grid">
-                                    {Object.keys(priceMap).map((months) => (
-                                      <label
-                                        key={months}
-                                        className={`plan-option ${plan === months ? "selected" : ""}`}
-                                      >
-                                        <input
-                                          type="radio"
-                                          name="plan"
-                                          value={months}
-                                          checked={plan === months}
-                                          onChange={(e) => setPlan(e.target.value)} />
-                                        <div className="plan-content">
-                                          <div className="plan-duration">
-                                            {months === "1"
-                                              ? t("oneMonth")
-                                              : months === "3"
-                                                ? t("threeMonths")
-                                                : months === "6"
-                                                  ? t("sixMonths")
-                                                  : t("twelveMonths")}
-                                          </div>
-                                          <div className="plan-price">
-                                            {priceMap[months]} {t("eur")}
-                                          </div>
-                                        </div>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Live Preview */}
-                                <div className="card" style={{ marginTop: 8 }}>
-                                  <div className="listing-header">
-                                    <h3 className="listing-title">
-                                      {form.name || t("previewTitlePlaceholder")}
-                                    </h3>
-                                    <span className="badge verified">✓ {t("verified")}</span>
-                                  </div>
-
-                                  <div className="listing-meta">
-                                    {t(form.category) || form.category || "—"} •{" "}
-                                    {previewLocation || "—"}
-                                  </div>
-
-                                  {form.imagePreview && (
-                                    <img
-                                      src={form.imagePreview}
-                                      alt="preview"
-                                      style={{
-                                        width: "100%",
-                                        borderRadius: 12,
-                                        border: "1px solid #e5e7eb",
-                                        margin: "10px 0",
-                                      }} />
-                                  )}
-
-                                  <p className="listing-description">
-                                    {form.description || t("previewDescriptionPlaceholder")}
-                                  </p>
-
-                                  <div className="listing-meta" style={{ marginTop: 8 }}>
-                                    {form.offerprice && (
-                                      <>
-                                        💶 <strong>{form.offerprice}</strong>&nbsp;&nbsp;
-                                      </>
-                                    )}
-                                    {form.tags && <>🏷️ {form.tags}</>}
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="submit"
-                                  className="btn submit"
-                                  disabled={loading || paymentModalOpen}
-                                >
-                                  {loading
-                                    ? `⏳ ${t("loading")}`
-                                    : `${t("createAndPay")} (${priceMap[plan]} ${t("eur")})`}
-                                </button>
-                              </form>
-                            )}
-
-                            <section
-                              className="card trust-section"
-                              style={{ marginTop: "5%", height: "fit-content" }}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                
+                    {/* Step 1 */}
+                    {form.step === 1 && (
+                      <form
+                        className="form"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!form.name || !form.category || !form.locationCity)
+                            return showMessage(t("fillAllFields"), "error");
+                          setForm({ ...form, step: 2 });
+                        }}
+                      >
+                        <input
+                          className="input"
+                          placeholder={t("name")}
+                          value={form.name}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              name: stripDangerous(e.target.value).slice(0, 100),
+                            })
+                          }
+                          maxLength="100"
+                          required
+                        />
+                
+                        <select
+                          className="select category-dropdown"
+                          value={form.category}
+                          onChange={(e) => setForm({ ...form, category: e.target.value })}
+                          required
+                        >
+                          <option value="">{t("selectCategory")}</option>
+                          {categories.map((cat) => (
+                            <option key={cat} value={cat}>
+                              {t(cat)}
+                            </option>
+                          ))}
+                        </select>
+                
+                        {/* Location picker with map modal */}
+                        <div className="location-picker">
+                          {/* City selector from MK_CITIES */}
+                          <select
+                            className="select city-dropdown"
+                            value={form.locationCity}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                locationCity: e.target.value || "",
+                              })
+                            }
+                            required
+                          >
+                            <option value="">{t("selectCity") || "Select city"}</option>
+                            {MK_CITIES.map((city) => (
+                              <option key={city} value={city}>
+                                {city}
+                              </option>
+                            ))}
+                          </select>
+                
+                          {/* Optional extra details: town / village / neighborhood etc. */}
+                          <input
+                            className="input"
+                            placeholder={
+                              t("locationExtra") || "Town / village / neighborhood (optional)"
+                            }
+                            maxLength="100"
+                            value={form.locationExtra}
+                            onChange={(e) => {
+                              const extra = stripDangerous(e.target.value).slice(0, 100);
+                              setForm({
+                                ...form,
+                                locationExtra: extra,
+                              });
+                            }}
+                          />
+                
+                          <button
+                            type="button"
+                            className="btn btn-ghost small"
+                            style={{ marginTop: 6 }}
+                            onClick={() => setShowMapPicker(true)}
+                          >
+                            {t("chooseOnMap") || "Choose on map"}
+                          </button>
+                        </div>
+                
+                        <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
+                          <button type="submit" className="btn">
+                            {t("continue")}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                
+                    {/* Step 2 */}
+                    {form.step === 2 && (
+                      <form
+                        className="form"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const phoneForListing = accountPhone || form.contact;
+                          if (!form.description || !phoneForListing)
+                            return showMessage(t("addPhoneInAccount") || t("fillAllFields"), "error");
+                          if (!validatePhone(phoneForListing))
+                            return showMessage(t("enterValidPhone"), "error");
+                          setForm({ ...form, contact: phoneForListing, step: 3 });
+                        }}
+                      >
+                        <textarea
+                          className="textarea"
+                          placeholder={t("description")}
+                          value={form.description}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              description: stripDangerous(e.target.value).slice(0, 1000),
+                            })
+                          }
+                          maxLength="1000"
+                          required
+                        />
+                
+                        <div className="contact-summary">
+                          <div className="contact-summary-main">
+                            <span className="field-label">{t("contact")}</span>
+                            <p className="contact-number">
+                              {accountPhone || t("addPhoneInAccount") || "Add a phone number in your account"}
+                            </p>
+                            <p className="contact-hint">
+                              {t("contactAutofill") || "We use your account phone for trust and safety."}
+                            </p>
+                          </div>
+                          <div className="contact-summary-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost small"
+                              onClick={() => {
+                                if (accountPhone) {
+                                  setForm((f) => ({ ...f, contact: accountPhone }));
+                                  showMessage(t("phoneSynced") || "Using your account phone number.", "success");
+                                } else {
+                                  setSelectedTab("account");
+                                  showMessage(t("addPhoneInAccount") || "Add your phone in account settings first.", "error");
+                                }
+                              }}
                             >
-                              <h2 className="section-title">
-                                {t("whyTrustUs")}
-                              </h2>
-                              <ul className="trust-list">
-                                <li>
-                                  ✅{" "}
-                                  {t("trustPoint1")}
-                                </li>
-                                <li>
-                                  ✅{" "}
-                                  {t("trustPoint2")}
-                                </li>
-                                <li>
-                                  ✅{" "}
-                                  {t("trustPoint3")}
-                                </li>
-                                <li>
-                                  ✅{" "}
-                                  {t("trustPoint4")}
-                                </li>
-                              </ul>
-                            </section>
-                          </section>
-                        ) : (
-                          <section className="card trust-section" style={{ height: "fit-content" }}>
-                            <h2 className="section-title">
-                              {t("whyTrustUs")}
-                            </h2>
-                            <ul className="trust-list">
-                              <li>
-                                ✅{" "}
-                                {t("trustPoint1")}
-                              </li>
-                              <li>
-                                ✅{" "}
-                                {t("trustPoint2")}
-                              </li>
-                              <li>
-                                ✅{" "}
-                                {t("trustPoint3")}
-                              </li>
-                              <li>
-                                ✅{" "}
-                                {t("trustPoint4")}
-                              </li>
-                            </ul>
-                          </section>
+                              {accountPhone ? t("useAccountPhone") || "Use account phone" : t("goToAccount") || "Go to account"}
+                            </button>
+                          </div>
+                        </div>
+                
+                        {/* Offer price range + currency */}
+                        <div className="offer-price-range">
+                          <label className="field-label">{t("offerPriceLabel")}</label>
+                          <div className="offer-range-row">
+                            <input
+                              className="input"
+                              type="number"
+                              min="0"
+                              placeholder={t("minPrice")}
+                              value={form.offerMin}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^\d.,]/g, "");
+                                const updated = { ...form, offerMin: val };
+                                updated.offerprice = formatOfferPrice(
+                                  updated.offerMin,
+                                  updated.offerMax,
+                                  updated.offerCurrency
+                                );
+                                setForm(updated);
+                              }}
+                            />
+                            <span>—</span>
+                            <input
+                              className="input"
+                              type="number"
+                              min="0"
+                              placeholder={t("maxPrice")}
+                              value={form.offerMax}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/[^\d.,]/g, "");
+                                const updated = { ...form, offerMax: val };
+                                updated.offerprice = formatOfferPrice(
+                                  updated.offerMin,
+                                  updated.offerMax,
+                                  updated.offerCurrency
+                                );
+                                setForm(updated);
+                              }}
+                            />
+                            <select
+                              className="select"
+                              value={form.offerCurrency}
+                              onChange={(e) => {
+                                const updated = { ...form, offerCurrency: e.target.value };
+                                updated.offerprice = formatOfferPrice(
+                                  updated.offerMin,
+                                  updated.offerMax,
+                                  updated.offerCurrency
+                                );
+                                setForm(updated);
+                              }}
+                            >
+                              {currencyOptions.map((cur) => (
+                                <option key={cur} value={cur}>
+                                  {cur}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                
+                        <input
+                          className="input"
+                          placeholder={t("tagsPlaceholder")}
+                          value={form.tags}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              tags: stripDangerous(e.target.value).slice(0, 64),
+                            })
+                          }
+                          maxLength="64"
+                        />
+                
+                        <input
+                          className="input"
+                          placeholder={t("socialPlaceholder")}
+                          value={form.socialLink}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              socialLink: stripDangerous(e.target.value).slice(0, 200),
+                            })
+                          }
+                          maxLength="200"
+                        />
+                
+                        <input
+                          className="input"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                        />
+                
+                        {form.imagePreview && (
+                          <img
+                            src={form.imagePreview}
+                            alt="preview"
+                            style={{
+                              width: "100%",
+                              borderRadius: 12,
+                              border: "1px solid #e5e7eb",
+                              marginTop: 8,
+                            }}
+                          />
                         )}
-                      </div>
-                    </Motion.aside>
-                  </Motion.div>
+                
+                        <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setForm({ ...form, step: 1 })}
+                          >
+                            {t("back")}
+                          </button>
+                          <button type="submit" className="btn">
+                            {t("continue")}
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                
+                    {/* Step 3 */}
+                    {form.step === 3 && (
+                      <form className="form" onSubmit={handleSubmit}>
+                        <div className="plan-selector">
+                          <label className="plan-label">{t("selectDuration")}</label>
+                          <div className="plan-grid">
+                            {Object.keys(priceMap).map((months) => (
+                              <label
+                                key={months}
+                                className={`plan-option ${
+                                  plan === months ? "selected" : ""
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="plan"
+                                  value={months}
+                                  checked={plan === months}
+                                  onChange={(e) => setPlan(e.target.value)}
+                                />
+                                <div className="plan-content">
+                                  <div className="plan-duration">
+                                    {months === "1"
+                                      ? t("oneMonth")
+                                      : months === "3"
+                                      ? t("threeMonths")
+                                      : months === "6"
+                                      ? t("sixMonths")
+                                      : t("twelveMonths")}
+                                  </div>
+                                  <div className="plan-price">
+                                    {priceMap[months]} {t("eur")}
+                                  </div>
+                                </div>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                
+                        {/* Live Preview */}
+                        <div className="card" style={{ marginTop: 8 }}>
+                          <div className="listing-header">
+                            <h3 className="listing-title">
+                              {form.name || t("previewTitlePlaceholder")}
+                            </h3>
+                            <span className="badge verified">✓ {t("verified")}</span>
+                          </div>
+                
+                          <div className="listing-meta">
+                            {t(form.category) || form.category || "—"} •{" "}
+                            {previewLocation || "—"}
+                          </div>
+                
+                          {form.imagePreview && (
+                            <img
+                              src={form.imagePreview}
+                              alt="preview"
+                              style={{
+                                width: "100%",
+                                borderRadius: 12,
+                                border: "1px solid #e5e7eb",
+                                margin: "10px 0",
+                              }}
+                            />
+                          )}
+                
+                          <p className="listing-description">
+                            {form.description || t("previewDescriptionPlaceholder")}
+                          </p>
+                
+                          <div className="listing-meta" style={{ marginTop: 8 }}>
+                            {form.offerprice && (
+                              <>
+                                💶 <strong>{form.offerprice}</strong>&nbsp;&nbsp;
+                              </>
+                            )}
+                            {form.tags && <>🏷️ {form.tags}</>}
+                          </div>
+                        </div>
+                
+                        <button
+                          type="submit"
+                          className="btn submit"
+                          disabled={loading || paymentModalOpen}
+                        >
+                          {loading
+                            ? `⏳ ${t("loading")}`
+                            : `${t("createAndPay")} (${priceMap[plan]} ${t("eur")})`}
+                        </button>
+                      </form>
+                    )}
+                
+                    <section
+                      className="card trust-section"
+                      style={{ marginTop: "5%", height: "fit-content" }}
+                    >
+                      <h2 className="section-title">
+                        {t("whyTrustUs")}
+                      </h2>
+                      <ul className="trust-list">
+                        <li>
+                          ✅{" "}
+                          {t("trustPoint1")}
+                        </li>
+                        <li>
+                          ✅{" "}
+                          {t("trustPoint2")}
+                        </li>
+                        <li>
+                          ✅{" "}
+                          {t("trustPoint3")}
+                        </li>
+                        <li>
+                          ✅{" "}
+                          {t("trustPoint4")}
+                        </li>
+                      </ul>
+                    </section>
+                  </section>
+                ) : (
+                  <section className="card trust-section" style={{ height: "fit-content" }}>
+                    <h2 className="section-title">
+                      {t("whyTrustUs")}
+                    </h2>
+                    <ul className="trust-list">
+                      <li>
+                        ✅{" "}
+                        {t("trustPoint1")}
+                      </li>
+                      <li>
+                        ✅{" "}
+                        {t("trustPoint2")}
+                      </li>
+                      <li>
+                        ✅{" "}
+                        {t("trustPoint3")}
+                      </li>
+                      <li>
+                        ✅{" "}
+                        {t("trustPoint4")}
+                      </li>
+                    </ul>
+                  </section>
                 )}
-              </AnimatePresence>
+                </div>
+              </Motion.aside>
+            </Motion.div>
+          )}
+        </AnimatePresence>
     
         {/* MAP PICKER MODAL */}
         <AnimatePresence>
@@ -3862,8 +3859,7 @@ export default function App() {
                         alt="preview"
                         className="edit-image-preview"
                       />
-                    )
-                  }
+                    )}
                   </div>
                 </div>
 
@@ -4884,7 +4880,7 @@ export default function App() {
         </footer>
         <div id="recaptcha-signup" style={{ display: "none" }} />
         <div id="recaptcha-container" style={{ display: "none" }} />
-    </div>
-  </PayPalScriptProvider>
+      </div>
+    </PayPalScriptProvider>
   );
 }
