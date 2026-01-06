@@ -118,6 +118,8 @@ const translations = {
     menu: "Menu",
     filters: "Filters",
     filterSubtitle: "Refine your search",
+    favoritesOnly: "Favorites only",
+    language: "Language",
     activeFilters: "Active filters",
     closeFilters: "Close filters",
     clearAll: "Clear all",
@@ -131,6 +133,7 @@ const translations = {
     listing: "listing",
     listingsLabel: "listings",
     resultsLabel: "Results",
+    resultsPerPage: "Per page",
 
     // Authentication
     login: "Login",
@@ -188,6 +191,7 @@ const translations = {
     paypalError: "PayPal error:",
     orderCreated: "Order created. Complete payment below.",
     paymentComplete: "Payment complete. Listing verified.",
+    paymentRetry: "Payment declined by funding source. Please choose another method or re-approve.",
 
     // Dashboard / Data
     dashboard: "Dashboard",
@@ -246,7 +250,6 @@ const translations = {
     expires: "Expires",
     months: "month/s",
     allListingsHint: "View and filter all verified listings on the platform.",
-    resultsLabel: "results",
     expiringSoon: "Expiring soon",
     expired: "Expired",
     day: "day",
@@ -354,7 +357,6 @@ const translations = {
     enterCurrentPassword: "Please enter your current password.",
 
     myListingsHint: "Manage, edit and extend your listings.",
-    listingsLabel: "listings",
 
     priceRangeLabel: "Price range",
     tagsFieldLabel: "Tags",
@@ -393,7 +395,6 @@ const translations = {
     unspecified: "Unspecified",
     map: "Map",
     openInMaps: "Open in Maps",
-    listing: "Listing",
     postedOn: "Posted on",
     locationDetails: "Location details",
     aboutListing: "About this listing",
@@ -562,6 +563,8 @@ const translations = {
     menu: "Meny",
     filters: "Filtrat",
     filterSubtitle: "Përmirëso kërkimin tënd",
+    favoritesOnly: "Vetëm të preferuarat",
+    language: "Gjuha",
     activeFilters: "Filtrat aktive",
     closeFilters: "Mbyll filtrat",
     clearAll: "Pastro të gjitha",
@@ -572,9 +575,9 @@ const translations = {
     noListingsFound: "Nuk u gjetën listime",
     tryDifferentFilters: "Provo të ndryshosh kërkimin ose filtrat për të gjetur më shumë listime.",
     noListingsAvailable: "Aktualisht nuk ka listime të disponueshme.",
-    listing: "listim",
     listingsLabel: "listime",
     resultsLabel: "Rezultatet",
+    resultsPerPage: "Për faqe",
 
     // Authentication
     login: "Hyrje",
@@ -632,6 +635,7 @@ const translations = {
     paypalError: "Gabim në PayPal:",
     orderCreated: "U krijua porosia. Përfundoni pagesën më poshtë.",
     paymentComplete: "Pagesa u krye. Listimi u verifikua.",
+    paymentRetry: "Pagesa u refuzua nga burimi i fondeve. Zgjidh një metodë tjetër ose rikonfirmo.",
 
     // Dashboard / Data
     dashboard: "Paneli",
@@ -690,7 +694,6 @@ const translations = {
     expires: "Skadon",
     months: "muaj",
     allListingsHint: "Shiko dhe filtro të gjitha listimet e verifikuara në platformë.",
-    resultsLabel: "rezultate",
     expiringSoon: "Skadon së shpejti",
     expired: "Skaduar",
     day: "ditë",
@@ -800,7 +803,6 @@ const translations = {
     enterCurrentPassword: "Shkruaj fjalëkalimin aktual.",
 
     myListingsHint: "Menaxho, edito dhe zgjat listimet e tua.",
-    listingsLabel: "listime",
 
     priceRangeLabel: "Çmimi",
     tagsFieldLabel: "Etiketa",
@@ -840,7 +842,6 @@ const translations = {
     unspecified: "E papërcaktuar",
     map: "Harta",
     openInMaps: "Hape në Maps",
-    listing: "Listim",
     postedOn: "Postuar më",
     locationDetails: "Detajet e lokacionit",
     aboutListing: "Rreth këtij listimi",
@@ -890,16 +891,7 @@ const translations = {
     accountDetails: "Detajet e llogarisë suaj",
     updateEmailDesc: "Përditëso adresën e emailit",
     addPhoneNumber: "Shto numër telefoni",
-    switchToListView: "Kalo në pamjen listë",
-    switchToGridView: "Kalo në pamjen rrjetë",
-    activeFilters: "Filtrat aktivë",
-    removeFilter: "Hiq filtrin",
-    hideFilters: "Fshih filtrat",
-    showFilters: "Shfaq filtrat",
-    closeFilters: "Mbyll filtrat",
-    filterSubtitle: "Përsosni kërkimin tuaj",
-    clearSearch: "Pastro kërkimin",
-},
+  },
 
   mk: {
     // General
@@ -1018,6 +1010,8 @@ const translations = {
     menu: "Мени",
     filters: "Филтри",
     filterSubtitle: "Подобри го твоето пребарување",
+    favoritesOnly: "Само омилени",
+    language: "Јазик",
     activeFilters: "Активни филтри",
     closeFilters: "Затвори филтри",
     clearAll: "Исчисти се",
@@ -1028,9 +1022,9 @@ const translations = {
     noListingsFound: "Не се пронајдени огласи",
     tryDifferentFilters: "Обиди се да ги прилагодиш пребарувањето или филтрите за да најдеш повеќе огласи.",
     noListingsAvailable: "Моментално нема достапни огласи.",
-    listing: "оглас",
     listingsLabel: "огласи",
     resultsLabel: "Резултати",
+    resultsPerPage: "По страница",
 
     // Authentication
     login: "Најава",
@@ -1088,6 +1082,7 @@ const translations = {
     paypalError: "Грешка на PayPal:",
     orderCreated: "Пораката е креирана. Завршете ја плаќањето подолу.",
     paymentComplete: "Плаќањето е успешно. Огласот е верификуван.",
+    paymentRetry: "Плаќањето е одбиено од изворот на средства. Изберете друг метод или повторно одобрете.",
 
     // Dashboard / Data
     dashboard: "Контролна табла",
@@ -1147,7 +1142,6 @@ const translations = {
     months: "месец/и",
     allListingsHint:
       "Прегледај и филтрирај ги сите верификувани огласи на платформата.",
-    resultsLabel: "резултати",
     expiringSoon: "Скоро истекува",
     expired: "Истечен",
     day: "ден",
@@ -1260,7 +1254,6 @@ const translations = {
     enterCurrentPassword: "Внеси ја тековната лозинка.",
 
     myListingsHint: "Управувај, уреди и продолжи ги твоите огласи.",
-    listingsLabel: "огласи",
 
     priceRangeLabel: "Ценовен опсег",
     tagsFieldLabel: "Тагови",
@@ -1269,7 +1262,6 @@ const translations = {
     coverImage: "Насловна слика",
 
     // NEW: Sharing & trust
-    preview: "Преглед",
     share: "Сподели",
     shareText: "Споделено од Локален пазар за поддршка",
     shareCopied: "Линкот од огласот е копиран ✅",
@@ -1301,7 +1293,6 @@ const translations = {
     unspecified: "Неодредено",
     map: "Мапа",
     openInMaps: "Отвори во Maps",
-    listing: "Оглас",
     postedOn: "Објавено на",
     locationDetails: "Детали за локацијата",
     aboutListing: "За овој оглас",
@@ -1351,15 +1342,6 @@ const translations = {
     accountDetails: "Детали за вашата сметка",
     updateEmailDesc: "Ажурирај ја адресата на е-пошта",
     addPhoneNumber: "Додај телефонски број",
-    switchToListView: "Префрли на листа",
-    switchToGridView: "Префрли на мрежа",
-    activeFilters: "Активни филтри",
-    removeFilter: "Отстрани филтер",
-    hideFilters: "Сокриј филтри",
-    showFilters: "Прикажи филтри",
-    closeFilters: "Затвори филтри",
-    filterSubtitle: "Подобрете го пребарувањето",
-    clearSearch: "Исчисти пребарување",
 },
 };
 
