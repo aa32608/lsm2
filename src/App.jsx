@@ -114,18 +114,76 @@ const buildLocationString = (city, extra) => {
   return c || e;
 };
 
-const chunkArray = (items = [], size = 1) => {
-  const chunks = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
-};
+// small helpers kept minimal
 
 const getDescriptionPreview = (text = "", limit = 160) => {
   const clean = stripDangerous(text || "").trim();
   if (!clean) return "";
   return clean.length > limit ? `${clean.slice(0, limit).trim()}…` : clean;
+};
+
+const HeadManager = ({ title, description, keywords, canonical, image, jsonLd }) => {
+  const apply = (fn) => {
+    if (typeof document === "undefined") return;
+    fn();
+  };
+  useEffect(() => {
+    apply(() => {
+      if (title) document.title = title;
+      const ensureMetaByName = (name, content) => {
+        if (!content) return;
+        let el = document.head.querySelector(`meta[name="${name}"]`);
+        if (!el) {
+          el = document.createElement("meta");
+          el.setAttribute("name", name);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("content", content);
+      };
+      const ensureMetaByProp = (property, content) => {
+        if (!content) return;
+        let el = document.head.querySelector(`meta[property="${property}"]`);
+        if (!el) {
+          el = document.createElement("meta");
+          el.setAttribute("property", property);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("content", content);
+      };
+      const ensureLink = (rel, href) => {
+        if (!href) return;
+        let el = document.head.querySelector(`link[rel="${rel}"]`);
+        if (!el) {
+          el = document.createElement("link");
+          el.setAttribute("rel", rel);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("href", href);
+      };
+      const ensureJSONLD = (id, data) => {
+        if (!data) return;
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement("script");
+          el.type = "application/ld+json";
+          el.id = id;
+          document.head.appendChild(el);
+        }
+        el.textContent = JSON.stringify(data);
+      };
+      ensureMetaByName("description", description);
+      ensureMetaByName("keywords", keywords);
+      ensureMetaByProp("og:title", title);
+      ensureMetaByProp("og:description", description);
+      ensureMetaByProp("og:type", "website");
+      ensureMetaByProp("og:url", canonical);
+      ensureMetaByProp("og:image", image);
+      ensureMetaByName("twitter:card", "summary_large_image");
+      ensureLink("canonical", canonical);
+      ensureJSONLD("jsonld-site", jsonLd);
+    });
+  }, [title, description, keywords, canonical, image, jsonLd]);
+  return null;
 };
 
 /* Helper: normalize phone numbers before storing */
@@ -320,7 +378,6 @@ export default function App() {
 
   /* Featured carousel */
   const [activeFeaturedCategory, setActiveFeaturedCategory] = useState(featuredCategories[0]);
-  const [featuredSlide, setFeaturedSlide] = useState(0);
 
   /* Close sidebar with ESC */
   useEffect(() => {
@@ -856,7 +913,7 @@ export default function App() {
         if (json.redirect) {
           try {
             window.open(json.redirect, "_blank");
-          } catch {}
+          } catch { void 0; }
         }
         showMessage(
           t("paymentRetry") ||
@@ -936,7 +993,7 @@ export default function App() {
         if (json.redirect) {
           try {
             window.open(json.redirect, "_blank");
-          } catch {}
+          } catch { void 0; }
         }
         showMessage(
           t("paymentRetry") ||
@@ -1225,25 +1282,9 @@ export default function App() {
     [featuredByCategory]
   );
 
-  const featuredSlides = useMemo(() => {
-    const slides = {};
-    Object.entries(featuredByCategory).forEach(([cat, items]) => {
-      slides[cat] = chunkArray(items, FEATURED_SLIDE_SIZE);
-    });
-    return slides;
-  }, [featuredByCategory]);
+  // slides can be computed ad-hoc if needed
 
-  const changeFeaturedSlide = useCallback(
-    (delta) => {
-      const total = featuredSlides[activeFeaturedCategory]?.length || 1;
-      setFeaturedSlide((current) => {
-        const normalizedTotal = total || 1;
-        const next = (current + delta) % normalizedTotal;
-        return next < 0 ? normalizedTotal + next : next;
-      });
-    },
-    [activeFeaturedCategory, featuredSlides]
-  );
+  // auto-rotation is handled via intervals below
 
   const toggleFav = (id) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -1268,15 +1309,7 @@ export default function App() {
     }
   }, [activeFeaturedCategory, featuredCategoryOrder]);
 
-  useEffect(() => {
-    const slides = featuredSlides[activeFeaturedCategory] || [];
-    if (!slides.length) {
-      setFeaturedSlide(0);
-      return;
-    }
-
-    setFeaturedSlide((prev) => (prev >= slides.length ? 0 : prev));
-  }, [activeFeaturedCategory, featuredSlides]);
+  // normalize category when slides change
 
   useEffect(() => {
     if (featuredCategoryOrder.length <= 1) return undefined;
@@ -1292,16 +1325,7 @@ export default function App() {
     return () => clearInterval(id);
   }, [featuredCategoryOrder]);
 
-  useEffect(() => {
-    const slides = featuredSlides[activeFeaturedCategory] || [];
-    if (slides.length <= 1) return undefined;
-
-    const id = setInterval(() => {
-      setFeaturedSlide((current) => (current + 1) % slides.length);
-    }, 5000);
-
-    return () => clearInterval(id);
-  }, [activeFeaturedCategory, featuredSlides]);
+  // auto-advance handled by category rotation only
 
   const handleFeedbackSubmit = async (listingId) => {
     if (!listingId) return;
@@ -1447,130 +1471,15 @@ export default function App() {
   const activeListingCount = listings.length;
   const verifiedListingCount = listings.filter((l) => l.isVerified).length;
   const phoneVerifiedCount = listings.filter((l) => l.phoneVerified).length;
-  const featuredSlidesForActive = featuredSlides[activeFeaturedCategory] || [];
-  const featuredSlideCount = featuredSlidesForActive.length || 1;
-  const featuredItemsForSlide =
-    featuredSlidesForActive[featuredSlide] || featuredSlidesForActive[0] || [];
+  // current slides can be derived on render when needed
 
-  const homeActionCards = useMemo(
-    () => [
-      {
-        id: "post",
-        title: t("submitListing") || "Post a listing",
-        description:
-          t("heroPanelSubtitle") ||
-          "Publish a service in minutes with contact verification and a mobile-first preview.",
-        icon: "🚀",
-        cta: t("submitListing") || "Start now",
-        onClick: () => {
-          setShowPostForm(true);
-          setForm((f) => ({ ...f, step: 1 }));
-        },
-      },
-      {
-        id: "explore",
-        title: t("explore") || "Explore listings",
-        description:
-          t("allListingsHint") ||
-          "Filter by category, city, and tags without endless scrolling or reloads.",
-        icon: "🧭",
-        cta: t("explore") || "Browse",
-        onClick: () => setSelectedTab("allListings"),
-      },
-      {
-        id: "verify",
-        title: t("verified") || "Stay verified",
-        description:
-          t("heroPointTwo") ||
-          "Keep trust high with verified phone or email and clearly stated price ranges.",
-        icon: "🛡️",
-        cta: t("verifyYourEmail") || "Verify now",
-        onClick: () => setShowAuthModal(true),
-      },
-    ],
-    [t]
-  );
+  // action cards are rendered inline in the UI
 
-  const homeGrowthSteps = useMemo(
-    () => [
-      {
-        title: t("growthStepPost") || "Post today",
-        description:
-          t("growthStepPostDesc") ||
-          "Launch a verified offer with city tags and a clear price window.",
-        stat: `${activeListingCount} ${t("listingsLabel") || "listings"}`,
-      },
-      {
-        title: t("growthStepShare") || "Share fast",
-        description:
-          t("shareHint") ||
-          "Send your link to neighbours or socials and collect fresh feedback.",
-        stat: `${favorites.length} ${t("favorites") || "favorites"}`,
-      },
-      {
-        title: t("growthStepRespond") || "Respond anywhere",
-        description:
-          t("growthStepRespondDesc") ||
-          "Tap-friendly actions keep replies quick on any screen size.",
-        stat: `${verifiedListingCount} ${t("verified") || "verified"}`,
-      },
-    ],
-    [t, activeListingCount, favorites.length, verifiedListingCount]
-  );
+  // growth steps rendered inline
 
-  const trafficIdeas = useMemo(
-    () => [
-      {
-        icon: "📈",
-        title: t("trafficIdeasTrending") || "Trending carousel",
-        text:
-          t("spotlightHint") ||
-          "Keep one listing refreshed weekly to stay in the featured rail.",
-      },
-      {
-        icon: "💬",
-        title: t("trafficIdeasFeedback") || "Collect replies",
-        text:
-          t("trafficIdeasFeedbackDesc") ||
-          "Highlight reviews and phone verification to boost trust.",
-      },
-      {
-        icon: "🗺️",
-        title: t("trafficIdeasLocal") || "Local focus",
-        text:
-          t("trafficIdeasLocalDesc") ||
-          "Target nearby cities with chips and map-ready contact options.",
-      },
-    ],
-    [t]
-  );
+  // ideas rendered inline
 
-  const mobileHighlights = useMemo(
-    () => [
-      {
-        title: t("quickStart") || "Built for speed",
-        description:
-          t("exploreHeroSubtitle") ||
-          "Actions and stats sit side-by-side so the mobile layout stays within thumb reach.",
-        badge: `${activeListingCount} ${t("listingsLabel") || "listings"}`,
-      },
-      {
-        title: t("verified") || "Trust signals",
-        description:
-          t("heroPanelSubtitle") ||
-          "Badges, chips, and plan details stay visible even when cards stack on smaller screens.",
-        badge: `${phoneVerifiedCount} ${t("phoneVerified") || "phone verified"}`,
-      },
-      {
-        title: t("cityShortcuts") || "Local focus",
-        description:
-          t("mkRibbonSubtitle") ||
-          "City shortcuts, spotlight rails, and action tiles make it easy to hop between towns.",
-        badge: `${mkSpotlightCities.length} ${t("cities") || "cities"}`,
-      },
-    ],
-    [t, activeListingCount, phoneVerifiedCount]
-  );
+  // highlights rendered inline
 
   const primaryNav = useMemo(
     () => [
@@ -1593,15 +1502,7 @@ export default function App() {
     return t("dashboard") || "Dashboard";
   }, [selectedTab, t]);
 
-  const sortLabelMap = useMemo(
-    () => ({
-      topRated: t("sortTopRated") || "Highest rated",
-      newest: t("sortNewest"),
-      expiring: t("sortExpiring"),
-      az: t("sortAZ"),
-    }),
-    [t]
-  );
+  // sort labels are inlined where needed
 
   const authModeTabs = useMemo(
     () => [
@@ -1630,8 +1531,28 @@ export default function App() {
     setConfirmationResult(null);
   };
 
+  const canonicalUrl = typeof window !== "undefined" ? window.location.href : "";
+  const seoTitle = "BizCall - Local Services";
+  const seoDescription = "Find and share trusted local services across North Macedonia";
+  const seoKeywords = "local services, marketplace, North Macedonia, Skopje, Tetovo";
+  const ogImage = "/og-image.png";
+  const jsonLdData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "BizCall",
+    "url": canonicalUrl
+  };
+
   return (
     <PayPalScriptProvider options={{ "client-id": PAYPAL_CLIENT_ID, currency: "EUR", locale: "en_MK" }}>
+      <HeadManager
+        title={seoTitle}
+        description={seoDescription}
+        keywords={seoKeywords}
+        canonical={canonicalUrl}
+        image={ogImage}
+        jsonLd={jsonLdData}
+      />
       {message.text && <div className={`notification ${message.type}`}>{message.text}</div>}
 
       <div className="app">
