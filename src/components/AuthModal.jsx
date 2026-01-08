@@ -508,3 +508,5 @@ const AuthModal = ({
     </Motion.div>
   );
 }
+
+export default AuthModal;
