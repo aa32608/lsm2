@@ -13,7 +13,6 @@ import { validateEmail } from '../utils/validators';
 const AccountPage = ({ 
   t, 
   user, 
-  userProfile,
   accountPhone,
   listings,
   favorites,

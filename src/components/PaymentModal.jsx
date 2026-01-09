@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion as Motion } from 'framer-motion';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import { priceMap } from '../utils/constants';

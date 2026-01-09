@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { categoryIcons } from '../utils/constants';
-import { getDescriptionPreview, getDaysUntilExpiry, buildLocationString } from '../utils/helpers';
+import { getDescriptionPreview, getDaysUntilExpiry } from '../utils/helpers';
+import FilterSheet from '../components/FilterSheet';
 
 const MyListingsPage = ({ 
   t, 
@@ -19,19 +20,20 @@ const MyListingsPage = ({
   const [myListingsExpiryFilter, setMyListingsExpiryFilter] = useState("all");
   const [myListingsSort, setMyListingsSort] = useState("newest");
   const [myListingsSearch, setMyListingsSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const myListingsRaw = useMemo(
     () => listings.filter((l) => l.userId === user?.uid),
     [listings, user]
   );
 
-  const getListingStats = (listing) => {
+  const getListingStats = useCallback((listing) => {
     const stats = feedbackAverages[listing.id] || {};
     const feedbackCount = listing.feedbackCount ?? stats.count ?? 0;
     const avgRating = listing.avgRating ?? stats.avg ?? 0;
     const engagement = feedbackCount + (favorites.includes(listing.id) ? 1 : 0);
     return { feedbackCount, avgRating, engagement };
-  };
+  }, [feedbackAverages, favorites]);
 
   const myListings = useMemo(() => {
     let filtered = [...myListingsRaw];
@@ -116,7 +118,7 @@ const MyListingsPage = ({
       const stats = getListingStats(l);
       return sum + (stats.feedbackCount || 0);
     }, 0);
-  }, [myListingsRaw, feedbackAverages, favorites]);
+  }, [myListingsRaw, getListingStats]);
 
   return (
     <div className="dashboard">
@@ -213,25 +215,13 @@ const MyListingsPage = ({
                       value={myListingsSearch}
                       onChange={(e) => setMyListingsSearch(e.target.value)}
                     />
-                    <select
-                      className="select my-listings-filter-select"
-                      value={myListingsStatusFilter}
-                      onChange={(e) => setMyListingsStatusFilter(e.target.value)}
+                    <button
+                      type="button"
+                      className="btn btn-ghost filter-toggle-btn"
+                      onClick={() => setFiltersOpen(true)}
                     >
-                      <option value="all">{t("allStatuses") || "All statuses"}</option>
-                      <option value="verified">{t("verified")}</option>
-                      <option value="pending">{t("pending")}</option>
-                    </select>
-                    <select
-                      className="select my-listings-filter-select"
-                      value={myListingsExpiryFilter}
-                      onChange={(e) => setMyListingsExpiryFilter(e.target.value)}
-                    >
-                      <option value="all">{t("allExpiry") || "All"}</option>
-                      <option value="expiring">{t("expiringSoon") || "Expiring soon"}</option>
-                      <option value="active">{t("active") || "Active"}</option>
-                      <option value="expired">{t("expired") || "Expired"}</option>
-                    </select>
+                      🔍 {t("filters")}
+                    </button>
                   </div>
                   <div className="my-listings-filters-right">
                     <select
@@ -260,6 +250,22 @@ const MyListingsPage = ({
                   </div>
                 </div>
               )}
+
+              <FilterSheet
+                isOpen={filtersOpen}
+                onClose={() => setFiltersOpen(false)}
+                catFilter={myListingsStatusFilter}
+                setCatFilter={setMyListingsStatusFilter}
+                locFilter={myListingsExpiryFilter}
+                setLocFilter={setMyListingsExpiryFilter}
+                sortBy={myListingsSort}
+                setSortBy={setMyListingsSort}
+                categories={["all", "verified", "pending", "expiring", "active", "expired"]}
+                mkCities={[]}
+                t={t}
+                verifiedListings={myListingsRaw}
+                q={myListingsSearch}
+              />
 
               {myListings.length === 0 ? (
                 <div className="empty my-listings-empty">
