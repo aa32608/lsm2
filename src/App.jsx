@@ -1762,7 +1762,6 @@ export default function App() {
               verifiedListingCount={verifiedListingCount}
             />
           )}
-
         </div>
 
         <AnimatePresence>
@@ -2338,27 +2337,278 @@ export default function App() {
         </AnimatePresence>
 
         {/* ===== EDIT MODAL (restored, resized) ===== */}
-        <EditListingModal
-          isOpen={!!editingListing}
-          onClose={() => {
-            setEditingListing(null);
-            setEditForm(null);
-            setShowEditMapPicker(false);
-          }}
-          editForm={editForm}
-          setEditForm={setEditForm}
-          onSave={saveEdit}
-          t={t}
-          categories={categories}
-          mkCities={MK_CITIES}
-          categoryIcons={categoryIcons}
-          stripDangerous={stripDangerous}
-          showMapPicker={showEditMapPicker}
-          setShowMapPicker={setShowEditMapPicker}
-          editLocationPreview={editLocationPreview}
-          setSelectedTab={setSelectedTab}
-          plan={plan}
-        />
+        <AnimatePresence>
+          {editingListing && editForm && (
+            <Motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setEditingListing(null);
+                setEditForm(null);
+                setShowEditMapPicker(false);
+              }}
+            >
+              <Motion.div
+                className="modal edit-modal"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 20, opacity: 0 }}
+              >
+                <div className="modal-header">
+                  <h3 className="modal-title">{t("edit")}</h3>
+                  <button
+                    className="icon-btn"
+                    onClick={() => {
+                      setEditingListing(null);
+                      setEditForm(null);
+                      setShowEditMapPicker(false);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="modal-body edit-modal-body">
+                  <div className="edit-summary-banner">
+                    <div>
+                      <p className="eyebrow subtle">{t("preview") || "Preview"}</p>
+                      <h4 className="edit-summary-title">{editForm.name || t("name")}</h4>
+                      <p className="edit-summary-sub">
+                        {(t(editForm.category) || editForm.category || t("category"))} • {editLocationPreview || t("location")}
+                      </p>
+                    </div>
+                    <div className="pill-row">
+                      <span className="pill pill-soft">⏱️ {editForm.plan || plan} {t("months")}</span>
+                      {editForm.offerprice && <span className="pill pill-price">{editForm.offerprice}</span>}
+                    </div>
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label">{t("name")}</label>
+                    <input
+                      className="input"
+                      value={editForm.name}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          name: stripDangerous(e.target.value).slice(0, 100),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label">{t("category")}</label>
+                    <select
+                      className="select"
+                      value={editForm.category}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, category: e.target.value })
+                      }
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {t(cat)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="field-row-2">
+                    <div className="field-group">
+                      <label className="field-label">{t("location")}</label>
+                      <select
+                        className="select"
+                        value={editForm.locationCity}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            locationCity: e.target.value,
+                          })
+                        }
+                      >
+                        <option value="">{t("selectCity")}</option>
+                        {MK_CITIES.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        className="input"
+                        placeholder={t("locationExtra")}
+                        value={editForm.locationExtra || ""}
+                        onChange={(e) => {
+                          const extra = stripDangerous(e.target.value).slice(0, 100);
+                          setEditForm({
+                            ...editForm,
+                            locationExtra: extra,
+                          });
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        className="btn btn-ghost small"
+                        onClick={() => setShowEditMapPicker(true)}
+                        style={{ marginTop: 6 }}
+                      >
+                        {t("chooseOnMap")}
+                      </button>
+
+                      <p className="field-hint">
+                        📍 {editLocationPreview || t("selectCity")}
+                      </p>
+                    </div>
+
+                    <div className="field-group">
+                      <label className="field-label">{t("contact")}</label>
+                      <input
+                        className="input"
+                        type="tel"
+                        value={editForm.contact || ""}
+                        disabled
+                        readOnly
+                      />
+                      <p className="field-hint">
+                        {t("contactEditLocked") || "Update your phone number in Account settings."}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn btn-ghost small"
+                        onClick={() => setSelectedTab("account")}
+                      >
+                        {t("goToAccount") || "Go to account"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label">{t("description")}</label>
+                    <textarea
+                      className="textarea"
+                      rows={4}
+                      value={editForm.description}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          description: stripDangerous(e.target.value).slice(0, 1000),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="field-row-2">
+                    <div className="field-group">
+                      <label className="field-label">
+                        {t("priceRangeLabel") || "Price range"}
+                      </label>
+                      <input
+                        className="input"
+                        placeholder="e.g. 500 - 800 MKD"
+                        value={editForm.offerprice}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            offerprice: stripDangerous(e.target.value),
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="field-group">
+                      <label className="field-label">
+                        {t("tagsFieldLabel") || "Tags"}
+                      </label>
+                      <input
+                        className="input"
+                        placeholder={t("tagsPlaceholder") || "Tags (optional)"}
+                        value={editForm.tags}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            tags: stripDangerous(e.target.value).slice(0, 64),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label">
+                      {t("websiteFieldLabel") || "Social / Website"}
+                    </label>
+                    <input
+                      className="input"
+                      placeholder={t("websitePlaceholder") || "Link (optional)"}
+                      value={editForm.socialLink}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          socialLink: stripDangerous(e.target.value).slice(0, 200),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <label className="field-label">
+                      {t("coverImage") || "Cover image (local only)"}
+                    </label>
+                    <div className="edit-image-row">
+                      <label className="btn btn-ghost small" htmlFor="edit-image">
+                        {t("uploadCoverLocal") || "Upload cover"}
+                      </label>
+                      <input
+                        id="edit-image"
+                        style={{ display: "none" }}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) =>
+                            setEditForm((f) => ({
+                              ...f,
+                              imagePreview: ev.target?.result || null,
+                            }));
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </div>
+                    {editForm.imagePreview && (
+                      <img
+                        src={editForm.imagePreview}
+                        alt="preview"
+                        className="edit-image-preview"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div className="modal-actions">
+                  <button className="btn" onClick={saveEdit}>
+                    {t("save")}
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => {
+                      setEditingListing(null);
+                      setEditForm(null);
+                      setShowEditMapPicker(false);
+                    }}
+                  >
+                    {t("cancel")}
+                  </button>
+                </div>
+              </Motion.div>
+            </Motion.div>
+          )}
+        </AnimatePresence>
 
 
         {/* ===== PAYMENT MODAL (restored) ===== */}
