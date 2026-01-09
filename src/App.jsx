@@ -24,8 +24,6 @@ import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import "leaflet/dist/leaflet.css";
 import NorthMacedoniaMap from "./NorthMacedoniaMap";
-import EditListingModal from "./components/EditListingModal";
-import FilterSheet from "./components/FilterSheet";
 import "./App.css";
 import Sidebar from "./Sidebar";
 import { TRANSLATIONS } from "./translations";
