@@ -1,19 +1,14 @@
-import React from 'react';
-import { categoryIcons, featuredCategories, mkSpotlightCities } from '../utils/constants';
-
-const HomePage = ({ 
-  t, 
-  setSelectedTab, 
+export default function HomeTab({
+  t,
   setShowPostForm,
   setForm,
-  setCatFilter,
-  setLocFilter,
-  listings,
-  user
-}) => {
-  const activeListingCount = listings.length;
-  const verifiedListingCount = listings.filter((l) => l.status === "verified").length;
-
+  setSelectedTab,
+  featuredCategories,
+  categoryIcons,
+  mkSpotlightCities,
+  activeListingCount,
+  verifiedListingCount
+}) {
   return (
     <div className="app-main-content">
       {/* HERO SECTION */}
@@ -30,7 +25,10 @@ const HomePage = ({
           >
             📝 {t("homeSimpleCtaPost")}
           </button>
-          <button className="btn btn-outline" onClick={() => setSelectedTab("allListings")}>
+          <button
+            className="btn btn-outline"
+            onClick={() => setSelectedTab("allListings")}
+          >
             🔍 {t("homeSimpleCtaBrowse")}
           </button>
         </div>
@@ -50,7 +48,6 @@ const HomePage = ({
                 key={cat}
                 className="simple-chip"
                 onClick={() => {
-                  setCatFilter(t(cat));
                   setSelectedTab("allListings");
                 }}
               >
@@ -69,7 +66,6 @@ const HomePage = ({
                 key={city}
                 className="simple-chip"
                 onClick={() => {
-                  setLocFilter(city);
                   setSelectedTab("allListings");
                 }}
               >
@@ -108,74 +104,18 @@ const HomePage = ({
 
       {/* QUICK STATS */}
       <section className="stats-section">
-        <h3>📊 {t("homeDigest") || "Live snapshot"}</h3>
+        <h3>📊 {t("homeDigest")}</h3>
         <div className="stats-grid">
           <div className="stat-item">
             <p className="stat-value blue">{activeListingCount}</p>
-            <p className="stat-label">{t("listingsLabel") || "Active"}</p>
+            <p className="stat-label">{t("listingsLabel")}</p>
           </div>
           <div className="stat-item">
             <p className="stat-value green">{verifiedListingCount}</p>
-            <p className="stat-label">{t("verified") || "Verified"}</p>
-          </div>
-          <div className="stat-item">
-            <p className="stat-value purple">{mkSpotlightCities.length}</p>
-            <p className="stat-label">{t("cities") || "Cities"}</p>
+            <p className="stat-label">{t("verified")}</p>
           </div>
         </div>
       </section>
-
-      {/* Feature Grid */}
-      {user && (
-        <section className="home-feature-grid">
-          <div className="card feature-card feature-card--primary">
-            <div className="feature-card__head">
-              <p className="eyebrow subtle">{t("getStartedFast")}</p>
-              <h2 className="section-title">✨ {t("heroTitle")}</h2>
-              <p className="section-subtitle-small">{t("spotlightHintHero")}</p>
-            </div>
-            <div className="feature-points">
-              <div className="feature-point">
-                <div className="feature-icon">🚀</div>
-                <div>
-                  <h4>{t("submitListing")}</h4>
-                  <p>{t("submitListingDesc")}</p>
-                </div>
-              </div>
-              <div className="feature-point">
-                <div className="feature-icon">🧭</div>
-                <div>
-                  <h4>{t("explore")}</h4>
-                  <p>{t("exploreHint")}</p>
-                </div>
-              </div>
-              <div className="feature-point">
-                <div className="feature-icon">🛡️</div>
-                <div>
-                  <h4>{t("verified")}</h4>
-                  <p>{t("verifiedHint")}</p>
-                </div>
-              </div>
-            </div>
-            <div className="feature-actions">
-              <button className="btn" onClick={() => setSelectedTab("allListings")}>
-                🔍 {t("browseMarketplace")}
-              </button>
-              <button
-                className="btn btn-ghost"
-                onClick={() => {
-                  setShowPostForm(true);
-                  setForm((f) => ({ ...f, step: 1 }));
-                }}
-              >
-                ➕ {t("postService")}
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
-};
-
-export default HomePage;
+}
