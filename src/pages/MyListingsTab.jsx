@@ -1,61 +1,78 @@
-export default function AccountTab({
+export default function MyListingsTab({
   t,
-  user,
-  logout,
-  setLanguage,
-  language,
-  verifiedListingCount,
-  activeListingCount,
+  myListings,
+  categoryIcons,
+  setSelectedListing,
+  setEditingListing,
+  setShowExtendModal,
+  setShowDeleteConfirm,
 }) {
   return (
-    <div className="section account-section">
+    <div className="section my-listings-section">
       <div className="section-header-row">
         <div>
-          <h2 className="section-title-inner">👤 {t("account")}</h2>
+          <h2 className="section-title-inner">📦 {t("myListings")}</h2>
           <p className="section-subtitle-small">
-            {t("accountSubtitle")}
+            {t("myListingsSubtitle")}
           </p>
         </div>
       </div>
 
-      {/* USER CARD */}
-      <div className="account-card">
-        <p>
-          <strong>{t("email")}:</strong> {user?.email}
-        </p>
-
-        <div className="account-stats">
-          <div>
-            <span className="stat-value blue">{activeListingCount}</span>
-            <span className="stat-label">{t("listingsLabel")}</span>
-          </div>
-          <div>
-            <span className="stat-value green">{verifiedListingCount}</span>
-            <span className="stat-label">{t("verified")}</span>
-          </div>
+      {myListings.length === 0 ? (
+        <div className="empty-state">
+          <p>📭 {t("noMyListings")}</p>
         </div>
-      </div>
+      ) : (
+        <div className="listing-grid compact">
+          {myListings.map((l) => (
+            <article key={l.id} className="listing-card elevated">
+              <header className="listing-header">
+                <div className="listing-icon-bubble">
+                  {categoryIcons[l.category] || "🏷️"}
+                </div>
+                <h3 className="listing-title">{l.name}</h3>
+              </header>
 
-      {/* LANGUAGE */}
-      <div className="account-card">
-        <h3>🌐 {t("language")}</h3>
-        <select
-          className="select"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-        >
-          <option value="mk">Македонски</option>
-          <option value="sq">Shqip</option>
-          <option value="en">English</option>
-        </select>
-      </div>
+              <div className="listing-meta-row">
+                {l.location && <span>📍 {l.location}</span>}
+                {l.expiresAt && (
+                  <span>⏳ {t("expires")} {l.expiresAt}</span>
+                )}
+              </div>
 
-      {/* LOGOUT */}
-      <div className="account-card">
-        <button className="btn btn-danger" onClick={logout}>
-          🚪 {t("logout")}
-        </button>
-      </div>
+              <div className="listing-actions-row">
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setSelectedListing(l)}
+                >
+                  👁 {t("view")}
+                </button>
+
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setEditingListing(l)}
+                >
+                  ✏️ {t("edit")}
+                </button>
+
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => setShowExtendModal(l)}
+                >
+                  ⏱ {t("extend")}
+                </button>
+
+                <button
+                  className="btn btn-danger"
+                  onClick={() => setShowDeleteConfirm(l)}
+                >
+                  🗑 {t("delete")}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
