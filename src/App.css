@@ -2006,7 +2006,7 @@ body {
 .listing-description-preview {
   -webkit-line-clamp: 4;
   line-clamp: 4;
-  min-height: 86px;
+  min-height: 24px;
   margin-bottom: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;

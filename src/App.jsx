@@ -2680,7 +2680,7 @@ export default function App() {
 
                                     <div className="listing-card-body">
                                       <p className="listing-description listing-description-clamp listing-description-preview">
-                                        {getDescriptionPreview(l.description, 180)}
+                                        {getDescriptionPreview(l.description, 120)}
                                       </p>
 
                                       {(() => {
