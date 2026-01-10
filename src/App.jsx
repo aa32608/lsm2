@@ -1953,7 +1953,7 @@ export default function App() {
 
                                 <div className="listing-card-body-enhanced">
                                   <p className="listing-description clamp-3 enhanced-copy">
-                                    {getDescriptionPreview(l.description, 120)}
+                                    {getDescriptionPreview(l.description, 15)}
                                   </p>
 
                                   {(() => {
@@ -2680,7 +2680,7 @@ export default function App() {
 
                                     <div className="listing-card-body">
                                       <p className="listing-description listing-description-clamp listing-description-preview">
-                                        {getDescriptionPreview(l.description, 120)}
+                                        {getDescriptionPreview(l.description, 30)}
                                       </p>
 
                                       {(() => {
