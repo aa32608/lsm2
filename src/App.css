@@ -3056,21 +3056,21 @@ body {
     max-width: 100%;
     width: 100%;
     box-sizing: border-box;
-    padding: 16px;
+    padding: 6px;
   }
 
   .listing-card-body {
     min-width: 0;
     overflow: hidden;
     gap: .5px;
-    padding: 5px;
+    padding: 1px;
   }
 
   .listing-grid-list .listing-card {
     display: flex;
     flex-direction: column;
     gap: .5px;
-    padding: 6px;
+    padding: 1px;
   }
 
   .listing-grid-list .listing-icon-bubble {
@@ -6492,7 +6492,7 @@ body {
   }
 
   .listing-card {
-    padding: 14px;
+    padding: 6px;
   }
 
   .listing-header {
@@ -6696,7 +6696,7 @@ body {
 
   /* Improved Card Styles */
   .listing-card {
-    padding: 16px;
+    padding: 6px;
     border-radius: 16px;
     margin-bottom: 16px;
   }
@@ -6766,7 +6766,7 @@ body {
   }
 
   .container {
-    padding: 0 12px;
+    padding: 0 1px;
   }
 
   .home-hero__grid {
@@ -6853,7 +6853,7 @@ body {
   }
 
   .listing-card {
-    padding: 16px;
+    padding: 6px;
     margin: 0 auto;
   }
 
@@ -6983,7 +6983,7 @@ body {
   }
 
   .listing-card-body-enhanced {
-    padding: 14px;
+    padding: 5px;
   }
 
   .my-listing-footer {
