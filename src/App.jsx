@@ -323,7 +323,6 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [countryCode, setCountryCode] = useState("+389");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
@@ -352,11 +351,6 @@ export default function App() {
 
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    repeatNewPassword: "",
-  });
 
   const handleSubscriptionChange = async (e) => {
     const isChecked = e.target.checked;
