@@ -199,8 +199,8 @@ const normalizePhoneForStorage = (raw) => {
   return "+389" + cleaned;
 };
 
-const MAILGUN_API_KEY = MAILGUN_API;
-const MAILGUN_DOMAIN = MAILGUN_DOM;
+const MAILGUN_API_KEY = import.meta.env.MAILGUN_API;
+const MAILGUN_DOMAIN = import.meta.env.MAILGUN_DOM;
 
 const sendEmail = async (to, subject, text) => {
   const formData = new URLSearchParams();
