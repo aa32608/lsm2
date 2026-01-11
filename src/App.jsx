@@ -1,6 +1,6 @@
 // src/App.jsx
 
-import logo from "./assets/logo.svg";
+import logo from "./assets/logo.png";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
 import { ref as dbRef, set, update, onValue, remove, push } from "firebase/database";
