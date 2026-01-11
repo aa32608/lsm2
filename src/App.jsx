@@ -200,7 +200,7 @@ const normalizePhoneForStorage = (raw) => {
 };
 
 const MAILGUN_API_KEY = MAILGUN_API;
-const MAILGUN_DOMAIN = "sandboxea6610a1b6e24108912879e0ca613641.mailgun.org";
+const MAILGUN_DOMAIN = MAILGUN_DOM;
 
 const sendEmail = async (to, subject, text) => {
   const formData = new URLSearchParams();
