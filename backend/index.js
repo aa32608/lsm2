@@ -10,7 +10,13 @@ import { Resend } from "resend";
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend lazily to prevent crash if API key is missing during startup
+let resend;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+} else {
+  console.warn("WARNING: RESEND_API_KEY is not set. Email functionality will be disabled.");
+}
 
 /* -------------------- FIREBASE SETUP (Render-friendly) -------------------- */
 
@@ -312,8 +318,8 @@ app.post("/api/send-email", async (req, res) => {
   }
 
   try {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("Resend API key missing");
+    if (!resend) {
+      throw new Error("Resend is not configured. Please set RESEND_API_KEY.");
     }
 
     const { data, error } = await resend.emails.send({
@@ -362,8 +368,8 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
       return res.status(200).json({ message: "No subscribed users" });
     }
 
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("Resend API key missing");
+    if (!resend) {
+      throw new Error("Resend is not configured. Please set RESEND_API_KEY.");
     }
 
     const emailPromises = subscribedUsers.map(async (user) => {
