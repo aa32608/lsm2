@@ -1,17 +1,10 @@
 {
-  "name": "BizCall - Local Services Marketplace",
+  "name": "BizCall - Local Services",
   "short_name": "BizCall",
-  "description": "Find and share trusted local services across North Macedonia",
+  "description": "Find trusted local services",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "icons": [
-    {
-      "src": "/logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
+  "icons": []
 }
