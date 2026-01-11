@@ -199,6 +199,30 @@ const normalizePhoneForStorage = (raw) => {
   return "+389" + cleaned;
 };
 
+const MAILGUN_API_KEY = "YOUR_MAILGUN_API_KEY";
+const MAILGUN_DOMAIN = "YOUR_MAILGUN_DOMAIN";
+
+const sendEmail = async (to, subject, text) => {
+  const formData = new URLSearchParams();
+  formData.append("from", `Excited User <mailgun@${MAILGUN_DOMAIN}>`);
+  formData.append("to", to);
+  formData.append("subject", subject);
+  formData.append("text", text);
+
+  const response = await fetch(
+    `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
+      },
+      body: formData,
+    }
+  );
+
+  return response;
+};
+
 const TabBar = ({ items = [], value, onChange, className = "", size = "default", fullWidth = false }) => (
   <div
     className={[
@@ -311,8 +335,8 @@ export default function App() {
   // For signup phone verification
   // const [signupPhoneLoading, setSignupPhoneLoading] = useState(false);
   const [emailForm, setEmailForm] = useState({
-  newEmail: "",
-  currentPassword: "",
+    newEmail: "",
+    currentPassword: "",
   });
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -320,8 +344,58 @@ export default function App() {
     repeatNewPassword: "",
   });
 
+  // Phone number editing state
+  const [phoneEditing, setPhoneEditing] = useState(false);
+  const [phoneCountryCode, setPhoneCountryCode] = useState("+389");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    repeatNewPassword: "",
+  });
+
+  const handleSubscriptionChange = async (e) => {
+    const isChecked = e.target.checked;
+    try {
+      await update(dbRef(db, `users/${user.uid}`), {
+        subscribedToMarketing: isChecked,
+      });
+      setUserProfile((prev) => ({ ...prev, subscribedToMarketing: isChecked }));
+      showMessage(t("subscriptionUpdated"), "success");
+    } catch (err) {
+      showMessage(t("errorUpdatingSubscription") + " " + err.message, "error");
+    }
+  };
+
+  const handleChangePhone = async (e) => {
+    e.preventDefault();
+    if (!passwordForm.currentPassword) {
+      showMessage(t("passwordRequired"), "error");
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, passwordForm.currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      const fullPhoneNumber = `${phoneCountryCode}${phoneNumber}`;
+      const normalizedPhone = normalizePhoneForStorage(fullPhoneNumber);
+      await update(dbRef(db, `users/${user.uid}`), { 
+        phone: normalizedPhone 
+      });
+      setAccountPhone(normalizedPhone);
+      setPhoneEditing(false);
+      showMessage(t("phoneUpdated"), "success");
+    } catch (err) {
+      showMessage(t("errorUpdatingPhone") + " " + err.message, "error");
+    } finally {
+      setSavingPhone(false);
+      setPasswordForm((f) => ({ ...f, currentPassword: "" }));
+    }
+  };
 
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -528,6 +602,35 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const checkExpiringListings = () => {
+    const now = Date.now();
+    const sevenDaysFromNow = now + 7 * 24 * 60 * 60 * 1000;
+    const expiringListings = myListingsRaw.filter(
+      (l) => l.expiresAt > now && l.expiresAt <= sevenDaysFromNow
+    );
+
+    if (expiringListings.length > 0) {
+      expiringListings.forEach((listing) => {
+        const ownerEmail = userProfile?.email;
+        if (ownerEmail) {
+          const subject = `Your listing "${listing.name}" is expiring soon!`;
+          const text = `Hi, your listing "${listing.name}" is expiring on ${new Date(
+            listing.expiresAt
+          ).toLocaleDateString()}. Renew it now to keep it active.`;
+          sendEmail(ownerEmail, subject, text);
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkExpiringListings();
+    }, 24 * 60 * 60 * 1000); // Check once a day
+
+    return () => clearInterval(interval);
+  }, [myListingsRaw]);
 
   /* Email-link sign-in (preserved) */
   useEffect(() => {
@@ -2149,11 +2252,57 @@ export default function App() {
                                   <div className="account-info-item-icon">📞</div>
                                   <div className="account-info-item-content">
                                     <p className="account-info-label">{t("phoneNumber")}</p>
-                                    <p className="account-info-value">
-                                      {accountPhone || (
-                                        <span className="account-info-placeholder">{t("addPhoneNumber")}</span>
-                                      )}
-                                    </p>
+                                    {!phoneEditing ? (
+                                      <>
+                                        <p className="account-info-value">
+                                          {accountPhone || (
+                                            <span className="account-info-placeholder">{t("addPhoneNumber")}</span>
+                                          )}
+                                        </p>
+                                        <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
+                                      </>
+                                    ) : (
+                                      <form className="account-form-enhanced" onSubmit={handleChangePhone}>
+                                        <div className="phone-input-group">
+                                          <select
+                                            value={phoneCountryCode}
+                                            onChange={(e) => setPhoneCountryCode(e.target.value)}
+                                            className="phone-country"
+                                          >
+                                            {countryCodes.map((c) => (
+                                              <option key={c.code} value={c.code}>
+                                                {c.code}
+                                              </option>
+                                            ))}
+                                          </select>
+                                          <input
+                                            type="tel"
+                                            className="phone-number"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value)}
+                                            placeholder={t("phoneNumber")}
+                                          />
+                                        </div>
+                                        <div className="account-form-field">
+                                          <label className="account-form-label">{t("currentPassword")}</label>
+                                          <input
+                                            type="password"
+                                            className="input account-form-input"
+                                            value={passwordForm.currentPassword}
+                                            onChange={(e) =>
+                                              setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))
+                                            }
+                                            placeholder={t("currentPasswordPlaceholder")}
+                                          />
+                                        </div>
+                                        <div className="account-form-actions">
+                                          <button type="button" className="btn btn-ghost small" onClick={() => setPhoneEditing(false)}>{t("cancel")}</button>
+                                          <button type="submit" className="btn small" disabled={savingPhone}>
+                                            {savingPhone ? t("saving") : t("savePhone")}
+                                          </button>
+                                        </div>
+                                      </form>
+                                    )}
                                   </div>
                                 </div>
                                 
@@ -2349,6 +2498,27 @@ export default function App() {
                                     </button>
                                   </div>
                                 </form>
+                              </div>
+
+                              {/* Divider */}
+                              <div className="account-form-divider"></div>
+
+                              {/* Email Subscription */}
+                              <div className="account-form-section">
+                                <div className="account-form-section-header">
+                                  <h4 className="account-form-section-title">📧 {t("emailSubscription")}</h4>
+                                  <p className="account-form-section-desc">{t("subscribeToWeeklyEmails")}</p>
+                                </div>
+                                <div className="account-form-field">
+                                  <label className="account-form-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={userProfile?.subscribedToMarketing}
+                                      onChange={handleSubscriptionChange}
+                                    />
+                                    {t("subscribeToWeeklyEmails")}
+                                  </label>
+                                </div>
                               </div>
                             </div>
                           </div>
