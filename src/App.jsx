@@ -365,6 +365,14 @@ export default function App() {
     }
   };
 
+  const [accountPhone, setAccountPhone] = useState("");
+
+  useEffect(() => {
+    setAccountPhone(
+      normalizePhoneForStorage(user?.phoneNumber || userProfile?.phone || "")
+    );
+  }, [user, userProfile]);
+
   const handleChangePhone = async (e) => {
     e.preventDefault();
     if (!passwordForm.currentPassword) {
@@ -596,6 +604,12 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const myListingsRaw = useMemo(() => {
+    if (!user) return [];
+    return listings.filter(l => l.userId === user.uid);
+  }, [listings, user]);
+
 
   const checkExpiringListings = () => {
     const now = Date.now();
@@ -830,10 +844,6 @@ export default function App() {
   const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const validatePhone = (s) => !!s && s.replace(/\D/g, "").length >= 8 && s.replace(/\D/g, "").length <= 16;
 
-  const accountPhone = useMemo(
-    () => normalizePhoneForStorage(user?.phoneNumber || userProfile?.phone || ""),
-    [user?.phoneNumber, userProfile]
-  );
 
   useEffect(() => {
     if (!accountPhone) return;
@@ -1248,8 +1258,6 @@ export default function App() {
     return days;
   };
 
-  const myListingsRaw = useMemo(() => listings.filter((l) => l.userId === user?.uid), [listings, user]);
-  
   const myListings = useMemo(() => {
     let filtered = [...myListingsRaw];
     
