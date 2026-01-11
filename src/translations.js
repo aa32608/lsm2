@@ -1,6 +1,6 @@
 // import { log } from "console";
 
-const translations = {
+const TRANSLATIONS = {
   en: {
     // General
     ",": ",",
@@ -566,4 +566,4 @@ const translations = {
   },
 };
 
-export default translations;
+export default TRANSLATIONS;
