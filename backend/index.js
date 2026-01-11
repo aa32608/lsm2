@@ -6,8 +6,11 @@ import fetch from "node-fetch";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 import cors from "cors";
+import { Resend } from "resend";
 
 dotenv.config();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /* -------------------- FIREBASE SETUP (Render-friendly) -------------------- */
 
@@ -309,34 +312,23 @@ app.post("/api/send-email", async (req, res) => {
   }
 
   try {
-    const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-    const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      throw new Error("Mailgun configuration missing");
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("Resend API key missing");
     }
 
-    const formData = new URLSearchParams();
-    formData.append("from", `Local Support Market <mailgun@${MAILGUN_DOMAIN}>`);
-    formData.append("to", to);
-    formData.append("subject", subject);
-    formData.append("text", text);
-
-    const response = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString("base64")}`,
-      },
-      body: formData,
+    const { data, error } = await resend.emails.send({
+      from: "BizCall MK <onboarding@resend.dev>", // Replace with your verified domain
+      to: [to],
+      subject: subject,
+      text: text,
     });
 
-    if (response.ok) {
-      res.json({ ok: true });
-    } else {
-      const errorData = await response.json();
-      console.error("Mailgun error:", errorData);
-      res.status(500).json({ error: "Failed to send email" });
+    if (error) {
+      console.error("Resend error:", error);
+      return res.status(500).json({ error: "Failed to send email" });
     }
+
+    res.json({ ok: true, id: data.id });
   } catch (err) {
     console.error("Email send error:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -370,31 +362,27 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
       return res.status(200).json({ message: "No subscribed users" });
     }
 
-    const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-    const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-
-    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
-      throw new Error("Mailgun configuration missing");
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error("Resend API key missing");
     }
 
     const emailPromises = subscribedUsers.map(async (user) => {
-      const formData = new URLSearchParams();
-      formData.append("from", `Local Support Market <mailgun@${MAILGUN_DOMAIN}>`);
-      formData.append("to", user.email);
-      formData.append("subject", "Your Weekly Update from Local Support Market!");
-      formData.append("text", `Hi ${user.name || "there"},\n\nCheck out the latest listings on Local Support Market!\n\nBest,\nThe Team`);
-
-      return fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString("base64")}`,
-        },
-        body: formData,
+      return resend.emails.send({
+        from: "BizCall MK <onboarding@resend.dev>", // Replace with your verified domain
+        to: [user.email],
+        subject: "Your Weekly Update from BizCall MK!",
+        text: `Hi ${user.name || "there"},\n\nCheck out the latest listings on BizCall MK!\n\nBest,\nThe Team`,
       });
     });
 
-    await Promise.all(emailPromises);
-    res.json({ ok: true, sentCount: subscribedUsers.length });
+    const results = await Promise.all(emailPromises);
+    const errors = results.filter((r) => r.error);
+
+    if (errors.length > 0) {
+      console.error("Some Resend emails failed:", errors);
+    }
+
+    res.json({ ok: true, sentCount: subscribedUsers.length - errors.length });
   } catch (err) {
     console.error("Weekly email error:", err);
     res.status(500).json({ error: "Failed to send emails" });
