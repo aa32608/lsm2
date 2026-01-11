@@ -299,6 +299,108 @@ app.get("/api/paypal/verify-order/:orderId/:listingId", async (req, res) => {
   }
 });
 
+/* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
+
+app.post("/api/send-email", async (req, res) => {
+  const { to, subject, text } = req.body;
+
+  if (!to || !subject || !text) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
+    const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
+
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+      throw new Error("Mailgun configuration missing");
+    }
+
+    const formData = new URLSearchParams();
+    formData.append("from", `Local Support Market <mailgun@${MAILGUN_DOMAIN}>`);
+    formData.append("to", to);
+    formData.append("subject", subject);
+    formData.append("text", text);
+
+    const response = await fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString("base64")}`,
+      },
+      body: formData,
+    });
+
+    if (response.ok) {
+      res.json({ ok: true });
+    } else {
+      const errorData = await response.json();
+      console.error("Mailgun error:", errorData);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  } catch (err) {
+    console.error("Email send error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
+
+app.post("/api/admin/send-weekly-marketing", async (req, res) => {
+  const { adminKey } = req.body;
+  
+  // Basic security check
+  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const usersRef = db.ref("users");
+    const snapshot = await usersRef.once("value");
+    const users = snapshot.val();
+
+    if (!users) {
+      return res.status(200).json({ message: "No users found" });
+    }
+
+    const subscribedUsers = Object.values(users).filter(
+      (user) => user.subscribedToMarketing && user.email
+    );
+
+    if (subscribedUsers.length === 0) {
+      return res.status(200).json({ message: "No subscribed users" });
+    }
+
+    const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
+    const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
+
+    if (!MAILGUN_API_KEY || !MAILGUN_DOMAIN) {
+      throw new Error("Mailgun configuration missing");
+    }
+
+    const emailPromises = subscribedUsers.map(async (user) => {
+      const formData = new URLSearchParams();
+      formData.append("from", `Local Support Market <mailgun@${MAILGUN_DOMAIN}>`);
+      formData.append("to", user.email);
+      formData.append("subject", "Your Weekly Update from Local Support Market!");
+      formData.append("text", `Hi ${user.name || "there"},\n\nCheck out the latest listings on Local Support Market!\n\nBest,\nThe Team`);
+
+      return fetch(`https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${Buffer.from(`api:${MAILGUN_API_KEY}`).toString("base64")}`,
+        },
+        body: formData,
+      });
+    });
+
+    await Promise.all(emailPromises);
+    res.json({ ok: true, sentCount: subscribedUsers.length });
+  } catch (err) {
+    console.error("Weekly email error:", err);
+    res.status(500).json({ error: "Failed to send emails" });
+  }
+});
+
 /* -------------------------- START SERVER -------------------------- */
 
 app.listen(PORT, () => {

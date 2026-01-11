@@ -3,7 +3,7 @@ const OFFLINE_URL = '/';
 const ASSETS = [
   '/',
   '/manifest.json',
-  '/assets/logo.png'
+  '/logo.png'
 ];
 
 self.addEventListener('install', (event) => {

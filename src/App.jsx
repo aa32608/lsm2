@@ -26,6 +26,8 @@ import "leaflet/dist/leaflet.css";
 import NorthMacedoniaMap from "./NorthMacedoniaMap";
 import "./App.css";
 import Sidebar from "./Sidebar";
+import Filtersheet from "./components/Filtersheet";
+import EditListingModal from "./components/EditListingModal";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 
@@ -199,28 +201,21 @@ const normalizePhoneForStorage = (raw) => {
   return "+389" + cleaned;
 };
 
-const MAILGUN_API_KEY = import.meta.env.MAILGUN_API;
-const MAILGUN_DOMAIN = import.meta.env.MAILGUN_DOM;
-
 const sendEmail = async (to, subject, text) => {
-  const formData = new URLSearchParams();
-  formData.append("from", `Excited User <mailgun@${MAILGUN_DOMAIN}>`);
-  formData.append("to", to);
-  formData.append("subject", subject);
-  formData.append("text", text);
-
-  const response = await fetch(
-    `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`,
-    {
+  try {
+    const response = await fetch(`${API_BASE}/api/send-email`, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${btoa(`api:${MAILGUN_API_KEY}`)}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
-    }
-  );
+      body: JSON.stringify({ to, subject, text }),
+    });
 
-  return response;
+    return response;
+  } catch (err) {
+    console.error("sendEmail error:", err);
+    throw err;
+  }
 };
 
 const TabBar = ({ items = [], value, onChange, className = "", size = "default", fullWidth = false }) => (
@@ -388,6 +383,17 @@ export default function App() {
       await update(dbRef(db, `users/${user.uid}`), { 
         phone: normalizedPhone 
       });
+
+      // Sync with listings
+      const userListings = listings.filter(l => l.userId === user.uid);
+      const listingUpdates = {};
+      userListings.forEach(l => {
+        listingUpdates[`listings/${l.id}/contact`] = normalizedPhone;
+      });
+      if (Object.keys(listingUpdates).length > 0) {
+        await update(dbRef(db), listingUpdates);
+      }
+
       setAccountPhone(normalizedPhone);
       setPhoneEditing(false);
       showMessage(t("phoneUpdated"), "success");
@@ -553,6 +559,41 @@ export default function App() {
     }
   }, [initialListingId, listings]);
   
+  useEffect(() => {
+    if (!user || !listings.length) return;
+
+    const checkExpiringListings = async () => {
+      const userListings = listings.filter(l => l.userId === user.uid && l.status === "verified");
+      const now = Date.now();
+      const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+      const targetEmail = user.email || userProfile?.email;
+
+      if (!targetEmail) return;
+
+      for (const listing of userListings) {
+        if (listing.expiresAt && !listing.expiryNotified) {
+          const timeLeft = listing.expiresAt - now;
+          if (timeLeft > 0 && timeLeft <= sevenDaysInMs) {
+            // Expiring soon (within 7 days)
+            const daysLeft = Math.ceil(timeLeft / (24 * 60 * 60 * 1000));
+            const subject = `Listing expiring soon: ${listing.name}`;
+            const text = `Hi, your listing "${listing.name}" will expire in ${daysLeft} days. \n\nRenew it here to keep it active: ${window.location.origin}?tab=myListings`;
+            
+            try {
+              await sendEmail(targetEmail, subject, text);
+              await update(dbRef(db, `listings/${listing.id}`), { expiryNotified: true });
+              console.log(`Sent expiry notification for listing: ${listing.id}`);
+            } catch (err) {
+              console.error("Failed to send expiry notification:", err);
+            }
+          }
+        }
+      }
+    };
+
+    checkExpiringListings();
+  }, [user, listings]);
+
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
   useEffect(() => {
@@ -573,8 +614,7 @@ export default function App() {
     onValue(listingsRef, (snapshot) => {
       const val = snapshot.val() || {};
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
-      const valid = arr.filter((i) => !i.expiresAt || i.expiresAt > Date.now());
-      setListings(valid);
+      setListings(arr);
     });
   }, []);
 
@@ -609,36 +649,6 @@ export default function App() {
     if (!user) return [];
     return listings.filter(l => l.userId === user.uid);
   }, [listings, user]);
-
-
-  const checkExpiringListings = () => {
-    const now = Date.now();
-    const sevenDaysFromNow = now + 7 * 24 * 60 * 60 * 1000;
-    const expiringListings = myListingsRaw.filter(
-      (l) => l.expiresAt > now && l.expiresAt <= sevenDaysFromNow
-    );
-
-    if (expiringListings.length > 0) {
-      expiringListings.forEach((listing) => {
-        const ownerEmail = userProfile?.email;
-        if (ownerEmail) {
-          const subject = `Your listing "${listing.name}" is expiring soon!`;
-          const text = `Hi, your listing "${listing.name}" is expiring on ${new Date(
-            listing.expiresAt
-          ).toLocaleDateString()}. Renew it now to keep it active.`;
-          sendEmail(ownerEmail, subject, text);
-        }
-      });
-    }
-  };
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      checkExpiringListings();
-    }, 24 * 60 * 60 * 1000); // Check once a day
-
-    return () => clearInterval(interval);
-  }, [myListingsRaw]);
 
   /* Email-link sign-in (preserved) */
   useEffect(() => {
@@ -718,6 +728,16 @@ export default function App() {
         await update(dbRef(db, `users/${currentUser.uid}`), { 
           email: emailForm.newEmail 
         });
+
+        // Sync with listings
+        const userListings = listings.filter(l => l.userId === currentUser.uid);
+        const listingUpdates = {};
+        userListings.forEach(l => {
+          listingUpdates[`listings/${l.id}/userEmail`] = emailForm.newEmail;
+        });
+        if (Object.keys(listingUpdates).length > 0) {
+          await update(dbRef(db), listingUpdates);
+        }
         
         // Reload user to get updated email
         await currentUser.reload();
@@ -1193,7 +1213,9 @@ export default function App() {
   };
 
   /* Derived data */
-  const verifiedListings = useMemo(() => listings.filter((l) => l.status === "verified"), [listings]);
+  const verifiedListings = useMemo(() => {
+    return listings.filter((l) => l.status === "verified" && (!l.expiresAt || l.expiresAt > Date.now()));
+  }, [listings]);
   const allLocations = useMemo(
     () => Array.from(new Set(verifiedListings.map((l) => (l.location || "").trim()).filter(Boolean))),
     [verifiedListings]
@@ -1282,7 +1304,7 @@ export default function App() {
     } else if (myListingsExpiryFilter === "active") {
       filtered = filtered.filter((l) => {
         const days = getDaysUntilExpiry(l.expiresAt);
-        return days === null || days > 7;
+        return days === null || days > 0;
       });
     }
     
@@ -1453,6 +1475,25 @@ export default function App() {
     setFeedbackSaving(true);
     try {
       await push(dbRef(db, `feedback/${listingId}`), entry);
+
+      // Notify listing owner
+      const listing = listings.find(l => l.id === listingId);
+      if (listing) {
+        // Use listing.userEmail if available, otherwise we'd need to fetch owner profile
+        // Since we sync userEmail to listings on change, it should be there.
+        const ownerEmail = listing.userEmail;
+        
+        if (ownerEmail) {
+          const subject = `New review for your listing: ${listing.name}`;
+          const text = `Hi, someone just left a ${rating}-star review for your listing "${listing.name}".\n\nComment: ${comment}\n\nCheck it out here: ${window.location.origin}?listing=${listingId}`;
+          try {
+            await sendEmail(ownerEmail, subject, text);
+          } catch (err) {
+            console.error("Failed to send feedback notification:", err);
+          }
+        }
+      }
+
       setFeedbackDraft((d) => ({ ...d, comment: "" }));
       showMessage(t("feedbackSaved"), "success");
     } catch (error) {
@@ -1884,6 +1925,15 @@ export default function App() {
                           </div>
                           <div className="my-listings-actions">
                             <button
+                              type="button"
+                              className="btn btn-ghost filter-toggle-btn"
+                              onClick={() => setFiltersOpen((v) => !v)}
+                              aria-expanded={filtersOpen}
+                            >
+                              {filtersOpen ? "✕ " : "🔍 "}
+                              {t("filters")}
+                            </button>
+                            <button
                               className="btn btn-ghost small"
                               onClick={() => setSelectedTab("allListings")}
                               type="button"
@@ -1904,60 +1954,73 @@ export default function App() {
                         </div>
 
                         {/* My Listings Filters & Sort */}
-                        {myListingsRaw.length > 0 && (
-                          <div className="my-listings-filters-bar">
-                            <div className="my-listings-filters-left">
-                              <input
-                                type="search"
-                                className="input my-listings-search-input"
-                                placeholder={t("searchPlaceholder") || "Search your listings..."}
-                                value={myListingsSearch}
-                                onChange={(e) => setMyListingsSearch(e.target.value)}
-                              />
-                              <select
-                                className="select my-listings-filter-select"
-                                value={myListingsStatusFilter}
-                                onChange={(e) => setMyListingsStatusFilter(e.target.value)}
-                              >
-                                <option value="all">{t("allStatuses") || "All statuses"}</option>
-                                <option value="verified">{t("verified")}</option>
-                                <option value="pending">{t("pending")}</option>
-                              </select>
-                              <select
-                                className="select my-listings-filter-select"
-                                value={myListingsExpiryFilter}
-                                onChange={(e) => setMyListingsExpiryFilter(e.target.value)}
-                              >
-                                <option value="all">{t("allExpiry") || "All"}</option>
-                                <option value="expiring">{t("expiringSoon") || "Expiring soon"}</option>
-                                <option value="active">{t("active") || "Active"}</option>
-                                <option value="expired">{t("expired") || "Expired"}</option>
-                              </select>
-                            </div>
-                            <div className="my-listings-filters-right">
-                              <select
-                                className="select my-listings-sort-select"
-                                value={myListingsSort}
-                                onChange={(e) => setMyListingsSort(e.target.value)}
-                              >
-                                <option value="newest">{t("sortNewest")}</option>
-                                <option value="oldest">{t("sortOldest") || "Oldest first"}</option>
-                                <option value="expiring">{t("sortExpiring")}</option>
-                                <option value="az">{t("sortAZ")}</option>
-                              </select>
-                              {(myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
-                                <button
-                                  className="btn btn-ghost small"
-                                  onClick={() => {
-                                    setMyListingsSearch("");
-                                    setMyListingsStatusFilter("all");
-                                    setMyListingsExpiryFilter("all");
-                                  }}
-                                  type="button"
-                                >
-                                  {t("clearAll") || "Clear all"}
-                                </button>
+                        <Filtersheet
+                          t={t}
+                          filtersOpen={filtersOpen}
+                          setFiltersOpen={setFiltersOpen}
+                          q={myListingsSearch}
+                          setQ={setMyListingsSearch}
+                          sortBy={myListingsSort}
+                          setSortBy={setMyListingsSort}
+                          statusFilter={myListingsStatusFilter}
+                          setStatusFilter={setMyListingsStatusFilter}
+                          expiryFilter={myListingsExpiryFilter}
+                          setExpiryFilter={setMyListingsExpiryFilter}
+                        />
+
+                        {/* Active Filters Bar */}
+                        {(myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all") && (
+                          <div className="active-filters-bar">
+                            <span className="active-filters-label">{t("activeFilters")}:</span>
+                            <div className="active-filters-chips">
+                              {myListingsSearch && (
+                                <span className="active-filter-chip">
+                                  {t("search")}: "{myListingsSearch}"
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setMyListingsSearch("")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
                               )}
+                              {myListingsStatusFilter !== "all" && (
+                                <span className="active-filter-chip">
+                                  {t("status")}: {t(myListingsStatusFilter) || myListingsStatusFilter}
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setMyListingsStatusFilter("all")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                              {myListingsExpiryFilter !== "all" && (
+                                <span className="active-filter-chip">
+                                  {t("expiry")}: {t(myListingsExpiryFilter) || myListingsExpiryFilter}
+                                  <button
+                                    type="button"
+                                    className="filter-chip-remove"
+                                    onClick={() => setMyListingsExpiryFilter("all")}
+                                  >
+                                    ✕
+                                  </button>
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                className="btn-clear-all-filters"
+                                onClick={() => {
+                                  setMyListingsSearch("");
+                                  setMyListingsStatusFilter("all");
+                                  setMyListingsExpiryFilter("all");
+                                  setMyListingsSort("newest");
+                                }}
+                              >
+                                {t("clearAll")}
+                              </button>
                             </div>
                           </div>
                         )}
@@ -2511,14 +2574,21 @@ export default function App() {
                                   <h4 className="account-form-section-title">📧 {t("emailSubscription")}</h4>
                                   <p className="account-form-section-desc">{t("subscribeToWeeklyEmails")}</p>
                                 </div>
-                                <div className="account-form-field">
-                                  <label className="account-form-label">
-                                    <input
-                                      type="checkbox"
-                                      checked={userProfile?.subscribedToMarketing}
-                                      onChange={handleSubscriptionChange}
-                                    />
-                                    {t("subscribeToWeeklyEmails")}
+                                <div className="account-form-field subscription-field">
+                                  <label className="subscription-toggle">
+                                    <div className="subscription-toggle-text">
+                                      <span className="subscription-toggle-title">📧 {t("emailSubscription")}</span>
+                                      <span className="subscription-toggle-desc">{t("subscribeToWeeklyEmails")}</span>
+                                    </div>
+                                    <div className="toggle-switch">
+                                      <input
+                                        type="checkbox"
+                                        className="subscription-checkbox"
+                                        checked={userProfile?.subscribedToMarketing}
+                                        onChange={handleSubscriptionChange}
+                                      />
+                                      <span className="toggle-slider"></span>
+                                    </div>
                                   </label>
                                 </div>
                               </div>
@@ -2653,161 +2723,22 @@ export default function App() {
                         </div>
 
                         <div className={`explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`}>
-                          {/* FILTER BOTTOM SHEET - COMPLETELY DIFFERENT APPROACH */}
-                          {filtersOpen && (
-                            <>
-                              <div 
-                                className="filter-sheet-backdrop"
-                                onClick={() => setFiltersOpen(false)}
-                                aria-label={t("closeFilters")}
-                              />
-                              <div className="filter-sheet-wrapper">
-                                <div className="filter-sheet-handle" onClick={() => setFiltersOpen(false)}>
-                                  <div className="filter-sheet-handle-bar"></div>
-                                </div>
-                                <div className="filter-sheet-content">
-                                  <div className="filter-sheet-header">
-                                    <div className="filter-sheet-header-left">
-                                      <div className="filter-sheet-icon">🔍</div>
-                                      <div>
-                                        <h2 className="filter-sheet-title">{t("filters")}</h2>
-                                        <p className="filter-sheet-subtitle">{t("filterSubtitle")}</p>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      className="filter-sheet-close"
-                                      onClick={() => setFiltersOpen(false)}
-                                      aria-label={t("closeFilters")}
-                                    >
-                                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24" }}>
-                                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                                      </svg>
-                                    </button>
-                                  </div>
-
-                                  <div className="filter-sheet-scroll">
-                                    <div className="filter-group">
-                                      <div className="filter-group-header">
-                                        <span className="filter-group-icon">🔎</span>
-                                        <span className="filter-group-title">{t("search")}</span>
-                                      </div>
-                                      <div className="filter-group-content">
-                                        <div className="filter-search-box">
-                                          <svg className="filter-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ minWidth: "24" }}>
-                                            <circle cx="11" cy="11" r="8"></circle>
-                                            <path d="m21 21-4.35-4.35"></path>
-                                          </svg>
-                                          <input
-                                            type="search"
-                                            className="filter-search-input"
-                                            placeholder={t("searchPlaceholder")}
-                                            value={q}
-                                            onChange={(e) => setQ(e.target.value)}
-                                          />
-                                          {q && (
-                                            <button
-                                              type="button"
-                                              className="filter-search-clear"
-                                              onClick={() => setQ("")}
-                                              aria-label={t("clearSearch")}
-                                            >
-                                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ minWidth: "24" }}>
-                                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                                              </svg>
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="filter-group">
-                                      <div className="filter-group-header">
-                                        <span className="filter-group-icon">📂</span>
-                                        <span className="filter-group-title">{t("category")}</span>
-                                      </div>
-                                      <div className="filter-group-content">
-                                        <div className="filter-options-grid">
-                                          {categories.map((cat) => {
-                                            const label = t(cat);
-                                            const active = catFilter === label;
-                                            return (
-                                              <button
-                                                key={cat}
-                                                type="button"
-                                                className={`filter-option-card ${active ? "is-selected" : ""}`}
-                                                onClick={() => setCatFilter(active ? "" : label)}
-                                              >
-                                                <div className="filter-option-icon">{categoryIcons[cat]}</div>
-                                                <div className="filter-option-label">{label}</div>
-                                                {active && (
-                                                  <div className="filter-option-check">
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
-                                                      <polyline points="20 6 9 17 4 12"></polyline>
-                                                    </svg>
-                                                  </div>
-                                                )}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="filter-group">
-                                      <div className="filter-group-header">
-                                        <span className="filter-group-icon">📍</span>
-                                        <span className="filter-group-title">{t("location")}</span>
-                                      </div>
-                                      <div className="filter-group-content">
-                                        <div className="filter-select-wrapper">
-                                          <select
-                                            className="filter-select-field"
-                                            value={locFilter}
-                                            onChange={(e) => setLocFilter(e.target.value)}
-                                          >
-                                            <option value="">{t("allLocations")}</option>
-                                            {allLocations.map((l) => (
-                                              <option key={l} value={l}>{l}</option>
-                                            ))}
-                                          </select>
-                                          <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                          </svg>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="filter-group">
-                                      <div className="filter-group-header">
-                                        <span className="filter-group-icon">🔄</span>
-                                        <span className="filter-group-title">{t("sortBy")}</span>
-                                      </div>
-                                      <div className="filter-group-content">
-                                        <div className="filter-select-wrapper">
-                                          <select
-                                            className="filter-select-field"
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                          >
-                                            <option value="topRated">⭐ {t("sortTopRated")}</option>
-                                            <option value="newest">🆕 {t("sortNewest")}</option>
-                                            <option value="expiring">⏰ {t("sortExpiring")}</option>
-                                            <option value="az">🔤 {t("sortAZ")}</option>
-                                          </select>
-                                          <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                          </svg>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          )}
+                          <Filtersheet
+                            t={t}
+                            filtersOpen={filtersOpen}
+                            setFiltersOpen={setFiltersOpen}
+                            q={q}
+                            setQ={setQ}
+                            catFilter={catFilter}
+                            setCatFilter={setCatFilter}
+                            locFilter={locFilter}
+                            setLocFilter={setLocFilter}
+                            sortBy={sortBy}
+                            setSortBy={setSortBy}
+                            categories={categories}
+                            categoryIcons={categoryIcons}
+                            allLocations={allLocations}
+                          />
 
                           <div className="explore-results-area">
                             {filtered.length > 0 ? (
@@ -3704,276 +3635,22 @@ export default function App() {
 
         {/* ===== EDIT MODAL (restored, resized) ===== */}
         <AnimatePresence>
-          {editingListing && editForm && (
-            <Motion.div
-              className="modal-overlay"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setEditingListing(null);
-                setEditForm(null);
-                setShowEditMapPicker(false);
-              }}
-            >
-              <Motion.div
-                className="modal edit-modal"
-                onClick={(e) => e.stopPropagation()}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: 20, opacity: 0 }}
-              >
-                <div className="modal-header">
-                  <h3 className="modal-title">{t("edit")}</h3>
-                  <button
-                    className="icon-btn"
-                    onClick={() => {
-                      setEditingListing(null);
-                      setEditForm(null);
-                      setShowEditMapPicker(false);
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="modal-body edit-modal-body">
-                  <div className="edit-summary-banner">
-                    <div>
-                      <p className="eyebrow subtle">{t("preview") || "Preview"}</p>
-                      <h4 className="edit-summary-title">{editForm.name || t("name")}</h4>
-                      <p className="edit-summary-sub">
-                        {(t(editForm.category) || editForm.category || t("category"))} • {editLocationPreview || t("location")}
-                      </p>
-                    </div>
-                    <div className="pill-row">
-                      <span className="pill pill-soft">⏱️ {editForm.plan || plan} {t("months")}</span>
-                      {editForm.offerprice && <span className="pill pill-price">{editForm.offerprice}</span>}
-                    </div>
-                  </div>
-
-                  <div className="field-group">
-                    <label className="field-label">{t("name")}</label>
-                    <input
-                      className="input"
-                      value={editForm.name}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          name: stripDangerous(e.target.value).slice(0, 100),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label className="field-label">{t("category")}</label>
-                    <select
-                      className="select"
-                      value={editForm.category}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, category: e.target.value })
-                      }
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {t(cat)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="field-row-2">
-                    <div className="field-group">
-                      <label className="field-label">{t("location")}</label>
-                      <select
-                        className="select"
-                        value={editForm.locationCity}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            locationCity: e.target.value,
-                          })
-                        }
-                      >
-                        <option value="">{t("selectCity")}</option>
-                        {MK_CITIES.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-
-                      <input
-                        className="input"
-                        placeholder={t("locationExtra")}
-                        value={editForm.locationExtra || ""}
-                        onChange={(e) => {
-                          const extra = stripDangerous(e.target.value).slice(0, 100);
-                          setEditForm({
-                            ...editForm,
-                            locationExtra: extra,
-                          });
-                        }}
-                      />
-
-                      <button
-                        type="button"
-                        className="btn btn-ghost small"
-                        onClick={() => setShowEditMapPicker(true)}
-                        style={{ marginTop: 6 }}
-                      >
-                        {t("chooseOnMap")}
-                      </button>
-
-                      <p className="field-hint">
-                        📍 {editLocationPreview || t("selectCity")}
-                      </p>
-                    </div>
-
-                    <div className="field-group">
-                      <label className="field-label">{t("contact")}</label>
-                      <input
-                        className="input"
-                        type="tel"
-                        value={editForm.contact || ""}
-                        disabled
-                        readOnly
-                      />
-                      <p className="field-hint">
-                        {t("contactEditLocked") || "Update your phone number in Account settings."}
-                      </p>
-                      <button
-                        type="button"
-                        className="btn btn-ghost small"
-                        onClick={() => setSelectedTab("account")}
-                      >
-                        {t("goToAccount") || "Go to account"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="field-group">
-                    <label className="field-label">{t("description")}</label>
-                    <textarea
-                      className="textarea"
-                      rows={4}
-                      value={editForm.description}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          description: stripDangerous(e.target.value).slice(0, 1000),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="field-row-2">
-                    <div className="field-group">
-                      <label className="field-label">
-                        {t("priceRangeLabel") || "Price range"}
-                      </label>
-                      <input
-                        className="input"
-                        placeholder="e.g. 500 - 800 MKD"
-                        value={editForm.offerprice}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            offerprice: stripDangerous(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="field-group">
-                      <label className="field-label">
-                        {t("tagsFieldLabel") || "Tags"}
-                      </label>
-                      <input
-                        className="input"
-                        placeholder={t("tagsPlaceholder") || "Tags (optional)"}
-                        value={editForm.tags}
-                        onChange={(e) =>
-                          setEditForm({
-                            ...editForm,
-                            tags: stripDangerous(e.target.value).slice(0, 64),
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="field-group">
-                    <label className="field-label">
-                      {t("websiteFieldLabel") || "Social / Website"}
-                    </label>
-                    <input
-                      className="input"
-                      placeholder={t("websitePlaceholder") || "Link (optional)"}
-                      value={editForm.socialLink}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          socialLink: stripDangerous(e.target.value).slice(0, 200),
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="field-group">
-                    <label className="field-label">
-                      {t("coverImage") || "Cover image (local only)"}
-                    </label>
-                    <div className="edit-image-row">
-                      <label className="btn btn-ghost small" htmlFor="edit-image">
-                        {t("uploadCoverLocal") || "Upload cover"}
-                      </label>
-                      <input
-                        id="edit-image"
-                        style={{ display: "none" }}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) =>
-                            setEditForm((f) => ({
-                              ...f,
-                              imagePreview: ev.target?.result || null,
-                            }));
-                          reader.readAsDataURL(file);
-                        }}
-                      />
-                    </div>
-                    {editForm.imagePreview && (
-                      <img
-                        src={editForm.imagePreview}
-                        alt="preview"
-                        className="edit-image-preview"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                  <button className="btn" onClick={saveEdit}>
-                    {t("save")}
-                  </button>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => {
-                      setEditingListing(null);
-                      setEditForm(null);
-                      setShowEditMapPicker(false);
-                    }}
-                  >
-                    {t("cancel")}
-                  </button>
-                </div>
-              </Motion.div>
-            </Motion.div>
-          )}
+          <EditListingModal
+            t={t}
+            editingListing={editingListing}
+            setEditingListing={setEditingListing}
+            editForm={editForm}
+            setEditForm={setEditForm}
+            saveEdit={saveEdit}
+            categories={categories}
+            MK_CITIES={MK_CITIES}
+            stripDangerous={stripDangerous}
+            editLocationPreview={editLocationPreview}
+            setShowEditMapPicker={setShowEditMapPicker}
+            plan={plan}
+            setSelectedTab={setSelectedTab}
+            handleShareListing={handleShareListing}
+          />
         </AnimatePresence>
 
 

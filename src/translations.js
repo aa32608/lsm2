@@ -448,7 +448,13 @@ export const TRANSLATIONS = {
     errorUpdatingSubscription: "Error updating subscription",
     emailSubscription: "Email Subscription",
     subscribeToWeeklyEmails: "Subscribe to weekly emails",
-},
+    phoneUpdated: "Phone number updated successfully!",
+    errorUpdatingPhone: "Error updating phone number:",
+    passwordRequired: "Password is required for this action.",
+    changePhone: "Change phone number",
+    newPhone: "New phone number",
+    savePhone: "Save phone",
+  },
 
   sq: {
     // General
@@ -506,7 +512,14 @@ export const TRANSLATIONS = {
     errorUpdatingSubscription: "Gabim gjatë përditësimit të abonimit",
     emailSubscription: "Abonimi me email",
     subscribeToWeeklyEmails: "Abonohu në email-et javore",
-},
+    phoneUpdated: "Numri i telefonit u përditësua me sukses!",
+    errorUpdatingPhone: "Gabim gjatë përditësimit të numrit të telefonit:",
+    passwordRequired: "Fjalëkalimi kërkohet për këtë veprim.",
+    changePhone: "Ndrysho numrin e telefonit",
+    newPhone: "Numri i ri i telefonit",
+    savePhone: "Ruaj telefonin",
+  },
+
   mk: {
     // General
     ",": ",",
@@ -563,6 +576,12 @@ export const TRANSLATIONS = {
     errorUpdatingSubscription: "Грешка при ажурирање на претплатата",
     emailSubscription: "Претплата преку е-пошта",
     subscribeToWeeklyEmails: "Претплатете се на неделни е-пошти",
+    phoneUpdated: "Телефонскиот број е успешно ажуриран!",
+    errorUpdatingPhone: "Грешка при ажурирање на телефонскиот број:",
+    passwordRequired: "Потребна е лозинка за оваа акција.",
+    changePhone: "Промени го телефонскиот број",
+    newPhone: "Нов телефонски број",
+    savePhone: "Зачувај телефон",
   },
 };
 
