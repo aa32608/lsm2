@@ -199,7 +199,7 @@ const normalizePhoneForStorage = (raw) => {
   return "+389" + cleaned;
 };
 
-const MAILGUN_API_KEY = "70d50dec12c997097a465db5824369f6-f6d80573-ce4cb54b";
+const MAILGUN_API_KEY = MAILGUN_API;
 const MAILGUN_DOMAIN = "sandboxea6610a1b6e24108912879e0ca613641.mailgun.org";
 
 const sendEmail = async (to, subject, text) => {
