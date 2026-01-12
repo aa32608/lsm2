@@ -1,3 +1,5 @@
+import ListingCard from "../components/ListingCard";
+
 export default function ListingsTab({
   t,
   viewMode,
@@ -20,7 +22,14 @@ export default function ListingsTab({
   feedbackAverages,
   setSelectedListing,
   filtersOpen,
-  setFiltersOpen
+  setFiltersOpen,
+  // Added for ListingCard
+  getDescriptionPreview,
+  getListingStats,
+  handleShareListing,
+  showMessage,
+  toggleFav,
+  favorites
 }) {
   return (
     <div className="section all-listings-section">
@@ -72,27 +81,26 @@ export default function ListingsTab({
       </div>
 
       {/* LISTINGS GRID */}
-      <div className={`listing-grid ${viewMode}`}>
+      <div className={`listing-grid-${viewMode}`}>
         {pagedFiltered.map((l) => (
-          <article
+          <ListingCard
             key={l.id}
-            className="listing-card elevated"
-            onClick={() => setSelectedListing(l)}
-          >
-            <header className="listing-header">
-              <div className="listing-icon-bubble">
-                {categoryIcons[l.category] || "🏷️"}
-              </div>
-              <h3 className="listing-title">{l.name}</h3>
-            </header>
-
-            <div className="listing-meta-row">
-              {l.location && <span>📍 {l.location}</span>}
-              {feedbackAverages[l.id]?.avg && (
-                <span>⭐ {feedbackAverages[l.id].avg}</span>
-              )}
-            </div>
-          </article>
+            listing={l}
+            t={t}
+            categoryIcons={categoryIcons}
+            getDescriptionPreview={getDescriptionPreview}
+            getListingStats={getListingStats}
+            onSelect={() => {
+              setSelectedListing(l);
+              const url = new URL(window.location.href);
+              url.searchParams.set("listing", l.id);
+              window.history.replaceState({}, "", url.toString());
+            }}
+            onShare={() => handleShareListing(l)}
+            showMessage={showMessage}
+            toggleFav={toggleFav}
+            isFavorite={favorites.includes(l.id)}
+          />
         ))}
       </div>
 

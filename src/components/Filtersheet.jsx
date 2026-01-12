@@ -1,6 +1,6 @@
 import React from "react";
 
-const Filtersheet = ({
+const Filtersheet = React.memo(({
   t,
   filtersOpen,
   setFiltersOpen,
@@ -233,6 +233,6 @@ const Filtersheet = ({
       </div>
     </>
   );
-};
+});
 
 export default Filtersheet;

@@ -15,7 +15,6 @@ import {
   updatePassword,
   reauthenticateWithCredential,
   EmailAuthProvider,
-  PhoneAuthProvider,
   RecaptchaVerifier,
   linkWithCredential,
 } from "firebase/auth";
@@ -28,6 +27,8 @@ import "./App.css";
 import Sidebar from "./Sidebar";
 import Filtersheet from "./components/Filtersheet";
 import EditListingModal from "./components/EditListingModal";
+import ListingCard from "./components/ListingCard";
+import MyListingCard from "./components/MyListingCard";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 
@@ -244,6 +245,82 @@ const TabBar = ({ items = [], value, onChange, className = "", size = "default",
   </div>
 );
 
+/* Components */
+const Header = React.memo(({ 
+  t, logo, primaryNav, selectedTab, setSelectedTab, lang, setLang, user, 
+  onLogout, onLogin, onMenuOpen 
+}) => (
+  <header className="header">
+    <div className="header-inner">
+      <button
+        className="icon-btn mobile-menu-btn"
+        onClick={onMenuOpen}
+        aria-label={t("menu") || "Menu"}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <button onClick={() => setSelectedTab("main")} className="brand">
+        <div className="brand-mark">
+          <div className="brand-logo-wrap">
+            <img
+              src={logo}
+              alt="BizCall logo"
+              className="brand-logo"
+              loading="lazy"
+            />
+          </div>
+        </div>
+        <div className="brand-text">
+          <h1 className="brand-title">BizCall</h1>
+          <p className="brand-tagline">{t("community") || "Trusted local services"}</p>
+        </div>
+      </button>
+
+      <nav className="header-nav desktop-nav" aria-label="Primary navigation">
+        {primaryNav.map((item) => (
+          <button
+            key={item.id}
+            style={{color: "#000"}}
+            className={`nav-chip ${selectedTab === item.id ? "active" : ""}`}
+            onClick={() => setSelectedTab(item.id)}
+          >
+            <span className="nav-chip-label">{item.icon} {item.label}</span>
+            {item.badge !== undefined && <span className="nav-chip-badge">{item.badge}</span>}
+          </button>
+        ))}
+      </nav>
+
+      <div className="header-actions">
+        <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
+          <option value="sq">🇦🇱 SQ</option>
+          <option value="mk">🇲🇰 MK</option>
+          <option value="en">🇬🇧 EN</option>
+        </select>
+
+        {user ? (
+          <>
+            <button className="btn btn-ghost desktop-only" onClick={onLogout}>
+              {t("logout")}
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn desktop-only"
+            onClick={onLogin}
+          >
+            {t("login")}
+          </button>
+        )}
+      </div>
+    </div>
+  </header>
+));
+
 export default function App() {
   /* i18n */
   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "sq");
@@ -310,7 +387,6 @@ export default function App() {
 
   /* Auth modal */
   const [showAuthModal, setShowAuthModal] = useState(false);
-  // OLD: const [authTab, setAuthTab] = useState("email");
   const [authMode, setAuthMode] = useState("login"); // "login" | "signup"
   const [verifyBusy, setVerifyBusy] = useState(false);
   const [resendBusy, setResendBusy] = useState(false);
@@ -321,13 +397,9 @@ export default function App() {
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
-  // Signup flow: email + password + phone
-  // const [signupPhoneConfirmation, setSignupPhoneConfirmation] = useState(null);
 
   const [postSignupVerifyOpen, setPostSignupVerifyOpen] = useState(false);
   
-  // For signup phone verification
-  // const [signupPhoneLoading, setSignupPhoneLoading] = useState(false);
   const [emailForm, setEmailForm] = useState({
     newEmail: "",
     currentPassword: "",
@@ -458,8 +530,7 @@ export default function App() {
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false); // Start closed, user can toggle
 
-  /* Featured carousel */
-  const [activeFeaturedCategory, setActiveFeaturedCategory] = useState(featuredCategories[0]);
+  /* Featured carousel removal - no longer used but kept state for reference previously */
 
   /* Close sidebar with ESC */
   useEffect(() => {
@@ -582,7 +653,7 @@ export default function App() {
             try {
               await sendEmail(targetEmail, subject, text);
               await update(dbRef(db, `listings/${listing.id}`), { expiryNotified: true });
-              console.log(`Sent expiry notification for listing: ${listing.id}`);
+              // console.log(`Sent expiry notification for listing: ${listing.id}`);
             } catch (err) {
               console.error("Failed to send expiry notification:", err);
             }
@@ -611,39 +682,39 @@ export default function App() {
   }, [user]);
   useEffect(() => {
     const listingsRef = dbRef(db, "listings");
-    onValue(listingsRef, (snapshot) => {
+    const unsubscribe = onValue(listingsRef, (snapshot) => {
       const val = snapshot.val() || {};
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
       setListings(arr);
     });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    const feedbackRef = dbRef(db, "feedback");
+    if (!selectedListing) {
+      setFeedbackStore({});
+      return;
+    }
+
+    const feedbackRef = dbRef(db, `feedback/${selectedListing.id}`);
     const unsubscribe = onValue(feedbackRef, (snapshot) => {
       const val = snapshot.val() || {};
-      const normalized = {};
+      const entries = Object.values(val)
+        .map((entry) => ({
+          rating: Number(entry.rating) || 0,
+          comment: entry.comment || "",
+          createdAt: entry.createdAt || 0,
+          userId: entry.userId || null,
+          author: entry.author || null,
+        }))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 50);
 
-      Object.entries(val).forEach(([listingId, entriesObj]) => {
-        const entries = Object.values(entriesObj || {})
-          .map((entry) => ({
-            rating: Number(entry.rating) || 0,
-            comment: entry.comment || "",
-            createdAt: entry.createdAt || 0,
-            userId: entry.userId || null,
-            author: entry.author || null,
-          }))
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-          .slice(0, 50);
-
-        normalized[listingId] = { entries };
-      });
-
-      setFeedbackStore(normalized);
+      setFeedbackStore({ [selectedListing.id]: { entries } });
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [selectedListing]);
 
   const myListingsRaw = useMemo(() => {
     if (!user) return [];
@@ -857,10 +928,10 @@ export default function App() {
 
   
   /* Helpers */
-  const showMessage = (text, type = "info") => {
+  const showMessage = useCallback((text, type = "info") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "info" }), 5000);
-  };
+  }, []);
   const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const validatePhone = (s) => !!s && s.replace(/\D/g, "").length >= 8 && s.replace(/\D/g, "").length <= 16;
 
@@ -873,8 +944,43 @@ export default function App() {
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
-    reader.onload = (ev) => setForm((f) => ({ ...f, imagePreview: ev.target?.result || null }));
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Compress with 0.7 quality
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        setForm((f) => ({ ...f, imagePreview: dataUrl }));
+        if (editingListing) {
+          setEditForm((f) => ({ ...f, imagePreview: dataUrl }));
+        }
+      };
+      img.src = ev.target?.result;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -1058,7 +1164,7 @@ export default function App() {
   }
 
   /* Extend flow */
-  async function startExtendFlow(listing) {
+  const startExtendFlow = useCallback(async (listing) => {
     if (!user) {
       setShowAuthModal(true);
       showMessage(t("loginRequired"), "error");
@@ -1082,7 +1188,7 @@ export default function App() {
       amount,
     });
     setPaymentModalOpen(true);
-  }
+  }, [user, t, showMessage]);
 
   async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI) {
     try {
@@ -1144,7 +1250,7 @@ export default function App() {
 
 
   /* Editing helpers (restored) */
-  const openEdit = (listing) => {
+  const openEdit = useCallback((listing) => {
     const rawLocation = (listing.location || "").trim();
     const guessedCity =
       listing.locationCity || MK_CITIES.find((city) => rawLocation.startsWith(city)) || "";
@@ -1172,7 +1278,7 @@ export default function App() {
       socialLink: listing.socialLink || "",
       imagePreview: listing.imagePreview || null,
     });
-  };
+  }, [accountPhone, userProfile]);
   const saveEdit = async () => {
     if (!editingListing || !editForm) return;
 
@@ -1206,11 +1312,11 @@ export default function App() {
     setEditingListing(null); setEditForm(null);
   };
 
-  const confirmDelete = async (id) => {
+  const confirmDelete = useCallback(async (id) => {
     if (!window.confirm("Delete this listing?")) return;
     await deleteListing(id);
     showMessage("Listing deleted", "success");
-  };
+  }, [showMessage]);
 
   /* Derived data */
   const verifiedListings = useMemo(() => {
@@ -1222,16 +1328,14 @@ export default function App() {
   );
   const feedbackAverages = useMemo(() => {
     const map = {};
-
-    Object.entries(feedbackStore).forEach(([listingId, data]) => {
-      const entries = data?.entries || [];
-      const total = entries.reduce((sum, e) => sum + (Number(e.rating) || 0), 0);
-      const count = entries.length;
-      map[listingId] = { count, avg: count ? Number((total / count).toFixed(1)) : null };
+    listings.forEach((l) => {
+      map[l.id] = {
+        count: l.feedbackCount || 0,
+        avg: l.avgRating || null,
+      };
     });
-
     return map;
-  }, [feedbackStore]);
+  }, [listings]);
   const filtered = useMemo(() => {
     let arr = [...verifiedListings];
     if (q.trim()) {
@@ -1272,13 +1376,13 @@ export default function App() {
   }, [filtered, page, pageSize]);
 
   // Helper function to calculate days until expiration
-  const getDaysUntilExpiry = (expiresAt) => {
+  const getDaysUntilExpiry = useCallback((expiresAt) => {
     if (!expiresAt) return null;
     const now = Date.now();
     const diff = expiresAt - now;
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     return days;
-  };
+  }, []);
 
   const myListings = useMemo(() => {
     let filtered = [...myListingsRaw];
@@ -1350,21 +1454,6 @@ export default function App() {
     [myListingsRaw]
   );
 
-  const getFeedbackForListing = useCallback(
-    (listingId) => feedbackStore[listingId]?.entries || [],
-    [feedbackStore]
-  );
-
-  const getAverageRating = useCallback(
-    (listingId) => {
-      const entries = getFeedbackForListing(listingId);
-      if (!entries.length) return null;
-      const total = entries.reduce((sum, entry) => sum + (Number(entry.rating) || 0), 0);
-      return Number((total / entries.length).toFixed(1));
-    },
-    [getFeedbackForListing]
-  );
-
   const getListingStats = useCallback(
     (listing) => {
       const stats = feedbackAverages[listing.id] || {};
@@ -1381,78 +1470,58 @@ export default function App() {
     const verified = listings.filter((l) => l.status === "verified");
     const map = {};
 
-    categories.forEach((category) => {
-      const top = verified
-        .filter((l) => l.category === category)
-        .map((listing) => {
-          const stats = feedbackAverages[listing.id] || {};
-          return {
-            ...listing,
-            avgRating: stats.avg ?? getAverageRating(listing.id) ?? 0,
-            feedbackCount: stats.count || 0,
-          };
-        })
-        .sort((a, b) => {
-          if ((b.avgRating || 0) !== (a.avgRating || 0)) return (b.avgRating || 0) - (a.avgRating || 0);
-          return (b.createdAt || 0) - (a.createdAt || 0);
-        })
-        .slice(0, FEATURED_MAX_ITEMS);
+    // Initialize map
+    categories.forEach(cat => map[cat] = []);
 
-      if (top.length) map[category] = top;
+    // One-pass grouping
+    verified.forEach(listing => {
+      if (map[listing.category]) {
+        const stats = feedbackAverages[listing.id] || {};
+        map[listing.category].push({
+          ...listing,
+          avgRating: stats.avg ?? 0,
+          feedbackCount: stats.count || 0,
+        });
+      }
+    });
+
+    // Sort and slice each category
+    Object.keys(map).forEach(cat => {
+      map[cat].sort((a, b) => {
+        if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+      map[cat] = map[cat].slice(0, FEATURED_MAX_ITEMS);
+      if (map[cat].length === 0) delete map[cat];
     });
 
     return map;
-  }, [feedbackAverages, getAverageRating, listings]);
+  }, [feedbackAverages, listings]);
 
   const featuredCategoryOrder = useMemo(
     () => featuredCategories.filter((cat) => featuredByCategory[cat]?.length),
     [featuredByCategory]
   );
 
-  // slides can be computed ad-hoc if needed
-
-  // auto-rotation is handled via intervals below
-
-  const toggleFav = (id) =>
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleFav = useCallback((id) =>
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])), []);
 
   const feedbackStats = useMemo(() => {
     if (!selectedListing) return { entries: [], avg: null, count: 0 };
-    const entries = getFeedbackForListing(selectedListing.id);
     const stats = feedbackAverages[selectedListing.id];
-    return { entries, avg: stats?.avg ?? null, count: stats?.count ?? 0 };
-  }, [feedbackAverages, selectedListing, getFeedbackForListing]);
+    return {
+      entries: feedbackStore[selectedListing.id]?.entries || [],
+      avg: stats?.avg ?? null,
+      count: stats?.count ?? 0
+    };
+  }, [feedbackAverages, selectedListing, feedbackStore]);
 
   useEffect(() => {
     if (!selectedListing) return;
-    const lastRating = getFeedbackForListing(selectedListing.id)[0]?.rating || 4;
+    const entries = feedbackStore[selectedListing.id]?.entries || [];
+    const lastRating = entries[0]?.rating || 4;
     setFeedbackDraft({ rating: lastRating, comment: "" });
-  }, [getFeedbackForListing, selectedListing]);
-
-  useEffect(() => {
-    if (!featuredCategoryOrder.length) return;
-    if (!featuredCategoryOrder.includes(activeFeaturedCategory)) {
-      setActiveFeaturedCategory(featuredCategoryOrder[0]);
-    }
-  }, [activeFeaturedCategory, featuredCategoryOrder]);
-
-  // normalize category when slides change
-
-  useEffect(() => {
-    if (featuredCategoryOrder.length <= 1) return undefined;
-
-    const id = setInterval(() => {
-      setActiveFeaturedCategory((current) => {
-        const idx = featuredCategoryOrder.indexOf(current);
-        const next = featuredCategoryOrder[(idx + 1) % featuredCategoryOrder.length];
-        return next || featuredCategoryOrder[0];
-      });
-    }, 6000);
-
-    return () => clearInterval(id);
-  }, [featuredCategoryOrder]);
-
-  // auto-advance handled by category rotation only
+  }, [feedbackStore, selectedListing]);
 
   const handleFeedbackSubmit = async (listingId) => {
     if (!listingId) return;
@@ -1474,15 +1543,24 @@ export default function App() {
 
     setFeedbackSaving(true);
     try {
+      // 1. Add feedback entry
       await push(dbRef(db, `feedback/${listingId}`), entry);
 
-      // Notify listing owner
+      // 2. Update listing stats (denormalization)
       const listing = listings.find(l => l.id === listingId);
       if (listing) {
-        // Use listing.userEmail if available, otherwise we'd need to fetch owner profile
-        // Since we sync userEmail to listings on change, it should be there.
+        const currentCount = listing.feedbackCount || 0;
+        const currentAvg = listing.avgRating || 0;
+        const newCount = currentCount + 1;
+        const newAvg = Number(((currentAvg * currentCount + rating) / newCount).toFixed(1));
+
+        await update(dbRef(db, `listings/${listingId}`), {
+          feedbackCount: newCount,
+          avgRating: newAvg
+        });
+
+        // 3. Notify listing owner
         const ownerEmail = listing.userEmail;
-        
         if (ownerEmail) {
           const subject = `New review for your listing: ${listing.name}`;
           const text = `Hi, someone just left a ${rating}-star review for your listing "${listing.name}".\n\nComment: ${comment}\n\nCheck it out here: ${window.location.origin}?listing=${listingId}`;
@@ -1504,7 +1582,7 @@ export default function App() {
     }
   };
 
-  const handleShareListing = (listing) => {
+  const handleShareListing = useCallback((listing) => {
     const url = `${window.location.origin}?listing=${encodeURIComponent(listing.id)}`;
     const text = `${listing.name || ""} • ${listing.location || ""} – ${
       t("shareText")
@@ -1532,82 +1610,38 @@ export default function App() {
         "error"
       );
     }
-  };
+  }, [t, showMessage]);
   
-  /* Header */
-  const Header = () => (
-    <header className="header">
-      <div className="header-inner">
-        <button
-          className="icon-btn mobile-menu-btn"
-          onClick={() => setSidebarOpen(true)}
-          aria-label={t("menu") || "Menu"}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
+  const onLogout = useCallback(async () => {
+    await signOut(auth);
+    showMessage(t("signedOut"), "success");
+  }, [t]);
 
-        <button onClick={() => setSelectedTab("main")} className="brand">
-          <div className="brand-mark">
-            <div className="brand-logo-wrap">
-              <img
-                src={logo}
-                alt="BizCall logo"
-                className="brand-logo"
-              />
-            </div>
-          </div>
-          <div className="brand-text">
-            <h1 className="brand-title">BizCall</h1>
-            <p className="brand-tagline">{t("community") || "Trusted local services"}</p>
-          </div>
-        </button>
+  const onLogin = useCallback(() => {
+    setShowAuthModal(true);
+    setMessage({ text: "", type: "info" });
+  }, []);
 
-        <nav className="header-nav desktop-nav" aria-label="Primary navigation">
-          {primaryNav.map((item) => (
-            <button
-              key={item.id}
-              style={{color: "#000"}}
-              className={`nav-chip ${selectedTab === item.id ? "active" : ""}`}
-              onClick={() => setSelectedTab(item.id)}
-            >
-              <span className="nav-chip-label">{item.icon} {item.label}</span>
-              {item.badge !== undefined && <span className="nav-chip-badge">{item.badge}</span>}
-            </button>
-          ))}
-        </nav>
+  const onMenuOpen = useCallback(() => setSidebarOpen(true), []);
 
-        <div className="header-actions">
-          <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
-            <option value="sq">🇦🇱 SQ</option>
-            <option value="mk">🇲🇰 MK</option>
-            <option value="en">🇬🇧 EN</option>
-          </select>
+  const onSidebarSelect = useCallback((tab) => {
+    setSelectedTab(tab);
+    setSidebarOpen(false);
+  }, [setSelectedTab]);
 
-          {user ? (
-            <>
-              <button className="btn btn-ghost desktop-only" onClick={async () => { await signOut(auth); showMessage(t("signedOut"), "success"); }}>
-                {t("logout")}
-              </button>
-            </>
-          ) : (
-            <button
-              className="btn desktop-only"
-              onClick={() => {
-                setShowAuthModal(true);
-                setMessage({ text: "", type: "info" });
-              }}
-            >
-              {t("login")}
-            </button>
-          )}
-        </div>
-      </div>
-    </header>
-  );
+  const handleSidebarLogout = useCallback(async () => {
+    await signOut(auth);
+    showMessage(t("signedOut"), "success");
+    setSidebarOpen(false);
+  }, [t]);
+
+  const handleSidebarLogin = useCallback(() => {
+    setShowAuthModal(true);
+    setMessage({ text: "", type: "info" });
+    setSidebarOpen(false);
+  }, []);
+
+  const onSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
   const previewLocation = buildLocationString(form.locationCity, form.locationExtra);
   const editLocationPreview = editForm
@@ -1615,8 +1649,8 @@ export default function App() {
     : "";
 
   const activeListingCount = listings.length;
-  const verifiedListingCount = listings.filter((l) => l.isVerified).length;
-  const phoneVerifiedCount = listings.filter((l) => l.phoneVerified).length;
+  const verifiedListingCount = useMemo(() => listings.filter((l) => l.status === "verified").length, [listings]);
+  const phoneVerifiedCount = useMemo(() => listings.filter((l) => l.phoneVerified).length, [listings]);
   // current slides can be derived on render when needed
 
   // action cards are rendered inline in the UI
@@ -1702,7 +1736,19 @@ export default function App() {
       {message.text && <div className={`notification ${message.type}`}>{message.text}</div>}
 
       <div className="app">
-        <Header />
+        <Header 
+          t={t}
+          logo={logo}
+          primaryNav={primaryNav}
+          selectedTab={selectedTab}
+          setSelectedTab={setSelectedTab}
+          lang={lang}
+          setLang={setLang}
+          user={user}
+          onLogout={onLogout}
+          onLogin={onLogin}
+          onMenuOpen={onMenuOpen}
+        />
 
         {selectedTab === "main" && (
           <div className="app-main-content">
@@ -1816,20 +1862,10 @@ export default function App() {
                 <Sidebar
                   t={t}
                   selected={selectedTab}
-                  onSelect={(tab) => {
-                    setSelectedTab(tab);
-                    setSidebarOpen(false);
-                  }}
-                  onLogout={async () => {
-                    await signOut(auth);
-                    showMessage(t("signedOut"), "success");
-                    setSidebarOpen(false);
-                  }}
-                  onLogin={() => {
-                    setShowAuthModal(true);
-                    setSidebarOpen(false);
-                  }}
-                  onClose={() => setSidebarOpen(false)}
+                  onSelect={onSidebarSelect}
+                  onLogout={handleSidebarLogout}
+                  onLogin={handleSidebarLogin}
+                  onClose={onSidebarClose}
                   user={user}
                 />
               </Motion.aside>
@@ -2053,178 +2089,21 @@ export default function App() {
                         ) : (
                           <div className="listing-grid my-listings-grid responsive-grid">
                             {myListings.map((l) => (
-                              <article key={l.id} className="listing-card my-listing-card elevated">
-                                <header className="listing-header my-listing-header rich-header">
-                                  <div className="listing-icon-bubble">{categoryIcons[l.category] || "🏷️"}</div>
-                                  <div className="listing-header-main">
-                                    <div className="listing-title-row spaced">
-                                      <h3 className="listing-title">{l.name}</h3>
-                                      <span
-                                        className={`status-chip ${l.status === "verified" ? "status-chip-verified" : "status-chip-pending"}`}
-                                      >
-                                        {l.status === "verified" ? `✅ ${t("verified")}` : `⏳ ${t("pending")}`}
-                                      </span>
-                                    </div>
-                                    <div className="listing-meta-row pill-row-tight">
-                                      <span className="pill pill-category">
-                                        {categoryIcons[l.category] || "🏷️"} {t(l.category) || l.category}
-                                      </span>
-                                      {l.location && (
-                                        <span className="pill pill-location">
-                                          📍 {l.location}
-                                        </span>
-                                      )}
-                                      {l.createdAt && (
-                                        <span className="pill pill-soft pill-date">
-                                          📅 {new Date(l.createdAt).toLocaleDateString()}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {(() => {
-                                      const days = getDaysUntilExpiry(l.expiresAt);
-                                      const isExpiringSoon = days !== null && days > 0 && days <= 7;
-                                      const isExpired = days !== null && days <= 0;
-                                      return (
-                                        <div className={`listing-expiry-info ${isExpiringSoon ? "expiring-soon" : ""} ${isExpired ? "expired" : ""}`}>
-                                          {l.expiresAt ? (
-                                            <>
-                                              <span className="expiry-label">{t("expires")}:</span>
-                                              <span className="expiry-date">{new Date(l.expiresAt).toLocaleDateString()}</span>
-                                              {days !== null && (
-                                                <span className={`expiry-days ${isExpiringSoon ? "warning" : ""} ${isExpired ? "expired-text" : ""}`}>
-                                                  {isExpired 
-                                                    ? ` ⚠️ ${t("expired") || "Expired"}`
-                                                    : isExpiringSoon 
-                                                      ? ` ⏰ ${days} ${days === 1 ? t("day") || "day" : t("days") || "days"} ${t("remaining") || "left"}`
-                                                      : ` (${days} ${days === 1 ? t("day") || "day" : t("days") || "days"})`
-                                                  }
-                                                </span>
-                                              )}
-                                            </>
-                                          ) : (
-                                            <span className="expiry-date">{t("noExpiry") || "No expiration"}</span>
-                                          )}
-                                        </div>
-                                      );
-                                    })()}
-                                  </div>
-                                  {(() => {
-                                    const stats = getListingStats(l);
-                                    return (
-                                      <div className="listing-score-pill">
-                                        <span className="score-main">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                        <span className="score-sub">{stats.feedbackCount} {t("reviews") || "reviews"}</span>
-                                      </div>
-                                    );
-                                  })()}
-                                </header>
-
-                                <div className="listing-card-body-enhanced">
-                                  <p className="listing-description clamp-3 enhanced-copy">
-                                    {getDescriptionPreview(l.description, 15)}
-                                  </p>
-
-                                  {(() => {
-                                    const stats = getListingStats(l);
-                                    return (
-                                      <div className="listing-stats ribboned">
-                                        <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                        <span className="stat-chip">💬 {stats.feedbackCount}</span>
-                                        <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-                                        {l.offerprice && (
-                                          <span className="pill pill-price subtle-pill">💶 {l.offerprice}</span>
-                                        )}
-                                      </div>
-                                    );
-                                  })()}
-
-                                  {(l.tags || l.contact) && (
-                                    <div className="my-listing-highlights rich-highlights">
-                                      {l.tags && (
-                                        <span className="pill pill-tags">🏷️ {l.tags.split(",")[0]?.trim() || l.tags}</span>
-                                      )}
-                                      {l.contact && (
-                                        <span className="pill pill-contact">📞 {l.contact}</span>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="my-listing-footer framed-footer">
-                                  <div className="listing-actions-primary">
-                                    <button
-                                      className="btn btn-primary small"
-                                      onClick={() => {
-                                        setSelectedListing(l);
-                                        const url = new URL(window.location.href);
-                                        url.searchParams.set("listing", l.id);
-                                        window.history.replaceState({}, "", url.toString());
-                                      }}
-                                    >
-                                      👁️ {t("view") || "View"}
-                                    </button>
-                                    <button
-                                      className="btn small"
-                                      onClick={() => openEdit(l)}
-                                    >
-                                      ✏️ {t("edit")}
-                                    </button>
-                                    <button
-                                      className="btn small btn-extend"
-                                      onClick={() => startExtendFlow(l)}
-                                    >
-                                      ⏰ {t("extend")}
-                                    </button>
-                                  </div>
-                                  <div className="listing-actions-secondary">
-                                    <button
-                                      className="btn btn-ghost small icon-only"
-                                      onClick={() => window.open(`tel:${l.contact}`)}
-                                      title={t("call")}
-                                    >
-                                      📞
-                                    </button>
-                                    <button
-                                      className="btn btn-ghost small icon-only"
-                                      onClick={() =>
-                                        window.open(
-                                          `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
-                                            l.name || ""
-                                          )}`
-                                        )
-                                      }
-                                      title={t("emailAction")}
-                                    >
-                                      ✉️
-                                    </button>
-                                    <button
-                                      className="btn btn-ghost small icon-only"
-                                      onClick={() => {
-                                        navigator.clipboard?.writeText(l.contact || "");
-                                        showMessage(t("copied"), "success");
-                                      }}
-                                      title={t("copy")}
-                                    >
-                                      📋
-                                    </button>
-                                    <button
-                                      className="btn btn-ghost small icon-only"
-                                      type="button"
-                                      onClick={() => handleShareListing(l)}
-                                      title={t("share")}
-                                    >
-                                      🔗
-                                    </button>
-                                    <button
-                                      className="btn btn-ghost small icon-only btn-delete"
-                                      onClick={() => confirmDelete(l.id)}
-                                      title={t("del")}
-                                    >
-                                      🗑️
-                                    </button>
-                                  </div>
-                                </div>
-                              </article>
+                              <MyListingCard
+                                key={l.id}
+                                listing={l}
+                                t={t}
+                                categoryIcons={categoryIcons}
+                                getDaysUntilExpiry={getDaysUntilExpiry}
+                                getListingStats={getListingStats}
+                                getDescriptionPreview={getDescriptionPreview}
+                                setSelectedListing={setSelectedListing}
+                                openEdit={openEdit}
+                                startExtendFlow={startExtendFlow}
+                                showMessage={showMessage}
+                                handleShareListing={handleShareListing}
+                                confirmDelete={confirmDelete}
+                              />
                             ))}
                           </div>
                         )}
@@ -2744,129 +2623,24 @@ export default function App() {
                             {filtered.length > 0 ? (
                               <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
                                 {pagedFiltered.map((l) => (
-                                  <article
+                                  <ListingCard
                                     key={l.id}
-                                    className="listing-card explore-card-modern"
-                                    onClick={() => {
+                                    listing={l}
+                                    t={t}
+                                    categoryIcons={categoryIcons}
+                                    getDescriptionPreview={getDescriptionPreview}
+                                    getListingStats={getListingStats}
+                                    onSelect={() => {
                                       setSelectedListing(l);
                                       const url = new URL(window.location.href);
                                       url.searchParams.set("listing", l.id);
                                       window.history.replaceState({}, "", url.toString());
-                                    } }
-                                  >
-                                    <header className="listing-header listing-header-dense">
-                                      <div className="listing-title-wrap">
-                                        <div className="listing-title-row">
-                                          <span className="listing-icon-bubble">
-                                            {categoryIcons[l.category] || "🏷️"}
-                                          </span>
-                                          <div>
-                                            <h3 className="listing-title">{l.name}</h3>
-                                            <div className="listing-meta pill-row-tight">
-                                              <span className="pill pill-category">{t(l.category) || l.category}</span>
-                                              <span className="pill pill-location">📍 {l.location}</span>
-                                              {l.expiresAt && (
-                                                <span className="pill pill-ghost subtle-pill">
-                                                  ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="listing-badges dense-badges">
-                                        {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
-                                        <span className="badge verified">✓ {t("verified")}</span>
-                                      </div>
-                                    </header>
-
-                                    <div className="listing-card-body">
-                                      <p className="listing-description listing-description-clamp listing-description-preview">
-                                        {getDescriptionPreview(l.description, 30)}
-                                      </p>
-
-                                      {(() => {
-                                        const stats = getListingStats(l);
-                                        return (
-                                          <div className="listing-stats spaced">
-                                            <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-                                            <span className="stat-chip">💬 {stats.feedbackCount}</span>
-                                            <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-                                            {l.tags && (
-                                              <span className="pill pill-tags">
-                                                {l.tags.split(",")[0]?.trim()}
-                                                {l.tags.split(",").length > 1 ? " +" : ""}
-                                              </span>
-                                            )}
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-
-                                    <div
-                                      className="listing-footer-row"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <div className="listing-footer-left">
-                                        {l.contact && (
-                                          <span className="pill pill-contact ghost-pill">
-                                            📞 {l.contact}
-                                          </span>
-                                        )}
-                                        {l.socialLink && (
-                                          <span className="pill pill-ghost subtle-pill">
-                                            🔗 {t("websiteLabel")}
-                                          </span>
-                                        )}
-                                      </div>
-
-                                      <div className="listing-actions compact">
-                                        <button
-                                          className="icon-btn"
-                                          type="button"
-                                          onClick={() => window.open(`tel:${l.contact}`)}
-                                        >
-                                          📞
-                                        </button>
-                                        <button
-                                          className="icon-btn"
-                                          type="button"
-                                          onClick={() => window.open(
-                                            `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
-                                              l.name || ""
-                                            )}`
-                                          )}
-                                        >
-                                          ✉️
-                                        </button>
-                                        <button
-                                          className="icon-btn"
-                                          type="button"
-                                          onClick={() => {
-                                            navigator.clipboard?.writeText(l.contact || "");
-                                            showMessage(t("copied"), "success");
-                                          } }
-                                        >
-                                          📋
-                                        </button>
-                                        <button
-                                          className="icon-btn"
-                                          type="button"
-                                          onClick={() => handleShareListing(l)}
-                                        >
-                                          🔗
-                                        </button>
-                                        <button
-                                          className="icon-btn"
-                                          type="button"
-                                          onClick={() => toggleFav(l.id)}
-                                        >
-                                          {favorites.includes(l.id) ? "★" : "☆"}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </article>
+                                    }}
+                                    onShare={() => handleShareListing(l)}
+                                    showMessage={showMessage}
+                                    toggleFav={toggleFav}
+                                    isFavorite={favorites.includes(l.id)}
+                                  />
                                 ))}
 
                               </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
@@ -4477,7 +4251,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {selectedListing.imagePreview && <img src={selectedListing.imagePreview} alt="preview" className="listing-hero-image" />}
+                      {selectedListing.imagePreview && <img src={selectedListing.imagePreview} alt="preview" className="listing-hero-image" loading="lazy" />}
 
                       <div className="listing-section">
                         <div className="section-heading">

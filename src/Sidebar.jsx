@@ -1,4 +1,6 @@
-const Sidebar = ({ t, selected, onSelect, onLogout, onLogin, onClose, user }) => {
+import React from "react";
+
+const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose, user }) => {
   const navItems = [
     { id: "main", label: t("homepage") || "Home", icon: "🏠" },
     ...(user ? [
@@ -68,5 +70,5 @@ const Sidebar = ({ t, selected, onSelect, onLogout, onLogin, onClose, user }) =>
       </div>
     </div>
   );
-};
+});
 export default Sidebar;
