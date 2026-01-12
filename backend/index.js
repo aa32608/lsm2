@@ -131,7 +131,7 @@ app.post("/api/paypal/create-order", async (req, res) => {
             },
           ],
           application_context: {
-            brand_name: "Local Support Market",
+            brand_name: "BizCall MK",
             landing_page: "NO_PREFERENCE",
             user_action: "PAY_NOW",
             shipping_preference: "NO_SHIPPING",

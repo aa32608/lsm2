@@ -1153,6 +1153,12 @@ export default function App() {
         body: JSON.stringify({ orderID, listingId, action: "create_listing" }),
       });
       const json = await resp.json();
+
+      if (resp.status === 400 && json.recoverable && json.redirect) {
+        window.location.href = json.redirect;
+        return;
+      }
+
       if (json.ok) {
         const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
         const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
@@ -1248,6 +1254,11 @@ export default function App() {
         body: JSON.stringify({ orderID, listingId, action: "extend" }),
       });
       const json = await resp.json();
+
+      if (resp.status === 400 && json.recoverable && json.redirect) {
+        window.location.href = json.redirect;
+        return;
+      }
 
       if (json.ok) {
         const snapshot = await fetchListing(listingId);
@@ -1768,7 +1779,9 @@ export default function App() {
     <PayPalScriptProvider options={{ 
       "client-id": PAYPAL_CLIENT_ID, 
       currency: "EUR", 
-      intent: "capture"
+      intent: "capture",
+      components: "buttons",
+      "disable-funding": "paylater,venmo"
     }}>
       <HeadManager
         title={seoTitle}
@@ -3575,46 +3588,48 @@ export default function App() {
                   )}
 
                   <div className="payment-buttons">
-                    <PayPalButtons
-                      style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
-                      createOrder={async () => {
-                        try {
-                          const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ 
-                              listingId: paymentIntent.listingId, 
-                              amount: paymentIntent.amount, 
-                              action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
-                            }),
-                          });
-                          const data = await res.json();
-                          if (!data.orderID) throw new Error("Failed to create PayPal order");
-                          return data.orderID;
-                        } catch (err) {
-                          console.error("PayPal createOrder error:", err);
-                          showMessage(t("paypalError") + " " + String(err), "error");
-                          throw err;
-                        }
-                      }}
-                      onApprove={async (data) => {
-                        const orderId = data.orderID;
-                        try {
-                          if (paymentIntent.type === "extend") {
-                            await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
-                          } else {
-                            await handleServerCapture(orderId, paymentIntent.listingId);
+                    {paymentIntent && (
+                      <PayPalButtons
+                        style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
+                        createOrder={async () => {
+                          try {
+                            const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ 
+                                listingId: paymentIntent.listingId, 
+                                amount: paymentIntent.amount, 
+                                action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                              }),
+                            });
+                            const data = await res.json();
+                            if (!data.orderID) throw new Error("Failed to create PayPal order");
+                            return data.orderID;
+                          } catch (err) {
+                            console.error("PayPal createOrder error:", err);
+                            showMessage(t("paypalError") + " " + String(err), "error");
+                            throw err;
                           }
-                          showMessage(t("thankYou"), "success");
-                        } catch (err) {
-                          console.error("PayPal approval error:", err);
+                        }}
+                        onApprove={async (data) => {
+                          const orderId = data.orderID;
+                          try {
+                            if (paymentIntent.type === "extend") {
+                              await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
+                            } else {
+                              await handleServerCapture(orderId, paymentIntent.listingId);
+                            }
+                            showMessage(t("thankYou"), "success");
+                          } catch (err) {
+                            console.error("PayPal approval error:", err);
+                            showMessage(t("paypalError") + " " + String(err), "error");
+                          }
+                        }}
+                        onError={(err) => {
                           showMessage(t("paypalError") + " " + String(err), "error");
-                        }
-                      }}
-                      onError={(err) => {
-                        showMessage(t("paypalError") + " " + String(err), "error");
-                      }}
-                    />
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
