@@ -19,7 +19,7 @@ const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose,
             <p className="sidebar-subtitle">{t("manageListings") || "Navigate your dashboard"}</p>
           </div>
           <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24" }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24px" }}>
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>

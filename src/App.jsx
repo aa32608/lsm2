@@ -462,25 +462,11 @@ export default function App() {
 
     setSavingPhone(true);
     try {
-      // 1. Check uniqueness in Database
-      const usersRef = dbRef(db, "users");
-      const phoneQuery = query(usersRef, orderByChild("phone"), equalTo(normalizedPhone));
-      const snapshot = await get(phoneQuery);
-      
-      if (snapshot.exists()) {
-        const users = snapshot.val();
-        const ownerIds = Object.keys(users);
-        // If someone else has this phone
-        if (ownerIds.some(id => id !== user.uid)) {
-          throw new Error(t("phoneAlreadyInUse") || "This phone number is already in use by another account.");
-        }
-      }
-
-      // 2. Re-authenticate
+      // 1. Re-authenticate
       const credential = EmailAuthProvider.credential(user.email, passwordForm.currentPassword);
       await reauthenticateWithCredential(user, credential);
 
-      // 3. Send SMS code for verification (to link/update in Auth)
+      // 2. Send SMS code for verification (to link/update in Auth)
       if (!window.recaptchaVerifierAccount) {
         window.recaptchaVerifierAccount = new RecaptchaVerifier(auth, "recaptcha-container-account", {
           size: "invisible"
@@ -1606,7 +1592,7 @@ export default function App() {
     setFeedbackDraft({ rating: lastRating, comment: "" });
   }, [feedbackStore, selectedListing]);
 
-  const handleFeedbackSubmit = async (listingId) => {
+  const handleFeedbackSubmit = useCallback(async (listingId) => {
     if (!listingId) return;
     const rating = Math.min(Math.max(Number(feedbackDraft.rating) || 0, 1), 5);
     const comment = (feedbackDraft.comment || "").trim();
@@ -1663,7 +1649,7 @@ export default function App() {
     } finally {
       setFeedbackSaving(false);
     }
-  };
+  }, [feedbackDraft, user, t, listings, showMessage]);
 
   const handleShareListing = useCallback((listing) => {
     const url = `${window.location.origin}?listing=${encodeURIComponent(listing.id)}`;
