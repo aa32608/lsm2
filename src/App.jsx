@@ -1801,7 +1801,6 @@ export default function App() {
       intent: "capture",
       components: "buttons",
       "enable-funding": "paylater,venmo",
-      "disable-funding": "fastlane",
       "data-sdk-integration-source": "react-paypal-js",
       "data-namespace": "paypal_sdk",
       "buyer-country": "MK"
