@@ -55,7 +55,7 @@ const EditListingModal = ({
         <div className="modal-body edit-modal-body">
           <div className="edit-summary-banner">
             <div>
-              <p className="eyebrow subtle">{t("preview") || "Preview"}</p>
+              <p className="eyebrow subtle">{t("preview")}</p>
               <h4 className="edit-summary-title">{editForm.name || t("name")}</h4>
               <p className="edit-summary-sub">
                 {(t(editForm.category) || editForm.category || t("category"))} • {editLocationPreview || t("location")}
@@ -157,7 +157,7 @@ const EditListingModal = ({
                 readOnly
               />
               <p className="field-hint">
-                {t("contactEditLocked") || "Update your phone number in Account settings."}
+                {t("contactEditLocked")}
               </p>
               <button
                 type="button"
@@ -169,7 +169,7 @@ const EditListingModal = ({
                 }}
                 style={{ marginTop: 8 }}
               >
-                {t("goToAccount") || "Go to account"}
+                {t("goToAccount")}
               </button>
             </div>
           </div>
@@ -192,11 +192,11 @@ const EditListingModal = ({
           <div className="field-row-2">
             <div className="field-group">
               <label className="field-label">
-                {t("priceRangeLabel") || "Price range"}
+                {t("priceRangeLabel")}
               </label>
               <input
                 className="input"
-                placeholder="e.g. 500 - 800 MKD"
+                placeholder={t("priceRangePlaceholder")}
                 value={editForm.offerprice}
                 onChange={(e) =>
                   setEditForm({
@@ -208,11 +208,11 @@ const EditListingModal = ({
             </div>
             <div className="field-group">
               <label className="field-label">
-                {t("tagsFieldLabel") || "Tags"}
+                {t("tagsFieldLabel")}
               </label>
               <input
                 className="input"
-                placeholder={t("tagsPlaceholder") || "Tags (optional)"}
+                placeholder={t("tagsPlaceholder")}
                 value={editForm.tags}
                 onChange={(e) =>
                   setEditForm({
@@ -226,11 +226,11 @@ const EditListingModal = ({
 
           <div className="field-group">
             <label className="field-label">
-              {t("websiteFieldLabel") || "Social / Website"}
+              {t("websiteFieldLabel")}
             </label>
             <input
               className="input"
-              placeholder={t("websitePlaceholder") || "Link (optional)"}
+              placeholder={t("websitePlaceholder")}
               value={editForm.socialLink}
               onChange={(e) =>
                 setEditForm({
@@ -243,11 +243,11 @@ const EditListingModal = ({
 
           <div className="field-group">
             <label className="field-label">
-              {t("coverImage") || "Cover image (local only)"}
+              {t("coverImage")}
             </label>
             <div className="edit-image-row">
               <label className="btn btn-ghost small" htmlFor="edit-image">
-                {t("uploadCoverLocal") || "Upload cover"}
+                {t("uploadCoverLocal")}
               </label>
               <input
                 id="edit-image"

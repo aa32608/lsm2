@@ -258,7 +258,7 @@ const Header = React.memo(({
       <button
         className="icon-btn mobile-menu-btn"
         onClick={onMenuOpen}
-        aria-label={t("menu") || "Menu"}
+        aria-label={t("menu")}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -272,7 +272,7 @@ const Header = React.memo(({
           <div className="brand-logo-wrap">
             <img
               src={logo}
-              alt="BizCall logo"
+              alt={t("bizcallLogo")}
               className="brand-logo"
               loading="lazy"
             />
@@ -280,11 +280,11 @@ const Header = React.memo(({
         </div>
         <div className="brand-text">
           <h1 className="brand-title">BizCall</h1>
-          <p className="brand-tagline">{t("community") || "Trusted local services"}</p>
+          <p className="brand-tagline">{t("communityTagline")}</p>
         </div>
       </button>
 
-      <nav className="header-nav desktop-nav" aria-label="Primary navigation">
+      <nav className="header-nav desktop-nav" aria-label={t("primaryNav")}>
         {primaryNav.map((item) => (
           <button
             key={item.id}
@@ -582,13 +582,13 @@ export default function App() {
       buildLocationString(
         selectedListing.locationData?.city || selectedListing.location,
         selectedListing.locationData?.area || selectedListing.locationExtra
-      ) || t("unspecified") || "Unspecified"
+      ) || t("unspecified")
     );
   }, [selectedListing, t]);
 
   const listingPriceLabel = useMemo(() => {
     if (!selectedListing) return "";
-    return selectedListing.offerprice || t("unspecified") || "Unspecified";
+    return selectedListing.offerprice || t("unspecified");
   }, [selectedListing, t]);
 
   const listingContactAvailable = !!selectedListing?.contact;
@@ -833,13 +833,13 @@ export default function App() {
 
     // Check if email is different
     if (emailForm.newEmail === currentUser.email) {
-      showMessage(t("enterValidEmail") || "Please enter a different email address", "error");
+      showMessage(t("differentEmailRequired"), "error");
       return;
     }
 
     // Check if current email is verified (some Firebase projects require this)
     if (!currentUser.emailVerified) {
-      showMessage(t("verifyYourEmail") || "Please verify your current email address before changing it.", "error");
+      showMessage(t("verifyCurrentEmailBeforeChange"), "error");
       return;
     }
 
@@ -886,7 +886,7 @@ export default function App() {
         const updatedUser = auth.currentUser;
         setUser(updatedUser);
         
-        showMessage(t("emailUpdateSuccess") || "Email updated successfully! Please check your new email for verification.", "success");
+        showMessage(t("emailUpdateSuccess"), "success");
         setEmailForm({ newEmail: "", currentPassword: "" });
       } catch (updateErr) {
         // If updateEmail fails with operation-not-allowed, it's a Firebase Auth restriction
@@ -902,16 +902,10 @@ export default function App() {
               emailChangeRequestedAt: Date.now()
             });
             
-            showMessage(
-              "⚠️ Email change is restricted by Firebase. Your new email has been saved in your profile, but you'll need to sign out and sign in with your new email address. Alternatively, contact support to enable email changes in Firebase Console.",
-              "error"
-            );
+            showMessage(t("emailChangeRestricted"), "error");
           } catch (dbErr) {
             console.error("Database update failed:", dbErr);
-            showMessage(
-              "Email change failed. Firebase has restricted email changes. Please contact support or check Firebase Console > Authentication > Settings.",
-              "error"
-            );
+            showMessage(t("emailChangeFailed"), "error");
           }
           setEmailForm({ newEmail: "", currentPassword: "" });
           return;
@@ -924,13 +918,13 @@ export default function App() {
       
       // Provide more helpful error messages
       if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        errorMessage = t("enterCurrentPassword") || "Incorrect password. Please try again.";
+        errorMessage = t("passwordIncorrect");
       } else if (err.code === "auth/email-already-in-use") {
-        errorMessage = "This email is already in use by another account.";
+        errorMessage = t("emailInUse");
       } else if (err.code === "auth/requires-recent-login") {
-        errorMessage = "Please log out and log back in before changing your email.";
+        errorMessage = t("recentLoginRequired");
       } else if (err.code === "auth/operation-not-allowed") {
-        errorMessage = "Email changes are blocked by 'Email Enumeration Protection' in Firebase. To fix: Install Google Cloud SDK, then run: gcloud identity-platform settings update --project=YOUR_PROJECT_ID --disable-email-enum. Or check Firebase Console > Authentication > Settings for email enumeration protection settings.";
+        errorMessage = t("emailEnumProtection");
       }
       
       showMessage(errorMessage, "error");
@@ -1105,7 +1099,7 @@ export default function App() {
     if (!requiredOk) return showMessage(t("fillAllFields"), "error");
 
     if (!phoneForListing) {
-      return showMessage(t("addPhoneInAccount") || "Please add your phone number in your account first.", "error");
+      return showMessage(t("addPhoneInAccountSettings"), "error");
     }
 
     const normalizedContact = normalizePhoneForStorage(phoneForListing);
@@ -1217,11 +1211,7 @@ export default function App() {
             window.open(json.redirect, "_blank");
           } catch { void 0; }
         }
-        showMessage(
-          t("paymentRetry") ||
-            "Payment declined by funding source. Please choose another method or re-approve.",
-          "error"
-        );
+        showMessage(t("paymentRetry"), "error");
         await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
         showMessage(t("paymentFailed") + " " + JSON.stringify(json.error), "error");
@@ -1241,7 +1231,7 @@ export default function App() {
     }
 
     if (listing.userId !== user.uid) {
-      showMessage(t("notOwner") || "You are not owner of this listing.", "error");
+      showMessage(t("notOwner"), "error");
       return;
     }
 
@@ -1287,7 +1277,7 @@ export default function App() {
           lastExtendPlan: effectivePlanKey,
         });
 
-        showMessage(t("extendSuccess") || "Listing extended successfully ✅", "success");
+        showMessage(t("extendSuccess"), "success");
         setExtendTarget(null);
         setPaymentModalOpen(false);
         setPaymentIntent(null);
@@ -1297,19 +1287,10 @@ export default function App() {
             window.open(json.redirect, "_blank");
           } catch { void 0; }
         }
-        showMessage(
-          t("paymentRetry") ||
-            "Payment declined by funding source. Please choose another method or re-approve.",
-          "error"
-        );
+        showMessage(t("paymentRetry"), "error");
         await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
-        showMessage(
-          (t("extendFailed") || "Extend payment failed:") +
-            " " +
-            JSON.stringify(json.error),
-          "error"
-        );
+        showMessage(t("extendFailed") + " " + JSON.stringify(json.error), "error");
       }
     } catch (err) {
       console.error(err);
@@ -1354,7 +1335,7 @@ export default function App() {
     const finalLocation = buildLocationString(editForm.locationCity, editForm.locationExtra);
     const phoneForListing = editForm.contact || accountPhone || editingListing.contact;
 
-    if (!phoneForListing) return showMessage(t("addPhoneInAccount") || t("fillAllFields"), "error");
+    if (!phoneForListing) return showMessage(t("addPhoneInAccountSettings"), "error");
 
     if (!editForm.name || !editForm.category || !editForm.locationCity || !editForm.description)
       return showMessage(t("fillAllFields"), "error");
@@ -1377,14 +1358,14 @@ export default function App() {
       imagePreview: editForm.imagePreview || null,
     };
     await update(dbRef(db, `listings/${editingListing.id}`), updates);
-    showMessage(t("save") + " ✅", "success");
+    showMessage(t("saveSuccess"), "success");
     setEditingListing(null); setEditForm(null);
   };
 
   const confirmDelete = useCallback(async (id) => {
     if (!window.confirm("Delete this listing?")) return;
     await deleteListing(id);
-    showMessage("Listing deleted", "success");
+    showMessage(t("listingDeleted"), "success");
   }, [showMessage]);
 
   /* Derived data */
@@ -1631,8 +1612,8 @@ export default function App() {
         // 3. Notify listing owner
         const ownerEmail = listing.userEmail;
         if (ownerEmail) {
-          const subject = `New review for your listing: ${listing.name}`;
-          const text = `Hi, someone just left a ${rating}-star review for your listing "${listing.name}".\n\nComment: ${comment}\n\nCheck it out here: ${window.location.origin}?listing=${listingId}`;
+          const subject = `${t("reviewNotificationSubject")}: ${listing.name}`;
+          const text = `${t("reviewNotificationText")}\n\n${t("reviewNotificationComment")}: ${comment}\n\n${t("reviewNotificationCheck")}: ${window.location.origin}?listing=${listingId}`;
           try {
             await sendEmail(ownerEmail, subject, text);
           } catch (err) {
@@ -1669,22 +1650,19 @@ export default function App() {
         });
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(url);
-      showMessage(
-        t("shareCopied") || "Linku i listimit u kopjua në clipboard ✅",
-        "success"
-      );
+      showMessage(t("shareCopied"), "success");
     } else {
-      showMessage(
-        t("shareNotSupported") || "Ky pajisje nuk e përkrah ndarjen direkt.",
-        "error"
-      );
+      showMessage(t("shareNotSupported"), "error");
     }
   }, [t, showMessage]);
   
   const onLogout = useCallback(async () => {
     await signOut(auth);
     showMessage(t("signedOut"), "success");
-  }, [t]);
+    if (selectedTab === "myListings" || selectedTab === "account") {
+      setSelectedTab("main");
+    }
+  }, [t, selectedTab, showMessage]);
 
   const onLogin = useCallback(() => {
     setShowAuthModal(true);
@@ -1702,7 +1680,10 @@ export default function App() {
     await signOut(auth);
     showMessage(t("signedOut"), "success");
     setSidebarOpen(false);
-  }, [t]);
+    if (selectedTab === "myListings" || selectedTab === "account") {
+      setSelectedTab("main");
+    }
+  }, [t, selectedTab, showMessage]);
 
   const handleSidebarLogin = useCallback(() => {
     setShowAuthModal(true);
@@ -1732,12 +1713,12 @@ export default function App() {
 
   const primaryNav = useMemo(
     () => [
-      { id: "main", label: t("homepage") || "Home", icon: "🏠" },
-      { id: "allListings", label: t("explore") || "Explore", icon: "🧭", badge: listings.length },
+      { id: "main", label: t("homepage"), icon: "🏠" },
+      { id: "allListings", label: t("explore"), icon: "🧭", badge: listings.length },
       ...(user
         ? [
-            { id: "myListings", label: t("myListings") || "My listings", icon: "📂", badge: myListingsRaw.length },
-            { id: "account", label: t("account") || "Account", icon: "👤" },
+            { id: "myListings", label: t("myListings"), icon: "📂", badge: myListingsRaw.length },
+            { id: "account", label: t("account"), icon: "👤" },
           ]
         : []),
     ],
@@ -1745,26 +1726,26 @@ export default function App() {
   );
 
   const currentSectionLabel = useMemo(() => {
-    if (selectedTab === "myListings") return t("myListings") || "My listings";
-    if (selectedTab === "account") return t("account") || "Account";
-    if (selectedTab === "allListings") return t("explore") || "Explore";
-    return t("dashboard") || "Dashboard";
+    if (selectedTab === "myListings") return t("myListings");
+    if (selectedTab === "account") return t("account");
+    if (selectedTab === "allListings") return t("explore");
+    return t("dashboard");
   }, [selectedTab, t]);
 
   // sort labels are inlined where needed
 
   const authModeTabs = useMemo(
     () => [
-      { id: "login", label: t("login") || "Login" },
-      { id: "signup", label: t("signup") || "Register" },
+      { id: "login", label: t("login") },
+      { id: "signup", label: t("signup") },
     ],
     [t]
   );
 
   const authMethodTabs = useMemo(
     () => [
-      { id: "email", label: t("emailTab") || "Email", icon: "✉️" },
-      { id: "phone", label: t("signInWithPhone") || "Phone", icon: "📱" },
+      { id: "email", label: t("emailTab"), icon: "✉️" },
+      { id: "phone", label: t("signInWithPhone"), icon: "📱" },
     ],
     [t]
   );
@@ -1781,9 +1762,9 @@ export default function App() {
   };
 
   const canonicalUrl = typeof window !== "undefined" ? window.location.href : "";
-  const seoTitle = "BizCall - Local Services";
-  const seoDescription = "Find and share trusted local services across North Macedonia";
-  const seoKeywords = "local services, marketplace, North Macedonia, Skopje, Tetovo";
+  const seoTitle = t("seoTitle");
+  const seoDescription = t("seoDescription");
+  const seoKeywords = t("seoKeywords");
   const ogImage = "/og-image.png";
   const jsonLdData = {
     "@context": "https://schema.org",
@@ -1793,7 +1774,7 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={{ "client-id": PAYPAL_CLIENT_ID, currency: "EUR", locale: "en_MK" }}>
+    <PayPalScriptProvider options={{ "client-id": PAYPAL_CLIENT_ID, currency: "EUR", locale: lang === "mk" ? "mk_MK" : lang === "sq" ? "sq_AL" : "en_MK" }}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -1890,19 +1871,19 @@ export default function App() {
         
             {/* QUICK STATS */}
             <section className="stats-section">
-              <h3>📊 {t("homeDigest") || "Live snapshot"}</h3>
+              <h3>📊 {t("homeDigest")}</h3>
               <div className="stats-grid">
                 <div className="stat-item">
                   <p className="stat-value blue">{activeListingCount}</p>
-                  <p className="stat-label">{t("listingsLabel") || "Active"}</p>
+                  <p className="stat-label">{t("active")}</p>
                 </div>
                 <div className="stat-item">
                   <p className="stat-value green">{verifiedListingCount}</p>
-                  <p className="stat-label">{t("verified") || "Verified"}</p>
+                  <p className="stat-label">{t("verified")}</p>
                 </div>
                 <div className="stat-item">
                   <p className="stat-value purple">{mkSpotlightCities.length}</p>
-                  <p className="stat-label">{t("cities") || "Cities"}</p>
+                  <p className="stat-label">{t("cities")}</p>
                 </div>
               </div>
             </section>
@@ -1953,7 +1934,7 @@ export default function App() {
                   <div className="dashboard-topbar">
                     <div className="dashboard-meta">
                       <p className="eyebrow subtle">{t("dashboard")}</p>
-                      <h2 className="dashboard-heading">{t("manageListings") || "Manage everything in one place"}</h2>
+                      <h2 className="dashboard-heading">{t("manageListings")}</h2>
                     </div>
                     <div className="topbar-tabs">
                       <span className="pill current-view">{currentSectionLabel}</span>
@@ -1963,7 +1944,7 @@ export default function App() {
                           type="button"
                           onClick={() => setSelectedTab("allListings")}
                         >
-                          🌍 {t("explore") || "Explore"}
+                          🌍 {t("explore")}
                         </button>
                       )}
                     </div>
@@ -1976,12 +1957,12 @@ export default function App() {
                           <div>
                             <h2 className="section-title-inner">📁 {t("myListings")}</h2>
                             <p className="section-subtitle-small">
-                              {t("myListingsHint") || "Review, edit and extend your listings in one place."}
+                              {t("myListingsHint")}
                             </p>
                           </div>
                           <div className="pill-row">
                             <span className="badge count">
-                              {myListings.length} {(myListings.length === 1 ? t("listing") || "listing" : t("listingsLabel") || "listings")}
+                              {myListings.length} {(myListings.length === 1 ? t("listing") : t("listingsLabel"))}
                             </span>
                             {myVerifiedCount > 0 && (
                               <span className="badge success">
@@ -2010,7 +1991,7 @@ export default function App() {
                               }).length;
                               return expiringSoon > 0 ? (
                                 <div className="stat-chip warning">
-                                  <span className="stat-label">⚠️ {t("expiringSoon") || "Expiring soon"}</span>
+                                  <span className="stat-label">⚠️ {t("expiringSoon")}</span>
                                   <span className="stat-value">{expiringSoon}</span>
                                 </div>
                               ) : null;
@@ -2022,7 +2003,7 @@ export default function App() {
                               }, 0);
                               return totalReviews > 0 ? (
                                 <div className="stat-chip info">
-                                  <span className="stat-label">💬 {t("reviews") || "Reviews"}</span>
+                                  <span className="stat-label">💬 {t("reviewsLabel")}</span>
                                   <span className="stat-value">{totalReviews}</span>
                                 </div>
                               ) : null;
@@ -2043,7 +2024,7 @@ export default function App() {
                               onClick={() => setSelectedTab("allListings")}
                               type="button"
                             >
-                              🔍 {t("explore") || "Browse listings"}
+                              🔍 {t("explore")}
                             </button>
                             <button
                               className="btn small"
@@ -2053,7 +2034,7 @@ export default function App() {
                               }}
                               type="button"
                             >
-                              ➕ {t("submitListing") || "Create listing"}
+                              ➕ {t("submitListing")}
                             </button>
                           </div>
                         </div>
@@ -2137,7 +2118,7 @@ export default function App() {
                               {myListingsRaw.length === 0 
                                 ? t("noListingsYet")
                                 : (myListingsSearch || myListingsStatusFilter !== "all" || myListingsExpiryFilter !== "all")
-                                  ? t("noListingsMatchFilters") || "No listings match your filters. Try adjusting your search."
+                                  ? t("noListingsMatchFilters")
                                   : t("noListingsYet")
                               }
                             </p>
@@ -2151,7 +2132,7 @@ export default function App() {
                                 }}
                                 type="button"
                               >
-                                {t("clearFilters") || "Clear filters"}
+                                {t("clearFilters")}
                               </button>
                             )}
                           </div>
@@ -2314,7 +2295,7 @@ export default function App() {
                                             setPhoneConfirmationResult(null);
                                           }}>{t("cancel")}</button>
                                           <button type="submit" className="btn small" disabled={savingPhone}>
-                                            {savingPhone ? t("sendingCode") || "Sending code..." : t("savePhone")}
+                                            {savingPhone ? t("sendingCode") : t("savePhone")}
                                           </button>
                                         </div>
                                         <div id="recaptcha-container-account"></div>
@@ -2336,9 +2317,9 @@ export default function App() {
                                           <button type="button" className="btn btn-ghost small" onClick={() => {
                                             setPhoneConfirmationResult(null);
                                             setPhoneVerificationCode("");
-                                          }}>{t("back") || "Back"}</button>
+                                          }}>{t("back")}</button>
                                           <button type="submit" className="btn small" disabled={savingPhone}>
-                                            {savingPhone ? t("verifying") || "Verifying..." : t("verifyCode") || "Verify Code"}
+                                            {savingPhone ? t("verifying") : t("verifyCode")}
                                           </button>
                                         </div>
                                       </form>
@@ -2493,7 +2474,7 @@ export default function App() {
                               <div className="account-form-section">
                                 <div className="account-form-section-header">
                                   <h4 className="account-form-section-title">🔑 {t("changePassword")}</h4>
-                                  <p className="account-form-section-desc">{t("securitySettings") || "Update your password"}</p>
+                                  <p className="account-form-section-desc">{t("securitySettings")}</p>
                                 </div>
                                 <form className="account-form-enhanced" onSubmit={handleChangePassword}>
                                   <div className="account-form-field">
@@ -2582,7 +2563,7 @@ export default function App() {
                             <p className="explore-page-subtitle">
                               {filtered.length === 0 
                                 ? t("noListingsFound")
-                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel") || "available"} • Page ${page} of ${totalPages}`
+                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel")} • ${t("page")} ${page} ${t("of")} ${totalPages}`
                               }
                             </p>
                           </div>
@@ -2742,11 +2723,11 @@ export default function App() {
                               </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
                                   <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                     <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button>
-                                    <span className="small-muted">Page {page} of {totalPages}</span>
+                                    <span className="small-muted">{t("page")} {page} {t("of")} {totalPages}</span>
                                     <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</button>
                                   </div>
                                   <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <span className="small-muted">{t("resultsPerPage") || "Per page"}</span>
+                                    <span className="small-muted">{t("resultsPerPage")}</span>
                                     <div className="filter-select-wrapper">
                                       <select className="filter-select-field" value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value, 10))}>
                                         <option value="6">6</option>
@@ -3037,7 +3018,7 @@ export default function App() {
                             }
                             required
                           >
-                            <option value="">{t("selectCity") || "Select city"}</option>
+                            <option value="">{t("selectCity")}</option>
                             {MK_CITIES.map((city) => (
                               <option key={city} value={city}>
                                 {city}
@@ -3049,7 +3030,7 @@ export default function App() {
                           <input
                             className="input"
                             placeholder={
-                              t("locationExtra") || "Town / village / neighborhood (optional)"
+                              t("locationExtra")
                             }
                             maxLength="100"
                             value={form.locationExtra}
@@ -3068,7 +3049,7 @@ export default function App() {
                             style={{ marginTop: 6 }}
                             onClick={() => setShowMapPicker(true)}
                           >
-                            {t("chooseOnMap") || "Choose on map"}
+                            {t("chooseOnMap")}
                           </button>
                         </div>
                 
@@ -3088,7 +3069,7 @@ export default function App() {
                           e.preventDefault();
                           const phoneForListing = accountPhone || form.contact;
                           if (!form.description || !phoneForListing)
-                            return showMessage(t("addPhoneInAccount") || t("fillAllFields"), "error");
+                            return showMessage(t("addPhoneInAccount"), "error");
                           if (!validatePhone(phoneForListing))
                             return showMessage(t("enterValidPhone"), "error");
                           setForm({ ...form, contact: phoneForListing, step: 3 });
@@ -3112,10 +3093,10 @@ export default function App() {
                           <div className="contact-summary-main">
                             <span className="field-label">{t("contact")}</span>
                             <p className="contact-number">
-                              {accountPhone || t("addPhoneInAccount") || "Add a phone number in your account"}
+                              {accountPhone || t("addPhoneInAccount")}
                             </p>
                             <p className="contact-hint">
-                              {t("contactAutofill") || "We use your account phone for trust and safety."}
+                              {t("contactAutofill")}
                             </p>
                           </div>
                           <div className="contact-summary-actions">
@@ -3125,14 +3106,14 @@ export default function App() {
                               onClick={() => {
                                 if (accountPhone) {
                                   setForm((f) => ({ ...f, contact: accountPhone }));
-                                  showMessage(t("phoneSynced") || "Using your account phone number.", "success");
+                                  showMessage(t("phoneSynced"), "success");
                                 } else {
                                   setSelectedTab("account");
-                                  showMessage(t("addPhoneInAccount") || "Add your phone in account settings first.", "error");
+                                  showMessage(t("addPhoneInAccount"), "error");
                                 }
                               }}
                             >
-                              {accountPhone ? t("useAccountPhone") || "Use account phone" : t("goToAccount") || "Go to account"}
+                              {accountPhone ? t("useAccountPhone") : t("goToAccount")}
                             </button>
                           </div>
                         </div>
@@ -3234,7 +3215,7 @@ export default function App() {
                         {form.imagePreview && (
                           <img
                             src={form.imagePreview}
-                            alt="preview"
+                            alt={t("previewAlt")}
                             style={{
                               width: "100%",
                               borderRadius: 12,
@@ -3315,7 +3296,7 @@ export default function App() {
                           {form.imagePreview && (
                             <img
                               src={form.imagePreview}
-                              alt="preview"
+                              alt={t("previewAlt")}
                               style={{
                                 width: "100%",
                                 borderRadius: 12,
@@ -3433,6 +3414,7 @@ export default function App() {
                   <button
                     className="icon-btn"
                     onClick={() => setShowMapPicker(false)}
+                    aria-label={t("close")}
                   >
                     ✕
                   </button>
@@ -3552,7 +3534,7 @@ export default function App() {
                   {paymentIntent.type === "extend" && (
                     <div className="plan-selector" style={{ marginTop: 12 }}>
                       <label className="plan-label">
-                        {t("selectExtendDuration") || t("selectDuration") || "Select extension duration"}
+                        {t("selectExtendDuration") || t("selectDuration")}
                       </label>
                       <div className="plan-grid">
                         {Object.keys(priceMap).map((months) => (
@@ -3628,12 +3610,12 @@ export default function App() {
                           showMessage(t("thankYou"), "success");
                         } catch (err) {
                           console.error("PayPal approval error:", err);
-                          showMessage((t("paypalError") || "PayPal error:") + " " + String(err), "error");
+                          showMessage(t("paypalError") + " " + String(err), "error");
                         }
                       }}
-                      onError={(err) =>
-                        showMessage((t("paypalError") || "PayPal error:") + " " + String(err), "error")
-                      }
+                      onError={(err) => {
+                        showMessage(t("paypalError") + " " + String(err), "error");
+                      }}
                     />
                   </div>
                 </div>
@@ -3669,7 +3651,7 @@ export default function App() {
                 <div className="modal-header">
                   <h3 className="modal-title">
                     {authMode === "signup"
-                      ? t("createAccount") || "Create your BizCall account"
+                      ? t("createAccount")
                       : authTab === "email"
                       ? t("emailLoginSignup")
                       : t("verifyPhone")}
@@ -3709,8 +3691,7 @@ export default function App() {
                     {authTab === "email" ? (
                       <div className="modal-body auth-body auth-body-card">
                         <p className="auth-subtitle">
-                          {t("loginSubtitle") ||
-                            "Log in with your email and password to manage your listings."}
+                          {t("loginSubtitle")}
                         </p>
         
                         {/* Email */}
@@ -3920,7 +3901,7 @@ export default function App() {
                     {/* REPEAT PASSWORD */}
                     <div className="auth-field-group">
                       <span className="field-label">
-                        {t("repeatNewPassword") || "Repeat password"}
+                        {t("repeatNewPassword")}
                       </span>
                       <input
                         className="input"
@@ -4003,7 +3984,7 @@ export default function App() {
                           }
                         }}
                       >
-                        {t("createAccount") || "Create account"}
+                        {t("createAccount")}
                       </button>
                     )}
                 
@@ -4063,7 +4044,7 @@ export default function App() {
                             }
                           }}
                         >
-                          {t("verifyPhone") || "Verify & finish signup"}
+                          {t("verifyPhone")}
                         </button>
                       </>
                     )}
@@ -4092,11 +4073,11 @@ export default function App() {
                         className="btn btn-ghost full-width"
                         disabled={resendBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage(t("paypalError") || "Error", "error");
+                          if (!auth.currentUser) return showMessage(t("paypalError"), "error");
                           setResendBusy(true);
                           try {
                             await sendEmailVerification(auth.currentUser);
-                            showMessage(t("emailLinkSent") || "Verification email sent.", "success");
+                            showMessage(t("emailLinkSent"), "success");
                           } catch (err) {
                             showMessage(String(err?.message || err), "error");
                           } finally {
@@ -4111,7 +4092,7 @@ export default function App() {
                         className="btn full-width"
                         disabled={verifyBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage(t("paypalError") || "Error", "error");
+                          if (!auth.currentUser) return showMessage(t("paypalError"), "error");
                           setVerifyBusy(true);
                           try {
                             await auth.currentUser.reload();
@@ -4185,7 +4166,7 @@ export default function App() {
                       onClick={async () => {
                         try {
                           const u = auth.currentUser;
-                          if (!u) return showMessage("Not signed in.", "error");
+                          if (!u) return showMessage(t("notSignedIn"), "error");
                           await sendEmailVerification(u);
                           showMessage(t("emailLinkSent"), "success");
                         } catch (err) {
@@ -4274,11 +4255,11 @@ export default function App() {
                         <div className="hero-left">
                           <div className="hero-icon-bubble">{categoryIcons[selectedListing.category] || "🏷️"}</div>
                           <div>
-                            <p className="eyebrow">{t("listing") || "Listing"}</p>
+                            <p className="eyebrow">{t("listing")}</p>
                             <h3 className="hero-title">{selectedListing.name}</h3>
                             <div className="chip-row">
                               <span className="pill">{t(selectedListing.category) || selectedListing.category}</span>
-                              <span className="pill pill-soft">{selectedListing.location || (t("unspecified") || "Unspecified")}</span>
+                              <span className="pill pill-soft">{selectedListing.location || t("unspecified")}</span>
                             </div>
                           </div>
                         </div>
@@ -4315,7 +4296,7 @@ export default function App() {
                             📋 {t("copy")}
                           </button>
                           <button className="quick-action-btn ghost" onClick={() => handleShareListing(selectedListing)}>
-                            🔗 {t("share") || "Share"}
+                            🔗 {t("share")}
                           </button>
                         </div>
                       </div>
@@ -4326,43 +4307,43 @@ export default function App() {
                           <p className="highlight-value">{selectedListing.status === "verified" ? t("verified") : t("pendingVerification")}</p>
                         </div>
                         <div className="highlight-card">
-                          <p className="highlight-label">{t("listedOn") || t("postedOn") || "Posted on"}</p>
-                          <p className="highlight-value">{selectedListing.createdAt ? new Date(selectedListing.createdAt).toLocaleDateString() : t("unspecified") || "Unspecified"}</p>
+                          <p className="highlight-label">{t("listedOn")}</p>
+                          <p className="highlight-value">{selectedListing.createdAt ? new Date(selectedListing.createdAt).toLocaleDateString() : t("unspecified")}</p>
                         </div>
                         <div className="highlight-card">
-                          <p className="highlight-label">{t("priceRangeLabel") || t("priceLabel")}</p>
+                          <p className="highlight-label">{t("priceRangeLabel")}</p>
                           <p className="highlight-value">{listingPriceLabel}</p>
                         </div>
                         <div className="highlight-card">
-                          <p className="highlight-label">{t("locationDetails") || "Location"}</p>
+                          <p className="highlight-label">{t("locationDetails")}</p>
                           <p className="highlight-value">{listingLocationLabel}</p>
                           {selectedListing.locationData?.mapsUrl && (
-                            <a className="map-link" href={selectedListing.locationData.mapsUrl} target="_blank" rel="noreferrer">{t("openInMaps") || "Open in Maps"}</a>
+                            <a className="map-link" href={selectedListing.locationData.mapsUrl} target="_blank" rel="noreferrer">{t("openInMaps")}</a>
                           )}
                         </div>
                         <div className="highlight-card">
-                          <p className="highlight-label">{t("reputation") || "Reputation"}</p>
-                          <p className="highlight-value">{feedbackStats.avg != null ? `${feedbackStats.avg}/5` : t("noFeedback") || "No feedback yet"}</p>
-                          <p className="small-muted">{t("recentFeedback") || "Recent notes"}: {feedbackStats.count}</p>
+                          <p className="highlight-label">{t("reputation")}</p>
+                          <p className="highlight-value">{feedbackStats.avg != null ? `${feedbackStats.avg}/5` : t("noFeedback")}</p>
+                          <p className="small-muted">{t("recentFeedback")}: {feedbackStats.count}</p>
                         </div>
                       </div>
 
-                      {selectedListing.imagePreview && <img src={selectedListing.imagePreview} alt="preview" className="listing-hero-image" loading="lazy" />}
+                      {selectedListing.imagePreview && <img src={selectedListing.imagePreview} alt={t("previewAlt")} className="listing-hero-image" loading="lazy" />}
 
                       <div className="listing-section">
                         <div className="section-heading">
-                          <h4>{t("aboutListing") || "About this listing"}</h4>
+                          <h4>{t("aboutListing")}</h4>
                           <span className="pill muted">{t("category")}: {t(selectedListing.category) || selectedListing.category}</span>
                         </div>
                         <p className="listing-description-full">{selectedListing.description}</p>
                         <div className="soft-grid">
                           <div>
-                            <p className="highlight-label">{t("pricing") || t("priceLabel")}</p>
+                            <p className="highlight-label">{t("pricing")}</p>
                             <p className="highlight-value">{listingPriceLabel}</p>
                           </div>
                           <div>
-                            <p className="highlight-label">{t("contactEmail") || "Email"}</p>
-                            <p className="highlight-value">{selectedListing.userEmail || t("unspecified") || "Unspecified"}</p>
+                            <p className="highlight-label">{t("contactEmail")}</p>
+                            <p className="highlight-value">{selectedListing.userEmail || t("unspecified")}</p>
                           </div>
                         </div>
                         {selectedListing.tags && (
@@ -4380,13 +4361,13 @@ export default function App() {
                       <div className="contact-panel">
                         <div>
                           <p className="panel-title">{t("contact")}</p>
-                          <p className="panel-subtitle">{selectedListing.contact || (t("unspecified") || "Unspecified")}</p>
-                          <p className="panel-hint">{t("contactAutofill") || "We use your account phone for trust and safety."}</p>
+                          <p className="panel-subtitle">{selectedListing.contact || t("unspecified")}</p>
+                          <p className="panel-hint">{t("contactAutofill")}</p>
                         </div>
                         <div className="quick-actions">
                           <div className="quick-actions-header">
-                            <p className="highlight-label">{t("quickActions") || "Quick actions"}</p>
-                            <p className="small-muted">{t("postingReadyHint") || "Listings reuse your saved phone number and location for faster posting."}</p>
+                            <p className="highlight-label">{t("quickActions")}</p>
+                            <p className="small-muted">{t("postingReadyHint")}</p>
                           </div>
                           <div className="quick-action-buttons">
                             <button className="quick-action-btn" disabled={!listingContactAvailable} onClick={() => listingContactAvailable && window.open(`tel:${selectedListing.contact}`)}>📞 {t("call")}</button>
@@ -4396,7 +4377,7 @@ export default function App() {
                               navigator.clipboard.writeText(selectedListing.contact);
                               showMessage(t("copied"), "success");
                             }}>📋 {t("copy")}</button>
-                            <button className="quick-action-btn ghost" onClick={() => handleShareListing(selectedListing)}>🔗 {t("share") || "Share"}</button>
+                            <button className="quick-action-btn ghost" onClick={() => handleShareListing(selectedListing)}>🔗 {t("share")}</button>
                           </div>
                         </div>
                       </div>
@@ -4405,31 +4386,29 @@ export default function App() {
 
                     <aside className="listing-sidebar">
                       <div className="sidebar-card">
-                        <p className="sidebar-title">{t("quickFacts") || "Quick facts"}</p>
+                        <p className="sidebar-title">{t("quickFacts")}</p>
                         <ul className="fact-list">
-                          <li><span>{t("statusLabel") || t("status") || "Status"}</span><strong>{selectedListing.status === "verified" ? t("verified") : t("pendingVerification")}</strong></li>
-                          <li><span>{t("listedOn") || t("postedOn") || "Listed"}</span><strong>{selectedListing.createdAt ? new Date(selectedListing.createdAt).toLocaleDateString() : t("unspecified") || "Unspecified"}</strong></li>
-                          <li><span>{t("locationLabelFull") || t("location") || "Location"}</span><strong>{selectedListing.location || t("unspecified") || "Unspecified"}</strong></li>
-                          <li><span>{t("pricing") || t("priceLabel") || "Price"}</span><strong>{selectedListing.offerprice || t("unspecified") || "Unspecified"}</strong></li>
+                          <li><span>{t("statusLabel")}</span><strong>{selectedListing.status === "verified" ? t("verified") : t("pendingVerification")}</strong></li>
+                          <li><span>{t("listedOn")}</span><strong>{selectedListing.createdAt ? new Date(selectedListing.createdAt).toLocaleDateString() : t("unspecified")}</strong></li>
+                          <li><span>{t("locationLabelFull")}</span><strong>{selectedListing.location || t("unspecified")}</strong></li>
+                          <li><span>{t("pricing")}</span><strong>{selectedListing.offerprice || t("unspecified")}</strong></li>
                         </ul>
                       </div>
 
                       <div className="sidebar-card">
-                        <p className="sidebar-title">{t("shareListing") || t("share") || "Share"}</p>
+                        <p className="sidebar-title">{t("shareListing")}</p>
                         <div className="sidebar-actions">
-                          <button className="quick-action-btn" onClick={() => handleShareListing(selectedListing)}>🔗 {t("share") || "Share"}</button>
+                          <button className="quick-action-btn" onClick={() => handleShareListing(selectedListing)}>🔗 {t("share")}</button>
                           <button className="quick-action-btn ghost" onClick={() => toggleFav(selectedListing.id)}>
-                            {favorites.includes(selectedListing.id) ? "★" : "☆"} {t("favorite") || "Favorite"}
+                            {favorites.includes(selectedListing.id) ? "★" : "☆"} {t("favorite")}
                           </button>
-                          {selectedListing.locationData?.mapsUrl && (
-                            <button className="quick-action-btn ghost" onClick={() => window.open(selectedListing.locationData.mapsUrl, "_blank")}>🗺️ {t("openInMaps") || "Open in Maps"}</button>
-                          )}
+                          <button className="quick-action-btn ghost" onClick={() => window.open(selectedListing.locationData.mapsUrl, "_blank")}>🗺️ {t("openInMaps")}</button>
                         </div>
                       </div>
 
                       <div className="sidebar-card muted-card">
-                        <p className="sidebar-title">{t("cloudFeedbackNote") || "Shared feedback"}</p>
-                        <p className="small-muted">{t("feedbackSidebarBlurb") || "Ratings and notes help everyone see the most trusted listings."}</p>
+                        <p className="sidebar-title">{t("cloudFeedbackNote")}</p>
+                        <p className="small-muted">{t("feedbackSidebarBlurb")}</p>
                       </div>
                     </aside>
                   </div>

@@ -53,22 +53,22 @@ const MyListingCard = React.memo(({
                 {days !== null && (
                   <span className={`expiry-days ${isExpiringSoon ? "warning" : ""} ${isExpired ? "expired-text" : ""}`}>
                     {isExpired 
-                      ? ` ⚠️ ${t("expired") || "Expired"}`
+                      ? ` ⚠️ ${t("expired")}`
                       : isExpiringSoon 
-                        ? ` ⏰ ${days} ${days === 1 ? t("day") || "day" : t("days") || "days"} ${t("remaining") || "left"}`
-                        : ` (${days} ${days === 1 ? t("day") || "day" : t("days") || "days"})`
+                        ? ` ⏰ ${days} ${days === 1 ? t("day") : t("days")} ${t("remaining")}`
+                        : ` (${days} ${days === 1 ? t("day") : t("days")})`
                     }
                   </span>
                 )}
               </>
             ) : (
-              <span className="expiry-date">{t("noExpiry") || "No expiration"}</span>
+              <span className="expiry-date">{t("noExpiry")}</span>
             )}
           </div>
         </div>
         <div className="listing-score-pill">
           <span className="score-main">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-          <span className="score-sub">{stats.feedbackCount} {t("reviews") || "reviews"}</span>
+          <span className="score-sub">{stats.feedbackCount} {t("reviews")}</span>
         </div>
       </header>
 
@@ -109,7 +109,7 @@ const MyListingCard = React.memo(({
               window.history.replaceState({}, "", url.toString());
             }}
           >
-            👁️ {t("view") || "View"}
+            👁️ {t("view")}
           </button>
           <button
             className="btn small"

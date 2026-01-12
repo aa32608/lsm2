@@ -2,12 +2,12 @@ import React from "react";
 
 const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose, user }) => {
   const navItems = [
-    { id: "main", label: t("homepage") || "Home", icon: "🏠" },
+    { id: "main", label: t("homepage"), icon: "🏠" },
     ...(user ? [
-      { id: "myListings", label: t("myListings") || "My Listings", icon: "📂" },
-      { id: "account", label: t("account") || "Account", icon: "👤" },
+      { id: "myListings", label: t("myListings"), icon: "📂" },
+      { id: "account", label: t("account"), icon: "👤" },
     ] : []),
-    { id: "allListings", label: t("explore") || "Explore", icon: "🧭" },
+    { id: "allListings", label: t("explore"), icon: "🧭" },
   ];
 
   return (
@@ -15,8 +15,8 @@ const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose,
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="sidebar-header-content">
-            <h3 className="sidebar-title">{t("dashboard") || "Menu"}</h3>
-            <p className="sidebar-subtitle">{t("manageListings") || "Navigate your dashboard"}</p>
+            <h3 className="sidebar-title">{t("dashboard")}</h3>
+            <p className="sidebar-subtitle">{t("manageListings")}</p>
           </div>
           <button className="sidebar-close-btn" onClick={onClose} aria-label="Close menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ minWidth: "24px" }}>
@@ -55,7 +55,7 @@ const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose,
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
-            <span>{t("logout") || "Logout"}</span>
+            <span>{t("logout")}</span>
           </button>
         ) : (
           <button className="sidebar-login" onClick={onLogin}>
@@ -64,7 +64,7 @@ const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose,
               <polyline points="10 17 15 12 10 7"></polyline>
               <line x1="15" y1="12" x2="3" y2="12"></line>
             </svg>
-            <span>{t("login") || "Login"}</span>
+            <span>{t("login")}</span>
           </button>
         )}
       </div>

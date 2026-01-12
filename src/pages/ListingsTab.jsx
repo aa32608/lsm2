@@ -113,7 +113,7 @@ export default function ListingsTab({
         >
           ←
         </button>
-        <span>{page} / {totalPages}</span>
+        <span>{t("page")} {page} {t("of")} {totalPages}</span>
         <button
           className="btn btn-ghost"
           disabled={page >= totalPages}

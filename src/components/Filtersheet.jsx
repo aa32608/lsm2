@@ -96,7 +96,7 @@ const Filtersheet = React.memo(({
               <div className="filter-group">
                 <div className="filter-group-header">
                   <span className="filter-group-icon">⏳</span>
-                  <span className="filter-group-title">{t("status") || "Status"}</span>
+                  <span className="filter-group-title">{t("status")}</span>
                 </div>
                 <div className="filter-group-content">
                   <div className="filter-select-wrapper">
@@ -105,7 +105,7 @@ const Filtersheet = React.memo(({
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
                     >
-                      <option value="all">{t("allStatuses") || "All statuses"}</option>
+                      <option value="all">{t("allStatuses")}</option>
                       <option value="verified">{t("verified")}</option>
                       <option value="pending">{t("pending")}</option>
                     </select>
@@ -121,7 +121,7 @@ const Filtersheet = React.memo(({
               <div className="filter-group">
                 <div className="filter-group-header">
                   <span className="filter-group-icon">⏰</span>
-                  <span className="filter-group-title">{t("expiry") || "Expiry"}</span>
+                  <span className="filter-group-title">{t("expiry")}</span>
                 </div>
                 <div className="filter-group-content">
                   <div className="filter-select-wrapper">
@@ -130,10 +130,10 @@ const Filtersheet = React.memo(({
                       value={expiryFilter}
                       onChange={(e) => setExpiryFilter(e.target.value)}
                     >
-                      <option value="all">{t("allExpiry") || "All"}</option>
-                      <option value="expiring">{t("expiringSoon") || "Expiring soon"}</option>
-                      <option value="active">{t("active") || "Active"}</option>
-                      <option value="expired">{t("expired") || "Expired"}</option>
+                      <option value="all">{t("allExpiry")}</option>
+                      <option value="expiring">{t("expiringSoon")}</option>
+                      <option value="active">{t("active")}</option>
+                      <option value="expired">{t("expired")}</option>
                     </select>
                     <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <polyline points="6 9 12 15 18 9"></polyline>
@@ -220,7 +220,7 @@ const Filtersheet = React.memo(({
                     <option value="newest">🆕 {t("sortNewest")}</option>
                     <option value="expiring">⏰ {t("sortExpiring")}</option>
                     <option value="az">🔤 {t("sortAZ")}</option>
-                    {setExpiryFilter && <option value="oldest">📅 {t("sortOldest") || "Oldest first"}</option>}
+                    {setExpiryFilter && <option value="oldest">📅 {t("sortOldest")}</option>}
                   </select>
                   <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="6 9 12 15 18 9"></polyline>
