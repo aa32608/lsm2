@@ -129,6 +129,7 @@ const MyListingCard = React.memo(({
             className="btn btn-ghost small icon-only"
             onClick={() => window.open(`tel:${l.contact}`)}
             title={t("call")}
+            aria-label={t("call")}
           >
             📞
           </button>
@@ -142,6 +143,7 @@ const MyListingCard = React.memo(({
               )
             }
             title={t("emailAction")}
+            aria-label={t("emailAction")}
           >
             ✉️
           </button>
@@ -152,6 +154,7 @@ const MyListingCard = React.memo(({
               showMessage(t("copied"), "success");
             }}
             title={t("copy")}
+            aria-label={t("copy")}
           >
             📋
           </button>

@@ -26,7 +26,7 @@ const ListingCard = React.memo(({
               <h3 className="listing-title">{l.name}</h3>
               <div className="listing-meta pill-row-tight">
                 <span className="pill pill-category">{t(l.category) || l.category}</span>
-                <span className="pill pill-location">📍 {l.location}</span>
+                <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
                 {l.expiresAt && (
                   <span className="pill pill-ghost subtle-pill">
                     ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
@@ -83,6 +83,7 @@ const ListingCard = React.memo(({
             className="icon-btn"
             type="button"
             onClick={() => window.open(`tel:${l.contact}`)}
+            aria-label={t("callAction")}
           >
             📞
           </button>
@@ -94,6 +95,7 @@ const ListingCard = React.memo(({
                 l.name || ""
               )}`
             )}
+            aria-label={t("emailAction")}
           >
             ✉️
           </button>
@@ -101,6 +103,7 @@ const ListingCard = React.memo(({
             className="icon-btn"
             type="button"
             onClick={() => onShare(l)}
+            aria-label={t("share")}
           >
             🔗
           </button>

@@ -279,7 +279,7 @@ const Header = React.memo(({
           </div>
         </div>
         <div className="brand-text">
-          <h1 className="brand-title">BizCall</h1>
+          <h1 className="brand-title">{t("bizCall")}</h1>
           <p className="brand-tagline">{t("communityTagline")}</p>
         </div>
       </button>
@@ -1363,7 +1363,7 @@ export default function App() {
   };
 
   const confirmDelete = useCallback(async (id) => {
-    if (!window.confirm("Delete this listing?")) return;
+    if (!window.confirm(t("confirmDelete"))) return;
     await deleteListing(id);
     showMessage(t("listingDeleted"), "success");
   }, [showMessage]);
@@ -2233,7 +2233,7 @@ export default function App() {
                                   <div className="account-info-item-icon">✉️</div>
                                   <div className="account-info-item-content">
                                     <p className="account-info-label">{t("emailLabel")}</p>
-                                    <p className="account-info-value">{user?.email || "—"}</p>
+                                    <p className="account-info-value">{user?.email || t("unspecified")}</p>
                                     {user?.emailVerified ? (
                                       <span className="account-info-badge verified">✅ {t("verified")}</span>
                                     ) : (
@@ -2309,7 +2309,7 @@ export default function App() {
                                             className="input account-form-input"
                                             value={phoneVerificationCode}
                                             onChange={(e) => setPhoneVerificationCode(e.target.value.replace(/\D/g, ""))}
-                                            placeholder="123456"
+                                            placeholder={t("enterCode")}
                                             maxLength="6"
                                           />
                                         </div>
@@ -2333,7 +2333,7 @@ export default function App() {
                                     <p className="account-info-label">{t("accountSince")}</p>
                                     <p className="account-info-value">
                                       {user?.metadata?.creationTime
-                                        ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { 
+                                        ? new Date(user.metadata.creationTime).toLocaleDateString(lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US', { 
                                             year: 'numeric', 
                                             month: 'long', 
                                             day: 'numeric' 
@@ -2722,9 +2722,9 @@ export default function App() {
 
                               </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
                                   <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>←</button>
+                                    <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} aria-label={t("previousPage")}>←</button>
                                     <span className="small-muted">{t("page")} {page} {t("of")} {totalPages}</span>
-                                    <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>→</button>
+                                    <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} aria-label={t("nextPage")}>→</button>
                                   </div>
                                   <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
                                     <span className="small-muted">{t("resultsPerPage")}</span>
@@ -2934,6 +2934,7 @@ export default function App() {
                   <button
                     className="icon-btn"
                     onClick={() => setShowPostForm(false)}
+                    aria-label={t("close")}
                   >
                     ✕
                   </button>
@@ -3289,8 +3290,8 @@ export default function App() {
                           </div>
                 
                           <div className="listing-meta">
-                            {t(form.category) || form.category || "—"} •{" "}
-                            {previewLocation || "—"}
+                            {t(form.category) || form.category || t("unspecified")} •{" "}
+                            {previewLocation || t("unspecified")}
                           </div>
                 
                           {form.imagePreview && (
@@ -3462,6 +3463,7 @@ export default function App() {
                   <button
                     className="icon-btn"
                     onClick={() => setShowEditMapPicker(false)}
+                    aria-label={t("close")}
                   >
                     ✕
                   </button>
@@ -3515,7 +3517,7 @@ export default function App() {
                   <h3 className="modal-title">
                     {paymentIntent.type === "extend" ? `${t("extend")} • ${extendTarget?.name || ""}` : t("paypalCheckout")}
                   </h3>
-                  <button className="icon-btn" onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }}>✕</button>
+                  <button className="icon-btn" onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }} aria-label={t("close")}>✕</button>
                 </div>
 
                 <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
@@ -3526,7 +3528,7 @@ export default function App() {
                     </div>
                     <div className="payment-row">
                       <span>{t("payingWith")}</span>
-                      <span>PayPal</span>
+                      <span>{t("payPal")}</span>
                     </div>
                   </div>
 
@@ -3659,6 +3661,7 @@ export default function App() {
                   <button
                     className="icon-btn"
                     onClick={() => setShowAuthModal(false)}
+                    aria-label={t("close")}
                   >
                     ✕
                   </button>
@@ -3743,8 +3746,7 @@ export default function App() {
                       /* PHONE LOGIN */
                       <div className="modal-body auth-body auth-body-card">
                         <p className="auth-subtitle">
-                          {t("phoneLoginSubtitle") ||
-                            "Log in quickly with an SMS code on your phone."}
+                          {t("phoneLoginSubtitle")}
                         </p>
         
                         <div className="auth-field-group">
@@ -3812,7 +3814,7 @@ export default function App() {
                               }}
                               disabled={phoneLoading}
                             >
-                              {phoneLoading ? "Sending..." : t("sendLink")}
+                              {phoneLoading ? t("sendingCode") : t("sendLink")}
                             </button>
                           </div>
                         ) : (
@@ -3858,7 +3860,7 @@ export default function App() {
                               }}
                               disabled={phoneLoading}
                             >
-                              {phoneLoading ? "Verifying..." : t("verifyPhone")}
+                              {phoneLoading ? t("verifying") : t("verifyPhone")}
                             </button>
                           </div>
                         )}

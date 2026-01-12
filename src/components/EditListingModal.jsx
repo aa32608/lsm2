@@ -47,6 +47,7 @@ const EditListingModal = ({
               setEditForm(null);
               setShowEditMapPicker(false);
             }}
+            aria-label={t("close")}
           >
             ✕
           </button>
@@ -270,7 +271,7 @@ const EditListingModal = ({
             {editForm.imagePreview && (
               <img
                 src={editForm.imagePreview}
-                alt="preview"
+                alt={t("previewAlt")}
                 className="edit-image-preview"
                 style={{ marginTop: 12, borderRadius: 12, maxWidth: "100%", height: "auto" }}
               />
