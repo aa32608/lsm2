@@ -125,14 +125,16 @@ const MyListingCard = React.memo(({
           </button>
         </div>
         <div className="listing-actions-secondary">
-          <button
-            className="btn btn-ghost small icon-only"
-            onClick={() => window.open(`tel:${l.contact}`)}
-            title={t("call")}
-            aria-label={t("call")}
-          >
-            📞
-          </button>
+          {l.contact && (
+            <button
+              className="btn btn-ghost small icon-only"
+              onClick={() => window.open(`tel:${l.contact}`)}
+              title={t("call")}
+              aria-label={t("call")}
+            >
+              📞
+            </button>
+          )}
           <button
             className="btn btn-ghost small icon-only"
             onClick={() =>

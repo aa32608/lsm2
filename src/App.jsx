@@ -4404,7 +4404,9 @@ export default function App() {
                           <button className="quick-action-btn ghost" onClick={() => toggleFav(selectedListing.id)}>
                             {favorites.includes(selectedListing.id) ? "★" : "☆"} {t("favorite")}
                           </button>
-                          <button className="quick-action-btn ghost" onClick={() => window.open(selectedListing.locationData.mapsUrl, "_blank")}>🗺️ {t("openInMaps")}</button>
+                          {selectedListing.locationData?.mapsUrl && (
+                            <button className="quick-action-btn ghost" onClick={() => window.open(selectedListing.locationData.mapsUrl, "_blank")}>🗺️ {t("openInMaps")}</button>
+                          )}
                         </div>
                       </div>
 

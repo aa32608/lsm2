@@ -79,14 +79,16 @@ const ListingCard = React.memo(({
         </div>
 
         <div className="listing-actions compact">
-          <button
-            className="icon-btn"
-            type="button"
-            onClick={() => window.open(`tel:${l.contact}`)}
-            aria-label={t("callAction")}
-          >
-            📞
-          </button>
+          {l.contact && (
+            <button
+              className="icon-btn"
+              type="button"
+              onClick={() => window.open(`tel:${l.contact}`)}
+              aria-label={t("callAction")}
+            >
+              📞
+            </button>
+          )}
           <button
             className="icon-btn"
             type="button"
