@@ -1129,20 +1129,11 @@ export default function App() {
         price: priceMap[plan],              // plan price (duration)
       });
 
-      // create order on your server
-      const createRes = await fetch(`${API_BASE}/api/paypal/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId, amount: priceMap[plan], action: "create_listing" }),
-      });
-      const createData = await createRes.json();
-      if (!createData.orderID) throw new Error("Failed to create PayPal order");
-
-      setPendingOrder({ listingId, orderID: createData.orderID });
-      setPaymentIntent({ type: "create", orderID: createData.orderID, amount: priceMap[plan], listingId });
+      // Open payment modal immediately with intent
+      setPendingOrder({ listingId });
+      setPaymentIntent({ type: "create", amount: priceMap[plan], listingId });
       setPaymentModalOpen(true);
-
-      showMessage(t("orderCreated"), "success");
+      
       checkPaymentStatus(listingId);
     } catch (err) {
       console.error(err);
@@ -1774,7 +1765,11 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={{ "client-id": PAYPAL_CLIENT_ID, currency: "EUR", locale: lang === "mk" ? "mk_MK" : lang === "sq" ? "sq_AL" : "en_MK" }}>
+    <PayPalScriptProvider options={{ 
+      "client-id": PAYPAL_CLIENT_ID, 
+      currency: "EUR", 
+      intent: "capture"
+    }}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -3582,32 +3577,33 @@ export default function App() {
                   <div className="payment-buttons">
                     <PayPalButtons
                       style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
-                      createOrder={(data, actions) =>
-                        actions.order.create({
-                          intent: "CAPTURE",
-                          purchase_units: [
-                            {
-                              amount: {
-                                currency_code: "EUR",
-                                value: paymentIntent.amount?.toString() || "0.00",
-                              },
-                            },
-                          ],
-                          application_context: {
-                            shipping_preference: "NO_SHIPPING",
-                            user_action: "PAY_NOW",
-                            return_url: window.location.origin + "/paypal-success",
-                            cancel_url: window.location.origin + "/paypal-cancel",
-                          },
-                        })
-                      }
+                      createOrder={async () => {
+                        try {
+                          const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ 
+                              listingId: paymentIntent.listingId, 
+                              amount: paymentIntent.amount, 
+                              action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                            }),
+                          });
+                          const data = await res.json();
+                          if (!data.orderID) throw new Error("Failed to create PayPal order");
+                          return data.orderID;
+                        } catch (err) {
+                          console.error("PayPal createOrder error:", err);
+                          showMessage(t("paypalError") + " " + String(err), "error");
+                          throw err;
+                        }
+                      }}
                       onApprove={async (data) => {
                         const orderId = data.orderID;
                         try {
                           if (paymentIntent.type === "extend") {
                             await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
                           } else {
-                            await handleServerCapture(orderId, pendingOrder.listingId);
+                            await handleServerCapture(orderId, paymentIntent.listingId);
                           }
                           showMessage(t("thankYou"), "success");
                         } catch (err) {
