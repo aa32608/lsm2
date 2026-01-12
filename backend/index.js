@@ -57,7 +57,8 @@ app.use(
       "http://localhost:5173",
       "https://lsm-bojr3c63z-artins-projects-8d0a28db.vercel.app",
       "https://bizcall.vercel.app",
-      "https://lsm-wozo.onrender.com", // replace with your real frontend URL
+      "https://lsm-wozo.onrender.com",
+      "https://lsmtetovo.vercel.app",
     ],
     credentials: true,
   })
@@ -167,42 +168,24 @@ app.post("/api/paypal/create-order", async (req, res) => {
 
 app.post("/api/paypal/capture", async (req, res) => {
   const { orderID, listingId, action } = req.body;
-  console.log("Capturing order", orderID, "for", listingId, "action:", action);
+  console.log("Capturing order:", orderID, "listingId:", listingId, "action:", action);
 
   if (!orderID || !listingId) {
-    return res.status(400).json({ error: "orderID and listingId required" });
+    console.error("❌ Missing orderID or listingId in request body. Received:", {
+      orderID: orderID ? "present" : "MISSING",
+      listingId: listingId ? "present" : "MISSING",
+      body: req.body 
+    });
+    return res.status(400).json({ 
+      error: "orderID and listingId required",
+      received: { orderID: !!orderID, listingId: !!listingId, action }
+    });
   }
 
   try {
     const accessToken = await generateAccessToken();
 
-    // Step 1: Check order status first (important for card flow)
-    const orderCheck = await fetch(
-      `${
-        process.env.PAYPAL_ENVIRONMENT === "sandbox"
-          ? "https://api-m.sandbox.paypal.com"
-          : "https://api-m.paypal.com"
-      }/v2/checkout/orders/${orderID}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-    const orderData = await orderCheck.json();
-
-    // Already completed?
-    if (orderData.status === "COMPLETED") {
-      console.log("✅ Order already captured by PayPal (card flow)");
-      await db.ref(`listings/${listingId}`).update({
-        status: "verified",
-        pricePaid:
-          orderData.purchase_units?.[0]?.amount?.value ||
-          orderData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value ||
-          0,
-      });
-      return res.json({ ok: true, status: "ALREADY_COMPLETED" });
-    }
-
-    // Step 2: Capture manually for popup (PayPal login flow)
+    // Step 1: Attempt to capture directly (Optimization: Skip redundant order check)
     const captureResponse = await fetch(
       `${
         process.env.PAYPAL_ENVIRONMENT === "sandbox"
@@ -220,55 +203,71 @@ app.post("/api/paypal/capture", async (req, res) => {
 
     const captureData = await captureResponse.json();
 
-    // Recoverable error: INSTRUMENT_DECLINED
+    // Handle successful completion
+    if (captureData.status === "COMPLETED") {
+      const amountPaid =
+        captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || 0;
+
+      await db.ref(`listings/${listingId}`).update({
+        pricePaid: Number(amountPaid),
+        status: "verified",
+      });
+
+      console.log("✅ Capture successful for", listingId);
+      return res.json({ ok: true, status: captureData.status });
+    }
+
+    // Handle "Order already captured" (Step 2: Fallback for duplicate requests)
+    if (
+      captureData.name === "UNPROCESSABLE_ENTITY" &&
+      captureData.details?.some((d) => d?.issue === "ORDER_ALREADY_CAPTURED")
+    ) {
+      console.log("⚠️ Order already captured, verifying status...");
+      const orderCheck = await fetch(
+        `${
+          process.env.PAYPAL_ENVIRONMENT === "sandbox"
+            ? "https://api-m.sandbox.paypal.com"
+            : "https://api-m.paypal.com"
+        }/v2/checkout/orders/${orderID}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const orderData = await orderCheck.json();
+      
+      if (orderData.status === "COMPLETED") {
+        await db.ref(`listings/${listingId}`).update({ status: "verified" });
+        return res.json({ ok: true, status: "ALREADY_CAPTURED" });
+      }
+    }
+
+    // Handle "Instrument Declined" (Recoverable)
     if (
       captureData?.name === "UNPROCESSABLE_ENTITY" &&
-      Array.isArray(captureData.details) &&
-      captureData.details.some((d) => d?.issue === "INSTRUMENT_DECLINED")
+      captureData.details?.some((d) => d?.issue === "INSTRUMENT_DECLINED")
     ) {
-      console.warn("⚠️ Instrument declined, prompting payer to choose another method");
+      console.warn("⚠️ Instrument declined for", listingId);
       const redirectLink =
         (captureData.links || []).find(
           (l) => l.rel === "redirect" || l.rel === "payer-action" || l.rel === "approve"
         )?.href || null;
-      // Keep listing pending to allow retry
-      await db.ref(`listings/${listingId}`).update({ status: "pending_payment" });
+      
       return res.status(400).json({
         ok: false,
         recoverable: true,
         issue: "INSTRUMENT_DECLINED",
         redirect: redirectLink,
-        message:
-          "The instrument was declined. The payer must choose another funding source or re-approve the payment.",
+        message: "The instrument was declined. Payer must choose another funding source.",
       });
     }
 
-    if (
-      captureData.name === "UNPROCESSABLE_ENTITY" &&
-      captureData.details?.[0]?.issue === "ORDER_ALREADY_CAPTURED"
-    ) {
-      console.warn("⚠️ Order already captured:", captureData);
-      await db.ref(`listings/${listingId}`).update({ status: "verified" });
-      return res.json({ ok: true, status: "ALREADY_CAPTURED" });
-    }
+    // All other failures
+    console.error("❌ Capture failed with status:", captureData.status, captureData);
+    await db.ref(`listings/${listingId}`).update({ status: "expired" });
+    return res.status(500).json({ error: captureData });
 
-    if (captureData.status !== "COMPLETED") {
-      console.error("❌ Capture failed:", captureData);
-      await db.ref(`listings/${listingId}`).update({ status: "expired" });
-      return res.status(500).json({ error: captureData });
-    }
-
-    const amountPaid =
-      captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || 0;
-
-    await db.ref(`listings/${listingId}`).update({
-      pricePaid: Number(amountPaid),
-      status: "verified",
-    });
-
-    res.json({ ok: true, status: captureData.status });
   } catch (err) {
-    console.error("Capture error:", err);
+    console.error("❌ Internal capture error:", err);
     try {
       await db.ref(`listings/${listingId}`).update({ status: "expired" });
     } catch (innerErr) {

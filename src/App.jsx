@@ -549,6 +549,7 @@ export default function App() {
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
 
   /* Filters / search */
@@ -1146,7 +1147,14 @@ export default function App() {
 
   /* Capture create flow */
   async function handleServerCapture(orderID, listingId) {
-    try {
+       console.log("handleServerCapture called with:", { orderID, listingId });
+       if (!orderID || !listingId) {
+         showMessage(t("error") + ": " + t("missingPaymentDetails"), "error");
+         return;
+       }
+      setIsProcessingPayment(true);
+      try {
+      console.log("Sending capture request to backend:", { orderID, listingId, action: "create_listing" });
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1216,6 +1224,8 @@ export default function App() {
     } catch (err) {
       console.error(err);
       showMessage(t("error") + " " + err.message, "error");
+    } finally {
+      setIsProcessingPayment(false);
     }
   }
 
@@ -1247,7 +1257,14 @@ export default function App() {
   }, [user, t, showMessage]);
 
   async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI) {
+     console.log("handleServerCaptureForExtend called with:", { orderID, listingId, planKeyFromUI });
+     if (!orderID || !listingId) {
+       showMessage(t("error") + ": " + t("missingPaymentDetails"), "error");
+       return;
+     }
+    setIsProcessingPayment(true);
     try {
+      console.log("Sending extend capture request to backend:", { orderID, listingId, action: "extend" });
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1297,6 +1314,8 @@ export default function App() {
     } catch (err) {
       console.error(err);
       showMessage(t("error") + " " + err.message, "error");
+    } finally {
+      setIsProcessingPayment(false);
     }
   }
 
@@ -1781,7 +1800,10 @@ export default function App() {
       currency: "EUR", 
       intent: "capture",
       components: "buttons",
-      "disable-funding": "paylater,venmo"
+      "enable-funding": "paylater,venmo",
+      "disable-funding": "fastlane",
+      "data-sdk-integration-source": "react-paypal-js",
+      "data-namespace": "paypal_sdk"
     }}>
       <HeadManager
         title={seoTitle}
@@ -3588,7 +3610,12 @@ export default function App() {
                   )}
 
                   <div className="payment-buttons">
-                    {paymentIntent && (
+                    {isProcessingPayment ? (
+                      <div className="processing-payment">
+                        <div className="spinner"></div>
+                        <p>{t("processingPayment") || "Processing Payment..."}</p>
+                      </div>
+                    ) : paymentIntent && (
                       <PayPalButtons
                         style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                         createOrder={async () => {
