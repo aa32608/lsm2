@@ -136,6 +136,7 @@ app.post("/api/paypal/create-order", async (req, res) => {
             landing_page: "NO_PREFERENCE",
             user_action: "PAY_NOW",
             shipping_preference: "NO_SHIPPING",
+            locale: "mk-MK",
           },
         }),
       }
