@@ -3,7 +3,7 @@
 import logo from "./assets/logo.png";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
-import { ref as dbRef, set, update, onValue, remove, push } from "firebase/database";
+import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo } from "firebase/database";
 import {
   signInWithEmailAndPassword,
   isSignInWithEmailLink,
@@ -17,6 +17,9 @@ import {
   EmailAuthProvider,
   RecaptchaVerifier,
   linkWithCredential,
+  linkWithPhoneNumber,
+  updatePhoneNumber,
+  PhoneAuthProvider,
 } from "firebase/auth";
 
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
@@ -415,6 +418,8 @@ export default function App() {
   const [phoneCountryCode, setPhoneCountryCode] = useState("+389");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneConfirmationResult, setPhoneConfirmationResult] = useState(null);
+  const [phoneVerificationCode, setPhoneVerificationCode] = useState("");
 
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -446,15 +451,90 @@ export default function App() {
       showMessage(t("passwordRequired"), "error");
       return;
     }
+
+    const fullPhoneNumber = `${phoneCountryCode}${phoneNumber.replace(/\D/g, "")}`;
+    const normalizedPhone = normalizePhoneForStorage(fullPhoneNumber);
+    
+    if (!validatePhone(normalizedPhone)) {
+      showMessage(t("enterValidPhone"), "error");
+      return;
+    }
+
     setSavingPhone(true);
     try {
+      // 1. Check uniqueness in Database
+      const usersRef = dbRef(db, "users");
+      const phoneQuery = query(usersRef, orderByChild("phone"), equalTo(normalizedPhone));
+      const snapshot = await get(phoneQuery);
+      
+      if (snapshot.exists()) {
+        const users = snapshot.val();
+        const ownerIds = Object.keys(users);
+        // If someone else has this phone
+        if (ownerIds.some(id => id !== user.uid)) {
+          throw new Error(t("phoneAlreadyInUse") || "This phone number is already in use by another account.");
+        }
+      }
+
+      // 2. Re-authenticate
       const credential = EmailAuthProvider.credential(user.email, passwordForm.currentPassword);
       await reauthenticateWithCredential(user, credential);
-      const fullPhoneNumber = `${phoneCountryCode}${phoneNumber}`;
-      const normalizedPhone = normalizePhoneForStorage(fullPhoneNumber);
-      await update(dbRef(db, `users/${user.uid}`), { 
-        phone: normalizedPhone 
-      });
+
+      // 3. Send SMS code for verification (to link/update in Auth)
+      if (!window.recaptchaVerifierAccount) {
+        window.recaptchaVerifierAccount = new RecaptchaVerifier(auth, "recaptcha-container-account", {
+          size: "invisible"
+        });
+      }
+      
+      // Use signInWithPhoneNumber to get a confirmationResult for the new number
+      const confirmation = await signInWithPhoneNumber(auth, normalizedPhone, window.recaptchaVerifierAccount);
+      setPhoneConfirmationResult(confirmation);
+      showMessage(t("codeSent"), "success");
+    } catch (err) {
+      console.error(err);
+      let msg = err.message;
+      if (err.code === "auth/invalid-phone-number") msg = t("enterValidPhone");
+      if (err.code === "auth/credential-already-in-use") msg = t("phoneAlreadyInUse");
+      showMessage(msg, "error");
+      if (window.recaptchaVerifierAccount) {
+        window.recaptchaVerifierAccount.clear();
+        window.recaptchaVerifierAccount = null;
+      }
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const handleVerifyPhoneCode = async (e) => {
+     e.preventDefault();
+     if (!phoneVerificationCode || phoneVerificationCode.length < 6) {
+       showMessage(t("enterCode"), "error");
+       return;
+     }
+ 
+     setSavingPhone(true);
+     try {
+       // 1. Get the credential from the code
+       const credential = PhoneAuthProvider.credential(
+         phoneConfirmationResult.verificationId,
+         phoneVerificationCode
+       );
+
+       // 2. Link or Update the phone number in Firebase Auth
+       if (user.phoneNumber) {
+         await updatePhoneNumber(user, credential);
+       } else {
+         await linkWithCredential(user, credential);
+       }
+       
+       const fullPhoneNumber = `${phoneCountryCode}${phoneNumber.replace(/\D/g, "")}`;
+       const normalizedPhone = normalizePhoneForStorage(fullPhoneNumber);
+ 
+       // 3. Update the database
+       await update(dbRef(db, `users/${user.uid}`), { 
+         phone: normalizedPhone 
+       });
 
       // Sync with listings
       const userListings = listings.filter(l => l.userId === user.uid);
@@ -468,8 +548,11 @@ export default function App() {
 
       setAccountPhone(normalizedPhone);
       setPhoneEditing(false);
+      setPhoneConfirmationResult(null);
+      setPhoneVerificationCode("");
       showMessage(t("phoneUpdated"), "success");
     } catch (err) {
+      console.error(err);
       showMessage(t("errorUpdatingPhone") + " " + err.message, "error");
     } finally {
       setSavingPhone(false);
@@ -2205,7 +2288,7 @@ export default function App() {
                                         </p>
                                         <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
                                       </>
-                                    ) : (
+                                    ) : !phoneConfirmationResult ? (
                                       <form className="account-form-enhanced" onSubmit={handleChangePhone}>
                                         <div className="phone-input-group">
                                           <select
@@ -2240,9 +2323,36 @@ export default function App() {
                                           />
                                         </div>
                                         <div className="account-form-actions">
-                                          <button type="button" className="btn btn-ghost small" onClick={() => setPhoneEditing(false)}>{t("cancel")}</button>
+                                          <button type="button" className="btn btn-ghost small" onClick={() => {
+                                            setPhoneEditing(false);
+                                            setPhoneConfirmationResult(null);
+                                          }}>{t("cancel")}</button>
                                           <button type="submit" className="btn small" disabled={savingPhone}>
-                                            {savingPhone ? t("saving") : t("savePhone")}
+                                            {savingPhone ? t("sendingCode") || "Sending code..." : t("savePhone")}
+                                          </button>
+                                        </div>
+                                        <div id="recaptcha-container-account"></div>
+                                      </form>
+                                    ) : (
+                                      <form className="account-form-enhanced" onSubmit={handleVerifyPhoneCode}>
+                                        <div className="account-form-field">
+                                          <label className="account-form-label">{t("enterCode")}</label>
+                                          <input
+                                            type="text"
+                                            className="input account-form-input"
+                                            value={phoneVerificationCode}
+                                            onChange={(e) => setPhoneVerificationCode(e.target.value.replace(/\D/g, ""))}
+                                            placeholder="123456"
+                                            maxLength="6"
+                                          />
+                                        </div>
+                                        <div className="account-form-actions">
+                                          <button type="button" className="btn btn-ghost small" onClick={() => {
+                                            setPhoneConfirmationResult(null);
+                                            setPhoneVerificationCode("");
+                                          }}>{t("back") || "Back"}</button>
+                                          <button type="submit" className="btn small" disabled={savingPhone}>
+                                            {savingPhone ? t("verifying") || "Verifying..." : t("verifyCode") || "Verify Code"}
                                           </button>
                                         </div>
                                       </form>
