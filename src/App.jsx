@@ -1802,7 +1802,7 @@ export default function App() {
       components: "buttons",
       "enable-funding": "paylater,venmo",
       "data-sdk-integration-source": "react-paypal-js",
-      "buyer-country": "MK"
+      "locale": "en_MK"
     }}>
       <HeadManager
         title={seoTitle}
