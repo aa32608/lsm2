@@ -392,57 +392,59 @@ async function sendMarketingEmails() {
     const verifiedDomain = process.env.RESEND_DOMAIN;
     const isTestingMode = !verifiedDomain;
 
+    const websiteUrl = "https://bizcall.mk"; // Or your production URL
+
     const templates = [
       {
-        id: "weekly_roundup",
+        id: "weekly_roundup_cta",
         subjects: {
-          en: "Your Weekly Roundup from BizCall MK!",
-          sq: "Përmbledhja juaj javore nga BizCall MK!",
-          mk: "Вашиот неделен преглед од BizCall MK!"
+          en: "🔥 Don't Miss Out! New Local Services Just Added on BizCall MK",
+          sq: "🔥 Mos e humbisni! Shërbime të reja lokale sapo u shtuan në BizCall MK",
+          mk: "🔥 Не пропуштајте! Нови локални услуги штотуку се додадени на BizCall MK"
         },
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nNew opportunities are waiting for you! Check out the latest listings on BizCall MK and see what's new in your community this week.\n\nBest,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nMundësi të reja po ju presin! Shikoni listimet më të fundit në BizCall MK dhe shihni çfarë ka të re në komunitetin tuaj këtë javë.\n\nMe respekt,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nВе чекаат нови можности! Проверете ги најновите огласи на BizCall MK и видете што е ново во вашата заедница оваа недела.\n\nСо почит,\nТимот на BizCall`
+          en: (name) => `Hello ${name || "there"},\n\nLooking for the best local experts in your area? 🧐\n\nNew opportunities and trusted services are being added to BizCall MK every single day. Whether you need a quick home repair, a reliable mechanic, or the best catering in town, we've got you covered.\n\nOur community is growing fast, and we don't want you to be the last to know. Find exactly what you need in seconds and support your local community at the same time.\n\n👉 Discover what's new today: ${websiteUrl}\n\nTo your success,\nThe BizCall Team`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nPo kërkoni ekspertët më të mirë lokalë në zonën tuaj? 🧐\n\nMundësi të reja dhe shërbime të besueshme po shtohen në BizCall MK çdo ditë. Pavarësisht nëse keni nevojë për një riparim të shpejtë në shtëpi, një mekanik të besueshëm apo kateringun më të mirë në qytet, ne jemi këtu për ju.\n\nKomuniteti ynë po rritet me shpejtësi dhe nuk duam që ju të jeni të fundit që e merrni vesh. Gjeni saktësisht atë që ju nevojitet në pak sekonda dhe mbështetni komunitetin tuaj lokal në të njëjtën kohë.\n\n👉 Zbuloni çfarë ka të re sot: ${websiteUrl}\n\nMe respekt,\nEkipi i BizCall`,
+          mk: (name) => `Здраво ${name || "таму"},\n\nГи барате најдобрите локални експерти во вашата област? 🧐\n\nНови можности и доверливи услуги се додаваат на BizCall MK секој ден. Без разлика дали ви треба брза поправка дома, сигурен механичар или најдобриот кетеринг во градот, ние сме тука за вас.\n\nНашата заедница расте брзо и не сакаме да бидете последните што ќе дознаат. Најдете го точно она што ви треба за неколку секунди и поддржете ја вашата локална заедница во исто време.\n\n👉 Откријте што е ново денес: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
         }
       },
       {
-        id: "community_hub",
+        id: "community_connection_cta",
         subjects: {
-          en: "Stay Connected with Your Local Community",
-          sq: "Qëndroni të lidhur me komunitetin tuaj lokal",
-          mk: "Останете поврзани со вашата локална заедница"
+          en: "🤝 Your Community is Calling! Connect with Pros on BizCall MK",
+          sq: "🤝 Komuniteti juaj po ju thërret! Lidhuni me profesionistët në BizCall MK",
+          mk: "🤝 Вашата заедnica ве повикува! Поврзете се со професионалци на BizCall MK"
         },
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nBizCall MK is more than just listings—it's about people. Connect with trusted local professionals and support your neighbors today.\n\nWarmly,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nBizCall MK është më shumë se thjesht listime—është për njerëzit. Lidhuni me profesionistë lokalë të besuar dhe mbështesni fqinjët tuaj sot.\n\nMe ngроhtësi,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nBizCall MK е повеќе од само огласи—станува збор за луѓето. Поврзете се со доверливи локални професионалци и поддржете ги вашите соседи денес.\n\nСрдечно,\nТимот на BizCall`
+          en: (name) => `Hi ${name || "there"},\n\nWhy search for hours when the best pros are right in your neighborhood? 🏠\n\nAt BizCall MK, we believe in the power of community. We've built a platform where you can find verified local talent for any task, big or small. From tech support to health services, your neighbors are here to help.\n\nStop scrolling and start connecting. Save time, save money, and get the job done right by someone you can trust.\n\n🔗 Browse the community map now: ${websiteUrl}\n\nBest regards,\nThe BizCall Team`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nPse të kërkoni me orë të tëra kur profesionistët më të mirë janë pikërisht në lagjen tuaj? 🏠\n\nNë BizCall MK, ne besojmë në fuqinë e komunitetit. Ne kemi ndërtuar një platformë ku mund të gjeni talente lokale të verifikuara për çdo detyrë, të madhe apo të vogël. Nga mbështetja teknike te shërbimet shëndetësore, fqinjët tuaj janë këtu për t'ju ndihmuar.\n\nMos kërkoni më tej dhe filloni të lidheni. Kurseni kohë, kurseni para dhe kryejeni punën siç duhet nga dikush që mund t'i besoni.\n\n🔗 Shfletoni hartën e komunitetit tani: ${websiteUrl}\n\nMe respekt,\nEkipi i BizCall`,
+          mk: (name) => `Здраво ${name || "таму"},\n\nЗошто да барате со часови кога најдобрите професионалци се токму во вашето соседство? 🏠\n\nВо BizCall MK, веруваме во моќта на заедницата. Изградивме платформа каде што можете да најдете проверени локални таленти за која било задача, голема или мала. Од техничка поддршка до здравствени услуги, вашите соседи се тука да ви помогнат.\n\nПрестанете да барате бесконечно и почнете да се поврзувате. Заштедете време, заштедете пари и завршете ја работата правилно со некој на кој можете да му верувате.\n\n🔗 Прелистајте ја мапата на заедницата сега: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
         }
       },
       {
-        id: "local_impact",
+        id: "growth_marketing_cta",
         subjects: {
-          en: "Make an Impact: Support Local Services",
-          sq: "Bëni një ndikim: Mbështetni shërbimet lokale",
-          mk: "Направете влијание: Поддржете ги локалните услуги"
+          en: "📈 Boost Your Local Business Today on BizCall MK",
+          sq: "📈 Rritni biznesin tuaj lokal sot në BizCall MK",
+          mk: "📈 Подобрете го вашиот локален бизнис денес на BizCall MK"
         },
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nEvery time you choose a local service on BizCall MK, you're helping our community grow. Discover top-rated local experts near you!\n\nBest regards,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nSa herë që zgjidhni një shërbim lokal në BizCall MK, ju po ndihmoni komunitetin tonë të rritet. Zbuloni ekspertët lokalë më të vlerësuar pranë jush!\n\nMe respekt,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nСекој пат кога избирате локална услуга на BizCall MK, му помагате на нашата заедница да расте. Откријте најдобро оценети локални експерти во ваша близина!\n\nСо почит,\nТимот на BizCall`
+          en: (name) => `Hello ${name || "there"},\n\nIs your service getting the visibility it deserves? 🚀\n\nThousands of local users are searching for services like yours on BizCall MK every week. If you haven't updated your listing lately, you might be missing out on valuable leads and new customers.\n\nTake 2 minutes to refresh your profile, add new photos, or post a featured listing to stay at the top of the search results. Your next big client is just one click away!\n\n✨ Manage your listings here: ${websiteUrl}\n\nTo your growth,\nThe BizCall Team`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj dukshmërinë që meriton? 🚀\n\nMijëra përdorues lokalë kërkojnë shërbime si tuajat në BizCall MK çdo javë. Nëse nuk e keni përditësuar listimin tuaj së fundmi, mund të jeni duke humbur klientë të rëndësishëm dhe mundësi të reja.\n\nMerrni 2 minuta për të rifreskuar profilin tuaj, shtoni foto të reja ose postoni një listim të veçuar për të qëndruar në krye të rezultateve të kërkimit. Klienti juaj i radhës është vetëm një klikim larg!\n\n✨ Menaxhoni listimet tuaja këtu: ${websiteUrl}\n\nPër rritjen tuaj,\nEkipi i BizCall`,
+          mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга ја добива видливоста што ја заслужува? 🚀\n\nИлјадници локални корисници бараат услуги како вашата на BizCall MK секоја недела. Ако не сте го ажурирале вашиот оглас неодамна, можеби пропуштате вредни контакти и нови клиенти.\n\nОдвојте 2 минути за да го освежите вашиот профил, додадете нови фотографии или објавете истакнат оглас за да останете на врвот на резултатите од пребарувањето. Вашиот следен голем клиент е на само еден клик подалеку!\n\n✨ Менаџирајте ги вашите огласи тука: ${websiteUrl}\n\nЗа вашиот раст,\nТимот на BizCall`
         }
       },
       {
-        id: "visibility_boost",
+        id: "trust_verified_cta",
         subjects: {
-          en: "Get Noticed on BizCall MK!",
-          sq: "Bëhuni të dukshëm në BizCall MK!",
-          mk: "Бидете забележани на BizCall MK!"
+          en: "💎 Quality You Can Trust: Verified Pros on BizCall MK",
+          sq: "💎 Cilësi që mund t'i besoni: Profesionistë të verifikuar në BizCall MK",
+          mk: "💎 Квалитет на кој можете да му верувате: Проверени професионалци на BizCall MK"
         },
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nIs your service getting the attention it deserves? Update your listing or post a new one today to reach more people in your area.\n\nCheers,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj vëmendjen që meriton? Përditëсонi listimin tuaj ose postoni një të ri sot për të arritur më shumë njerëz në zonën tuaj.\n\nGëzuar,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга го добива вниманието што го заслужува? Ажурирајте го вашиот оглас или објавете нов денес за да допрете до повеќе луѓе во вашата област.\n\nПоздрав,\nТимот на BizCall`
+          en: (name) => `Hi ${name || "there"},\n\nTired of unreliable services? We hear you. 🤝\n\nThat's why BizCall MK is dedicated to connecting you with the highest-rated, most trusted local experts in North Macedonia. Our platform makes it easy to read reviews, compare services, and find someone who actually delivers on their promises.\n\nDon't settle for less. Choose quality, choose local, and get the peace of mind you deserve for your next project.\n\n🎯 Find a trusted pro today: ${websiteUrl}\n\nStay safe,\nThe BizCall Team`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nJeni lodhur nga shërbimet jo të besueshme? Ne ju kuptojmë. 🤝\n\nKjo është arsyeja pse BizCall MK i është përkushtuar lidhjes tuaj me ekspertët lokalë më të vlerësuar dhe më të besuar në Maqedoninë e Veriut. Platforma jonë e bën të lehtë leximin e vlerësimeve, krahasimin e shërbimeve dhe gjetjen e dikujt që me të vërtetë i mban premtimet e veta.\n\nMos u kënaqni me pak. Zgjidhni cilësinë, zgjidhni lokalet dhe fitoni qetësinë që meritoni për projektin tuaj të radhës.\n\n🎯 Gjeni një profesionist të besuar sot: ${websiteUrl}\n\nGjithë të mirat,\nEkipi i BizCall`,
+          mk: (name) => `Здраво ${name || "таму"},\n\nУморни сте од несигурни услуги? Ве разбираме. 🤝\n\nЗатоа BizCall MK е посветен на тоа да ве поврзе со најдобро оценетите и најдоверливите локални експерти во Северна Македонија. Нашата платформа го олеснува читањето на рецензии, споредувањето услуги и наоѓањето на некој кој навистина ги исполнува своите ветувања.\n\nНе се задоволувајте со помалку. Изберете квалитет, изберете локално и добијте го мирот што го заслужувате за вашиот следен проект.\n\n🎯 Најдете доверлив професионалец денес: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
         }
       }
     ];
@@ -501,7 +503,7 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 // Schedule the marketing emails to run 5 minutes from now and then every week at this time.
 // Since the exact current server time might vary, we'll calculate the cron expression dynamically.
 const now = new Date();
-const targetDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+const targetDate = new Date(now.getTime() + 1 * 60 * 1000); // 5 minutes from now
 
 const minute = targetDate.getMinutes();
 const hour = targetDate.getHours();
