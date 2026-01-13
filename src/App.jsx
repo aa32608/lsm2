@@ -357,9 +357,19 @@ export default function App() {
   });
   const [plan, setPlan] = useState("1");
 
+  const [listings, setListings] = useState(() => {
+    const cached = localStorage.getItem("cached_listings");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [publicListings, setPublicListings] = useState([]);
+  const [userListings, setUserListings] = useState([]);
+  const [listingsLoading, setListingsLoading] = useState(() => {
+    const cached = localStorage.getItem("cached_listings");
+    return !cached; // If we have cache, don't show loading spinner initially
+  });
+  const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
-  const deferredListings = useDeferredValue(listings);
   const [user, setUser] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [initialListingId, setInitialListingId] = useState(null);
@@ -756,16 +766,6 @@ export default function App() {
 
     return () => unsubscribe();
   }, [user]);
-  const [listings, setListings] = useState(() => {
-    const cached = localStorage.getItem("cached_listings");
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [publicListings, setPublicListings] = useState([]);
-  const [userListings, setUserListings] = useState([]);
-  const [listingsLoading, setListingsLoading] = useState(() => {
-    const cached = localStorage.getItem("cached_listings");
-    return !cached; // If we have cache, don't show loading spinner initially
-  });
 
   // Sync merged listings
   useEffect(() => {
@@ -773,9 +773,21 @@ export default function App() {
     publicListings.forEach((l) => merged.set(l.id, l));
     userListings.forEach((l) => merged.set(l.id, l));
     const combined = Array.from(merged.values());
-    setListings(combined);
+    
+    // Simple check to avoid redundant updates if merged content is same length
+    setListings((prev) => {
+      if (prev.length === combined.length && JSON.stringify(prev) === JSON.stringify(combined)) {
+        return prev;
+      }
+      return combined;
+    });
+
     if (combined.length > 0) {
-      localStorage.setItem("cached_listings", JSON.stringify(combined));
+      const currentCache = localStorage.getItem("cached_listings");
+      const newCache = JSON.stringify(combined);
+      if (currentCache !== newCache) {
+        localStorage.setItem("cached_listings", newCache);
+      }
     }
   }, [publicListings, userListings]);
 
@@ -1877,15 +1889,7 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={{ 
-      "client-id": PAYPAL_CLIENT_ID, 
-      currency: "EUR", 
-      intent: "capture",
-      components: "buttons",
-      "enable-funding": "paylater,venmo",
-      "data-sdk-integration-source": "react-paypal-js",
-      "locale": "en_MK"
-    }}>
+    <>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -3709,46 +3713,56 @@ export default function App() {
                         <p>{t("processingPayment") || "Processing Payment..."}</p>
                       </div>
                     ) : paymentIntent && (
-                      <PayPalButtons
-                        style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
-                        createOrder={async () => {
-                          try {
-                            const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ 
-                                listingId: paymentIntent.listingId, 
-                                amount: paymentIntent.amount, 
-                                action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
-                              }),
-                            });
-                            const data = await res.json();
-                            if (!data.orderID) throw new Error("Failed to create PayPal order");
-                            return data.orderID;
-                          } catch (err) {
-                            console.error("PayPal createOrder error:", err);
-                            showMessage(t("paypalError") + " " + String(err), "error");
-                            throw err;
-                          }
-                        }}
-                        onApprove={async (data) => {
-                          const orderId = data.orderID;
-                          try {
-                            if (paymentIntent.type === "extend") {
-                              await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
-                            } else {
-                              await handleServerCapture(orderId, paymentIntent.listingId);
+                      <PayPalScriptProvider options={{ 
+                        "client-id": PAYPAL_CLIENT_ID, 
+                        currency: "EUR", 
+                        intent: "capture",
+                        components: "buttons",
+                        "enable-funding": "paylater,venmo",
+                        "data-sdk-integration-source": "react-paypal-js",
+                        "locale": "en_MK"
+                      }}>
+                        <PayPalButtons
+                          style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
+                          createOrder={async () => {
+                            try {
+                              const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ 
+                                  listingId: paymentIntent.listingId, 
+                                  amount: paymentIntent.amount, 
+                                  action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                                }),
+                              });
+                              const data = await res.json();
+                              if (!data.orderID) throw new Error("Failed to create PayPal order");
+                              return data.orderID;
+                            } catch (err) {
+                              console.error("PayPal createOrder error:", err);
+                              showMessage(t("paypalError") + " " + String(err), "error");
+                              throw err;
                             }
-                            showMessage(t("thankYou"), "success");
-                          } catch (err) {
-                            console.error("PayPal approval error:", err);
+                          }}
+                          onApprove={async (data) => {
+                            const orderId = data.orderID;
+                            try {
+                              if (paymentIntent.type === "extend") {
+                                await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
+                              } else {
+                                await handleServerCapture(orderId, paymentIntent.listingId);
+                              }
+                              showMessage(t("thankYou"), "success");
+                            } catch (err) {
+                              console.error("PayPal approval error:", err);
+                              showMessage(t("paypalError") + " " + String(err), "error");
+                            }
+                          }}
+                          onError={(err) => {
                             showMessage(t("paypalError") + " " + String(err), "error");
-                          }
-                        }}
-                        onError={(err) => {
-                          showMessage(t("paypalError") + " " + String(err), "error");
-                        }}
-                      />
+                          }}
+                        />
+                      </PayPalScriptProvider>
                     )}
                   </div>
                 </div>
@@ -4635,6 +4649,6 @@ export default function App() {
         <div id="recaptcha-signup" style={{ display: "none" }} />
         <div id="recaptcha-container" style={{ display: "none" }} />
       </div>
-    </PayPalScriptProvider>
+    </>
   );
 }
