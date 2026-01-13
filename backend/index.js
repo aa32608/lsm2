@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import admin from "firebase-admin";
 import cors from "cors";
 import { Resend } from "resend";
+import cron from "node-cron";
 
 dotenv.config();
 
@@ -363,21 +364,16 @@ app.post("/api/send-email", async (req, res) => {
 
 /* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
 
-app.post("/api/admin/send-weekly-marketing", async (req, res) => {
-  const { adminKey } = req.body;
-  
-  // Basic security check
-  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
+async function sendMarketingEmails() {
+  console.log("[Marketing] Starting weekly marketing email batch...");
   try {
     const usersRef = db.ref("users");
     const snapshot = await usersRef.once("value");
     const users = snapshot.val();
 
     if (!users) {
-      return res.status(200).json({ message: "No users found" });
+      console.log("[Marketing] No users found in database.");
+      return { message: "No users found", sentCount: 0 };
     }
 
     const subscribedUsers = Object.values(users).filter(
@@ -385,7 +381,8 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
     );
 
     if (subscribedUsers.length === 0) {
-      return res.status(200).json({ message: "No subscribed users" });
+      console.log("[Marketing] No subscribed users found.");
+      return { message: "No subscribed users", sentCount: 0 };
     }
 
     if (!resend) {
@@ -395,7 +392,6 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
     const verifiedDomain = process.env.RESEND_DOMAIN;
     const isTestingMode = !verifiedDomain;
 
-    // Define 4 marketing templates with translations
     const templates = [
       {
         id: "weekly_roundup",
@@ -419,7 +415,7 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
         },
         texts: {
           en: (name) => `Hi ${name || "there"},\n\nBizCall MK is more than just listings—it's about people. Connect with trusted local professionals and support your neighbors today.\n\nWarmly,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nBizCall MK është më shumë se thjesht listime—është për njerëzit. Lidhuni me profesionistë lokalë të besuar dhe mbështesni fqinjët tuaj sot.\n\nMe ngrohtësi,\nEkipi i BizCall`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nBizCall MK është më shumë se thjesht listime—është për njerëzit. Lidhuni me profesionistë lokalë të besuar dhe mbështesni fqinjët tuaj sot.\n\nMe ngроhtësi,\nEkipi i BizCall`,
           mk: (name) => `Здраво ${name || "таму"},\n\nBizCall MK е повеќе од само огласи—станува збор за луѓето. Поврзете се со доверливи локални професионалци и поддржете ги вашите соседи денес.\n\nСрдечно,\nТимот на BizCall`
         }
       },
@@ -445,23 +441,19 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
         },
         texts: {
           en: (name) => `Hi ${name || "there"},\n\nIs your service getting the attention it deserves? Update your listing or post a new one today to reach more people in your area.\n\nCheers,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj vëmendjen që meriton? Përditësoni listimin tuaj ose postoni një të ri sot për të arritur më shumë njerëz në zonën tuaj.\n\nGëzuar,\nEkipi i BizCall`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj vëmendjen që meriton? Përditëсонi listimin tuaj ose postoni një të ri sot për të arritur më shumë njerëz në zonën tuaj.\n\nGëzuar,\nEkipi i BizCall`,
           mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга го добива вниманието што го заслужува? Ажурирајте го вашиот оглас или објавете нов денес за да допрете до повеќе луѓе во вашата област.\n\nПоздрав,\nТимот на BizCall`
         }
       }
     ];
 
-    // Pick a random template for this batch
     const selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
 
     const emailPromises = subscribedUsers.map(async (user) => {
-      // Determine recipient's language (default to 'sq' if not set)
       const userLang = user.language || "sq";
-      
       let finalTo = user.email;
       let finalSubject = selectedTemplate.subjects[userLang] || selectedTemplate.subjects["en"];
       let finalText = (selectedTemplate.texts[userLang] || selectedTemplate.texts["en"])(user.name);
-      
       let finalFrom = isTestingMode 
         ? "BizCall MK <onboarding@resend.dev>" 
         : `BizCall MK <notifications@${verifiedDomain}>`;
@@ -481,15 +473,53 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 
     const results = await Promise.all(emailPromises);
     const errors = results.filter((r) => r.error);
+    if (errors.length > 0) console.error("[Marketing] Some emails failed:", errors);
 
-    if (errors.length > 0) {
-      console.error("Some Resend emails failed:", errors);
-    }
-
-    res.json({ ok: true, sentCount: subscribedUsers.length - errors.length });
+    return { ok: true, sentCount: subscribedUsers.length - errors.length };
   } catch (err) {
-    console.error("Weekly email error:", err);
+    console.error("[Marketing] Batch error:", err);
+    throw err;
+  }
+}
+
+app.post("/api/admin/send-weekly-marketing", async (req, res) => {
+  const { adminKey } = req.body;
+  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await sendMarketingEmails();
+    res.json(result);
+  } catch (err) {
     res.status(500).json({ error: "Failed to send emails" });
+  }
+});
+
+/* ----------------------- CRON SCHEDULER ----------------------- */
+
+// Schedule the marketing emails to run 5 minutes from now and then every week at this time.
+// Since the exact current server time might vary, we'll calculate the cron expression dynamically.
+const now = new Date();
+const targetDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
+
+const minute = targetDate.getMinutes();
+const hour = targetDate.getHours();
+const dayOfWeek = targetDate.getDay(); // 0-6 (Sun-Sat)
+
+// Cron expression: minute hour dayOfMonth month dayOfWeek
+// To run every week at this exact time:
+const cronExpression = `${minute} ${hour} * * ${dayOfWeek}`;
+
+console.log(`[Cron] Marketing emails scheduled to start at ${targetDate.toLocaleTimeString()} and repeat every week (Cron: ${cronExpression})`);
+
+cron.schedule(cronExpression, async () => {
+  console.log("[Cron] Triggering weekly marketing emails...");
+  try {
+    const result = await sendMarketingEmails();
+    console.log(`[Cron] Successfully sent ${result.sentCount} marketing emails.`);
+  } catch (err) {
+    console.error("[Cron] Failed to send marketing emails:", err);
   }
 });
 
