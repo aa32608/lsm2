@@ -720,10 +720,10 @@ export default function App() {
   
   const [expiryChecked, setExpiryChecked] = useState(false);
   useEffect(() => {
-    if (!user || !listings.length || expiryChecked) return;
+    if (!user || listingsLoading || !deferredListings.length || expiryChecked) return;
 
     const checkExpiringListings = async () => {
-      const userListings = listings.filter(l => l.userId === user.uid && l.status === "verified");
+      const userListings = deferredListings.filter(l => l.userId === user.uid && l.status === "verified");
       const now = Date.now();
       const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
       const targetEmail = user.email || userProfile?.email;
@@ -752,7 +752,7 @@ export default function App() {
     };
 
     checkExpiringListings();
-  }, [user, listings, expiryChecked, userProfile]);
+  }, [user, deferredListings, expiryChecked, userProfile, listingsLoading]);
 
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
@@ -835,29 +835,52 @@ export default function App() {
     }
   }, [publicListings, userListings]);
 
-  // 1. Public listings (verified) - Run once on mount
-    // IMPORTANT: Ensure ".indexOn": ["status", "userId"] is set in Firebase Rules for performance
-    useEffect(() => {
-      const verifiedQuery = query(
-        dbRef(db, "listings"),
-        orderByChild("status"),
-        equalTo("verified"),
-        limitToLast(300) // Reduced from 500 for better initial load
-      );
+  // 1. Public listings (verified) - Use get() for faster initial load, then onValue for updates
+  useEffect(() => {
+    const verifiedQuery = query(
+      dbRef(db, "listings"),
+      orderByChild("status"),
+      equalTo("verified"),
+      limitToLast(150) // Further reduced for speed, matching cache limit
+    );
 
+    let isFirstLoad = true;
     const startTime = Date.now();
-    const unsubscribe = onValue(verifiedQuery, (snapshot) => {
+
+    // 1a. Initial Get
+    get(verifiedQuery).then((snapshot) => {
       const duration = Date.now() - startTime;
       if (duration > 2000) {
-        console.warn(`[Performance] Public listings fetch took ${duration}ms. This is usually caused by missing indexes in Firebase Rules. Please ensure you have ".indexOn": ["status", "userId"] set for the "listings" node.`);
+        console.warn(`[Performance] Initial get() took ${duration}ms. Rules are correct, but network or DB might be slow.`);
       }
       const val = snapshot.val() || {};
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
-      setPublicListings(arr);
+      
+      setPublicListings(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
+        return arr;
+      });
       setListingsLoading(false);
+    }).catch(err => {
+      console.error("Initial fetch error:", err);
+      setListingsLoading(false);
+    });
+
+    // 1b. Real-time listener (skip the very first trigger since get() handled it)
+    const unsubscribe = onValue(verifiedQuery, (snapshot) => {
+      if (isFirstLoad) {
+        isFirstLoad = false;
+        return;
+      }
+      const val = snapshot.val() || {};
+      const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
+      
+      setPublicListings(prev => {
+        if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
+        return arr;
+      });
     }, (err) => {
-      console.error("Public fetch error:", err);
-      setListingsLoading(false);
+      console.error("Public listener error:", err);
     });
 
     return () => unsubscribe();
@@ -1863,7 +1886,7 @@ export default function App() {
     ? buildLocationString(editForm.locationCity, editForm.locationExtra)
     : "";
 
-  const activeListingCount = listings.length;
+  const activeListingCount = useMemo(() => deferredListings.length, [deferredListings]);
   const verifiedListingCount = useMemo(() => deferredListings.filter((l) => l.status === "verified").length, [deferredListings]);
   const phoneVerifiedCount = useMemo(() => deferredListings.filter((l) => l.phoneVerified).length, [deferredListings]);
   // current slides can be derived on render when needed
