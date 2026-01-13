@@ -21,20 +21,28 @@ const Filtersheet = React.memo(({
   expiryFilter,
   setExpiryFilter,
 }) => {
+  // Local states for debouncing
   const [localSearch, setLocalSearch] = useState(q);
+  const [localCat, setLocalCat] = useState(catFilter);
+  const [localLoc, setLocalLoc] = useState(locFilter);
+  const [localSort, setLocalSort] = useState(sortBy);
 
-  useEffect(() => {
-    setLocalSearch(q);
-  }, [q]);
+  // Sync local state when props change (e.g. from outside reset)
+  useEffect(() => { setLocalSearch(q); }, [q]);
+  useEffect(() => { setLocalCat(catFilter); }, [catFilter]);
+  useEffect(() => { setLocalLoc(locFilter); }, [locFilter]);
+  useEffect(() => { setLocalSort(sortBy); }, [sortBy]);
 
+  // Debounce all filters
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localSearch !== q) {
-        setQ(localSearch);
-      }
-    }, 300);
+      if (localSearch !== q) setQ(localSearch);
+      if (localCat !== catFilter) setCatFilter(localCat);
+      if (localLoc !== locFilter) setLocFilter(localLoc);
+      if (localSort !== sortBy) setSortBy(localSort);
+    }, 400); // 400ms debounce for smoother experience
     return () => clearTimeout(timer);
-  }, [localSearch, q, setQ]);
+  }, [localSearch, localCat, localLoc, localSort, q, catFilter, locFilter, sortBy, setQ, setCatFilter, setLocFilter, setSortBy]);
 
   if (!filtersOpen) return null;
 
@@ -171,13 +179,13 @@ const Filtersheet = React.memo(({
                   <div className="filter-options-grid">
                     {categories.map((cat) => {
                       const label = t(cat);
-                      const active = catFilter === label;
+                      const active = localCat === label;
                       return (
                         <button
                           key={cat}
                           type="button"
                           className={`filter-option-card ${active ? "is-selected" : ""}`}
-                          onClick={() => setCatFilter(active ? "" : label)}
+                          onClick={() => setLocalCat(active ? "" : label)}
                         >
                           <div className="filter-option-icon">{categoryIcons[cat]}</div>
                           <div className="filter-option-label">{label}</div>
@@ -206,8 +214,8 @@ const Filtersheet = React.memo(({
                   <div className="filter-select-wrapper">
                     <select
                       className="filter-select-field"
-                      value={locFilter}
-                      onChange={(e) => setLocFilter(e.target.value)}
+                      value={localLoc}
+                      onChange={(e) => setLocalLoc(e.target.value)}
                     >
                       <option value="">{t("allLocations")}</option>
                       {allLocations.map((l) => (
@@ -231,8 +239,8 @@ const Filtersheet = React.memo(({
                 <div className="filter-select-wrapper">
                   <select
                     className="filter-select-field"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    value={localSort}
+                    onChange={(e) => setLocalSort(e.target.value)}
                   >
                     <option value="topRated">⭐ {t("sortTopRated")}</option>
                     <option value="newest">🆕 {t("sortNewest")}</option>

@@ -361,7 +361,10 @@ export default function App() {
     const cached = localStorage.getItem("cached_listings");
     return cached ? JSON.parse(cached) : [];
   });
-  const [publicListings, setPublicListings] = useState([]);
+  const [publicListings, setPublicListings] = useState(() => {
+    const cached = localStorage.getItem("cached_listings");
+    return cached ? JSON.parse(cached) : [];
+  });
   const [userListings, setUserListings] = useState([]);
   const [listingsLoading, setListingsLoading] = useState(() => {
     const cached = localStorage.getItem("cached_listings");
@@ -769,24 +772,35 @@ export default function App() {
 
   // Sync merged listings
   useEffect(() => {
-    const merged = new Map();
-    publicListings.forEach((l) => merged.set(l.id, l));
-    userListings.forEach((l) => merged.set(l.id, l));
-    const combined = Array.from(merged.values());
-    
-    // Simple check to avoid redundant updates if merged content is same length
-    setListings((prev) => {
-      if (prev.length === combined.length && JSON.stringify(prev) === JSON.stringify(combined)) {
-        return prev;
-      }
-      return combined;
-    });
+    // Optimization: If publicListings still matches cache and userListings is empty, skip
+    if (userListings.length === 0) {
+      setListings((prev) => {
+        const sorted = [...publicListings].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        // Deep compare or just length check for performance
+        if (prev.length === sorted.length && JSON.stringify(prev) === JSON.stringify(sorted)) {
+          return prev;
+        }
+        return sorted;
+      });
+    } else {
+      const merged = new Map();
+      publicListings.forEach((l) => merged.set(l.id, l));
+      userListings.forEach((l) => merged.set(l.id, l));
+      const combined = Array.from(merged.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      
+      setListings((prev) => {
+        if (prev.length === combined.length && JSON.stringify(prev) === JSON.stringify(combined)) {
+          return prev;
+        }
+        return combined;
+      });
+    }
 
-    if (combined.length > 0) {
-      // Create a lightweight version for caching to avoid QuotaExceededError
-      const cacheData = combined
+    // Cache update logic
+    if (publicListings.length > 0) {
+      const cacheData = publicListings
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-        .slice(0, 150) // Limit to 150 most recent items
+        .slice(0, 150)
         .map(l => ({
           id: l.id,
           name: l.name,
@@ -799,7 +813,6 @@ export default function App() {
           expiresAt: l.expiresAt,
           offerprice: l.offerprice,
           contact: l.contact,
-          // Truncate description to keep cache size small
           description: l.description ? l.description.substring(0, 100) + "..." : "",
           userId: l.userId,
           avgRating: l.avgRating,
@@ -832,7 +845,12 @@ export default function App() {
         limitToLast(300) // Reduced from 500 for better initial load
       );
 
+    const startTime = Date.now();
     const unsubscribe = onValue(verifiedQuery, (snapshot) => {
+      const duration = Date.now() - startTime;
+      if (duration > 2000) {
+        console.warn(`[Performance] Public listings fetch took ${duration}ms. This is usually caused by missing indexes in Firebase Rules. Please ensure you have ".indexOn": ["status", "userId"] set for the "listings" node.`);
+      }
       const val = snapshot.val() || {};
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
       setPublicListings(arr);
