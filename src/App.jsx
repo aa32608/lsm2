@@ -331,10 +331,14 @@ const Header = React.memo(({
 export default function App() {
   /* i18n */
   const [lang, setLang] = useState(() => localStorage.getItem("lang") || "sq");
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+
   const t = useCallback(
     (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
     [lang]
   );
+
   useEffect(() => {
     localStorage.setItem("lang", lang);
     if (user) {
@@ -380,10 +384,8 @@ export default function App() {
   const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
-  const [user, setUser] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [initialListingId, setInitialListingId] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
 
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
