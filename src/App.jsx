@@ -335,7 +335,14 @@ export default function App() {
     (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
     [lang]
   );
-  useEffect(() => localStorage.setItem("lang", lang), [lang]);
+  useEffect(() => {
+    localStorage.setItem("lang", lang);
+    if (user) {
+      update(dbRef(db, `users/${user.uid}`), { language: lang }).catch(err => {
+        console.warn("Failed to sync language to profile:", err);
+      });
+    }
+  }, [lang, user]);
 
   /* Core state */
   const [form, setForm] = useState({
