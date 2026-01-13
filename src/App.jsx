@@ -3,7 +3,7 @@
 import logo from "./assets/logo.png";
 import React, { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
-import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo } from "firebase/database";
+import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo, limitToLast } from "firebase/database";
 import {
   signInWithEmailAndPassword,
   isSignInWithEmailLink,
@@ -703,8 +703,9 @@ export default function App() {
     }
   }, [initialListingId, listings]);
   
+  const [expiryChecked, setExpiryChecked] = useState(false);
   useEffect(() => {
-    if (!user || !listings.length) return;
+    if (!user || !listings.length || expiryChecked) return;
 
     const checkExpiringListings = async () => {
       const userListings = listings.filter(l => l.userId === user.uid && l.status === "verified");
@@ -726,17 +727,17 @@ export default function App() {
             try {
               await sendEmail(targetEmail, subject, text);
               await update(dbRef(db, `listings/${listing.id}`), { expiryNotified: true });
-              // console.log(`Sent expiry notification for listing: ${listing.id}`);
             } catch (err) {
               console.error("Failed to send expiry notification:", err);
             }
           }
         }
       }
+      setExpiryChecked(true);
     };
 
     checkExpiringListings();
-  }, [user, listings]);
+  }, [user, listings, expiryChecked, userProfile]);
 
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
@@ -754,14 +755,54 @@ export default function App() {
     return () => unsubscribe();
   }, [user]);
   useEffect(() => {
-    const listingsRef = dbRef(db, "listings");
-    const unsubscribe = onValue(listingsRef, (snapshot) => {
+    let publicItems = [];
+    let userItems = [];
+
+    const syncListings = () => {
+      const merged = new Map();
+      // Add public items first, then user items (user items can overwrite if they are also verified)
+      publicItems.forEach((l) => merged.set(l.id, l));
+      userItems.forEach((l) => merged.set(l.id, l));
+      setListings(Array.from(merged.values()));
+    };
+
+    // 1. Fetch public verified listings (limited for performance)
+    const verifiedQuery = query(
+      dbRef(db, "listings"),
+      orderByChild("status"),
+      equalTo("verified"),
+      limitToLast(500)
+    );
+
+    const unsubPublic = onValue(verifiedQuery, (snapshot) => {
       const val = snapshot.val() || {};
-      const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
-      setListings(arr);
+      publicItems = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
+      syncListings();
     });
-    return () => unsubscribe();
-  }, []);
+
+    // 2. Fetch current user's listings (if logged in)
+    let unsubUser = null;
+    if (user) {
+      const userQuery = query(
+        dbRef(db, "listings"),
+        orderByChild("userId"),
+        equalTo(user.uid)
+      );
+      unsubUser = onValue(userQuery, (snapshot) => {
+        const val = snapshot.val() || {};
+        userItems = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
+        syncListings();
+      });
+    } else {
+      userItems = [];
+      syncListings();
+    }
+
+    return () => {
+      unsubPublic();
+      if (unsubUser) unsubUser();
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!selectedListing) {
