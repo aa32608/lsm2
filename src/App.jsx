@@ -3822,12 +3822,19 @@ export default function App() {
                                   action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
                                 }),
                               });
+                              
+                              if (!res.ok) {
+                                const errorData = await res.json().catch(() => ({}));
+                                console.error("Backend error creating PayPal order:", errorData);
+                                throw new Error(errorData.error || `Server error: ${res.status}`);
+                              }
+
                               const data = await res.json();
-                              if (!data.orderID) throw new Error("Failed to create PayPal order");
+                              if (!data.orderID) throw new Error("No orderID returned from backend");
                               return data.orderID;
                             } catch (err) {
                               console.error("PayPal createOrder error:", err);
-                              showMessage(t("paypalError") + " " + String(err), "error");
+                              showMessage(t("paypalError") + " " + (err.message || String(err)), "error");
                               throw err;
                             }
                           }}

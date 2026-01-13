@@ -145,24 +145,20 @@ app.post("/api/paypal/create-order", async (req, res) => {
 
     const order = await orderResponse.json();
     if (!order.id) {
-      console.error("PayPal order creation failed:", order);
-      await db.ref(`listings/${listingId}`).update({
-        status: "expired",
+      console.error("PayPal order creation failed. Full response:", JSON.stringify(order, null, 2));
+      // If we get an error from PayPal, let's return it more clearly
+      const errorMessage = order.message || (order.details && order.details[0] && order.details[0].description) || "Unknown PayPal error";
+      return res.status(500).json({ 
+        error: "PayPal order creation failed", 
+        details: errorMessage,
+        paypal_response: order 
       });
-      return res.status(500).json({ error: order });
     }
 
     res.json({ orderID: order.id });
   } catch (err) {
     console.error("Create order error:", err);
-    try {
-      await db.ref(`listings/${req.body.listingId}`).update({
-        status: "expired",
-      });
-    } catch (innerErr) {
-      console.error("Failed to update Firebase on error:", innerErr);
-    }
-    res.status(500).json({ error: "Failed to create PayPal order" });
+    res.status(500).json({ error: "Internal server error creating PayPal order", message: err.message });
   }
 });
 
