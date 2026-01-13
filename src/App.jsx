@@ -3805,7 +3805,6 @@ export default function App() {
                         currency: "EUR", 
                         intent: "capture",
                         components: "buttons",
-                        "enable-funding": "paylater,venmo",
                         "data-sdk-integration-source": "react-paypal-js",
                         "locale": "en_MK"
                       }}>
