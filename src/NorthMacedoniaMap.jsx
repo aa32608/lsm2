@@ -2,6 +2,7 @@
 import React from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { CITIES_WITH_COORDS } from "./mkCities";
 
 // Fix for default marker paths in many bundlers

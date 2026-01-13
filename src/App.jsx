@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import logo from "./assets/logo.png";
-import React, { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useDeferredValue, lazy, Suspense } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
 import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo, limitToLast } from "firebase/database";
 import {
@@ -24,12 +24,14 @@ import {
 
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { AnimatePresence, motion as Motion } from "framer-motion";
-import "leaflet/dist/leaflet.css";
-import NorthMacedoniaMap from "./NorthMacedoniaMap";
 import "./App.css";
-import Sidebar from "./Sidebar";
-import Filtersheet from "./components/Filtersheet";
-import EditListingModal from "./components/EditListingModal";
+
+// Lazy loaded components
+const NorthMacedoniaMap = lazy(() => import("./NorthMacedoniaMap"));
+const Sidebar = lazy(() => import("./Sidebar"));
+const Filtersheet = lazy(() => import("./components/Filtersheet"));
+const EditListingModal = lazy(() => import("./components/EditListingModal"));
+
 import ListingCard from "./components/ListingCard";
 import MyListingCard from "./components/MyListingCard";
 import { TRANSLATIONS } from "./translations";
@@ -94,6 +96,8 @@ const mkSpotlightCities = [
 const featuredCategories = ["tech", "services", "homeRepair", "food", "electronics", "car"];
 const FEATURED_SLIDE_SIZE = 3;
 const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
+
+const priceMap = { "1": 0.1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -352,11 +356,9 @@ export default function App() {
     imagePreview: null, // local-only preview
   });
   const [plan, setPlan] = useState("1");
-  const priceMap = { "1": 0.1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
-  const [listings, setListings] = useState([]);
   const deferredListings = useDeferredValue(listings);
   const [user, setUser] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
@@ -754,19 +756,31 @@ export default function App() {
 
     return () => unsubscribe();
   }, [user]);
+  const [listings, setListings] = useState(() => {
+    const cached = localStorage.getItem("cached_listings");
+    return cached ? JSON.parse(cached) : [];
+  });
+  const [publicListings, setPublicListings] = useState([]);
+  const [userListings, setUserListings] = useState([]);
+  const [listingsLoading, setListingsLoading] = useState(() => {
+    const cached = localStorage.getItem("cached_listings");
+    return !cached; // If we have cache, don't show loading spinner initially
+  });
+
+  // Sync merged listings
   useEffect(() => {
-    let publicItems = [];
-    let userItems = [];
+    const merged = new Map();
+    publicListings.forEach((l) => merged.set(l.id, l));
+    userListings.forEach((l) => merged.set(l.id, l));
+    const combined = Array.from(merged.values());
+    setListings(combined);
+    if (combined.length > 0) {
+      localStorage.setItem("cached_listings", JSON.stringify(combined));
+    }
+  }, [publicListings, userListings]);
 
-    const syncListings = () => {
-      const merged = new Map();
-      // Add public items first, then user items (user items can overwrite if they are also verified)
-      publicItems.forEach((l) => merged.set(l.id, l));
-      userItems.forEach((l) => merged.set(l.id, l));
-      setListings(Array.from(merged.values()));
-    };
-
-    // 1. Fetch public verified listings (limited for performance)
+  // 1. Public listings (verified) - Run once on mount
+  useEffect(() => {
     const verifiedQuery = query(
       dbRef(db, "listings"),
       orderByChild("status"),
@@ -774,34 +788,39 @@ export default function App() {
       limitToLast(500)
     );
 
-    const unsubPublic = onValue(verifiedQuery, (snapshot) => {
+    const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       const val = snapshot.val() || {};
-      publicItems = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
-      syncListings();
+      const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
+      setPublicListings(arr);
+      setListingsLoading(false);
+    }, (err) => {
+      console.error("Public fetch error:", err);
+      setListingsLoading(false);
     });
 
-    // 2. Fetch current user's listings (if logged in)
-    let unsubUser = null;
-    if (user) {
-      const userQuery = query(
-        dbRef(db, "listings"),
-        orderByChild("userId"),
-        equalTo(user.uid)
-      );
-      unsubUser = onValue(userQuery, (snapshot) => {
-        const val = snapshot.val() || {};
-        userItems = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
-        syncListings();
-      });
-    } else {
-      userItems = [];
-      syncListings();
+    return () => unsubscribe();
+  }, []);
+
+  // 2. User listings - Run when user changes
+  useEffect(() => {
+    if (!user) {
+      setUserListings([]);
+      return undefined;
     }
 
-    return () => {
-      unsubPublic();
-      if (unsubUser) unsubUser();
-    };
+    const userQuery = query(
+      dbRef(db, "listings"),
+      orderByChild("userId"),
+      equalTo(user.uid)
+    );
+
+    const unsubscribe = onValue(userQuery, (snapshot) => {
+      const val = snapshot.val() || {};
+      const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
+      setUserListings(arr);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   useEffect(() => {
@@ -2001,15 +2020,17 @@ export default function App() {
                 transition={{ type: "tween", duration: 0.3 }}
                 style={{ touchAction: "none", WebkitOverflowScrolling: "touch" }}
               >
-                <Sidebar
-                  t={t}
-                  selected={selectedTab}
-                  onSelect={onSidebarSelect}
-                  onLogout={handleSidebarLogout}
-                  onLogin={handleSidebarLogin}
-                  onClose={onSidebarClose}
-                  user={user}
-                />
+                <Suspense fallback={<div className="sidebar-loading">...</div>}>
+                  <Sidebar
+                    t={t}
+                    selected={selectedTab}
+                    onSelect={onSidebarSelect}
+                    onLogout={handleSidebarLogout}
+                    onLogin={handleSidebarLogin}
+                    onClose={onSidebarClose}
+                    user={user}
+                  />
+                </Suspense>
               </Motion.aside>
             </>
           )}
@@ -2653,9 +2674,11 @@ export default function App() {
                           <div className="explore-header-content">
                             <h2 className="explore-page-title">🔍 {t("explore")}</h2>
                             <p className="explore-page-subtitle">
-                              {filtered.length === 0 
-                                ? t("noListingsFound")
-                                : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel")} • ${t("page")} ${page} ${t("of")} ${totalPages}`
+                              {listingsLoading 
+                                ? t("loading")
+                                : filtered.length === 0 
+                                  ? t("noListingsFound")
+                                  : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel")} • ${t("page")} ${page} ${t("of")} ${totalPages}`
                               }
                             </p>
                           </div>
@@ -2771,25 +2794,32 @@ export default function App() {
                         </div>
 
                         <div className={`explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`}>
-                          <Filtersheet
-                            t={t}
-                            filtersOpen={filtersOpen}
-                            setFiltersOpen={setFiltersOpen}
-                            q={q}
-                            setQ={setQ}
-                            catFilter={catFilter}
-                            setCatFilter={setCatFilter}
-                            locFilter={locFilter}
-                            setLocFilter={setLocFilter}
-                            sortBy={sortBy}
-                            setSortBy={setSortBy}
-                            categories={categories}
-                            categoryIcons={categoryIcons}
-                            allLocations={allLocations}
-                          />
+                          <Suspense fallback={<div className="filters-loading">...</div>}>
+                            <Filtersheet
+                              t={t}
+                              filtersOpen={filtersOpen}
+                              setFiltersOpen={setFiltersOpen}
+                              q={q}
+                              setQ={setQ}
+                              catFilter={catFilter}
+                              setCatFilter={setCatFilter}
+                              locFilter={locFilter}
+                              setLocFilter={setLocFilter}
+                              sortBy={sortBy}
+                              setSortBy={setSortBy}
+                              categories={categories}
+                              categoryIcons={categoryIcons}
+                              allLocations={allLocations}
+                            />
+                          </Suspense>
 
                           <div className="explore-results-area">
-                            {filtered.length > 0 ? (
+                            {listingsLoading ? (
+                              <div className="loading-state">
+                                <div className="spinner"></div>
+                                <p>{t("loading")}</p>
+                              </div>
+                            ) : filtered.length > 0 ? (
                               <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
                                 {pagedFiltered.map((l) => (
                                   <ListingCard
@@ -3509,17 +3539,19 @@ export default function App() {
                 </div>
 
                 <div className="modal-body" style={{ maxHeight: "70vh", overflow: "hidden" }}>
-                  <NorthMacedoniaMap
-                    selectedCity={form.locationCity}
-                    onSelectCity={(cityName) => {
-                      setForm((f) => ({ ...f, locationCity: cityName }));
-                      showMessage(
-                        `${t("locationSetTo")} ${cityName}`,
-                        "success"
-                      );
-                      setShowMapPicker(false);
-                    }}
-                  />
+                  <Suspense fallback={<div className="map-loading">Loading Map...</div>}>
+                    <NorthMacedoniaMap
+                      selectedCity={form.locationCity}
+                      onSelectCity={(cityName) => {
+                        setForm((f) => ({ ...f, locationCity: cityName }));
+                        showMessage(
+                          `${t("locationSetTo")} ${cityName}`,
+                          "success"
+                        );
+                        setShowMapPicker(false);
+                      }}
+                    />
+                  </Suspense>
                 </div>
               </Motion.div>
             </Motion.div>
@@ -3557,17 +3589,19 @@ export default function App() {
                 </div>
 
                 <div className="modal-body" style={{ maxHeight: "70vh", overflow: "hidden" }}>
-                  <NorthMacedoniaMap
-                    selectedCity={editForm.locationCity}
-                    onSelectCity={(cityName) => {
-                      setEditForm((f) => ({ ...f, locationCity: cityName }));
-                      showMessage(
-                        `${t("locationSetTo")} ${cityName}`,
-                        "success"
-                      );
-                      setShowEditMapPicker(false);
-                    }}
-                  />
+                  <Suspense fallback={<div className="map-loading">Loading Map...</div>}>
+                    <NorthMacedoniaMap
+                      selectedCity={editForm.locationCity}
+                      onSelectCity={(cityName) => {
+                        setEditForm((f) => ({ ...f, locationCity: cityName }));
+                        showMessage(
+                          `${t("locationSetTo")} ${cityName}`,
+                          "success"
+                        );
+                        setShowEditMapPicker(false);
+                      }}
+                    />
+                  </Suspense>
                 </div>
               </Motion.div>
             </Motion.div>
@@ -3576,22 +3610,24 @@ export default function App() {
 
         {/* ===== EDIT MODAL (restored, resized) ===== */}
         <AnimatePresence>
-          <EditListingModal
-            t={t}
-            editingListing={editingListing}
-            setEditingListing={setEditingListing}
-            editForm={editForm}
-            setEditForm={setEditForm}
-            saveEdit={saveEdit}
-            categories={categories}
-            MK_CITIES={MK_CITIES}
-            stripDangerous={stripDangerous}
-            editLocationPreview={editLocationPreview}
-            setShowEditMapPicker={setShowEditMapPicker}
-            plan={plan}
-            setSelectedTab={setSelectedTab}
-            handleShareListing={handleShareListing}
-          />
+          <Suspense fallback={null}>
+            <EditListingModal
+              t={t}
+              editingListing={editingListing}
+              setEditingListing={setEditingListing}
+              editForm={editForm}
+              setEditForm={setEditForm}
+              saveEdit={saveEdit}
+              categories={categories}
+              MK_CITIES={MK_CITIES}
+              stripDangerous={stripDangerous}
+              editLocationPreview={editLocationPreview}
+              setShowEditMapPicker={setShowEditMapPicker}
+              plan={plan}
+              setSelectedTab={setSelectedTab}
+              handleShareListing={handleShareListing}
+            />
+          </Suspense>
         </AnimatePresence>
 
 
