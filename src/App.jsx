@@ -783,22 +783,54 @@ export default function App() {
     });
 
     if (combined.length > 0) {
+      // Create a lightweight version for caching to avoid QuotaExceededError
+      const cacheData = combined
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 150) // Limit to 150 most recent items
+        .map(l => ({
+          id: l.id,
+          name: l.name,
+          category: l.category,
+          location: l.location,
+          locationCity: l.locationCity,
+          status: l.status,
+          verified: l.verified,
+          createdAt: l.createdAt,
+          expiresAt: l.expiresAt,
+          offerprice: l.offerprice,
+          contact: l.contact,
+          // Truncate description to keep cache size small
+          description: l.description ? l.description.substring(0, 100) + "..." : "",
+          userId: l.userId,
+          avgRating: l.avgRating,
+          feedbackCount: l.feedbackCount
+        }));
+
+      const newCache = JSON.stringify(cacheData);
       const currentCache = localStorage.getItem("cached_listings");
-      const newCache = JSON.stringify(combined);
+      
       if (currentCache !== newCache) {
-        localStorage.setItem("cached_listings", newCache);
+        try {
+          localStorage.setItem("cached_listings", newCache);
+        } catch (e) {
+          console.error("Cache storage failed:", e);
+          if (e.name === "QuotaExceededError" || e.code === 22) {
+            localStorage.removeItem("cached_listings");
+          }
+        }
       }
     }
   }, [publicListings, userListings]);
 
   // 1. Public listings (verified) - Run once on mount
-  useEffect(() => {
-    const verifiedQuery = query(
-      dbRef(db, "listings"),
-      orderByChild("status"),
-      equalTo("verified"),
-      limitToLast(500)
-    );
+    // IMPORTANT: Ensure ".indexOn": ["status", "userId"] is set in Firebase Rules for performance
+    useEffect(() => {
+      const verifiedQuery = query(
+        dbRef(db, "listings"),
+        orderByChild("status"),
+        equalTo("verified"),
+        limitToLast(300) // Reduced from 500 for better initial load
+      );
 
     const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       const val = snapshot.val() || {};
