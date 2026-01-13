@@ -377,7 +377,7 @@ async function sendMarketingEmails() {
     }
 
     const subscribedUsers = Object.values(users).filter(
-      (user) => user.subscribedToMarketing && user.email
+      (user) => user.subscribedToMarketing !== false && user.email
     );
 
     if (subscribedUsers.length === 0) {

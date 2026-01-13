@@ -1437,13 +1437,18 @@ export default function App() {
       if (json.ok) {
         const snapshot = await fetchListing(listingId);
         const currentExpiry = snapshot?.expiresAt || Date.now();
+        const currentStatus = snapshot?.status || "verified";
 
         // Use the plan chosen in the modal; fallback to listing.plan or 1
         const effectivePlanKey =
           planKeyFromUI || String(snapshot?.plan || "1");
         const planMonths = parseInt(effectivePlanKey, 10) || 1;
 
-        const base = Math.max(Date.now(), currentExpiry);
+        // If listing is expired or pending (not verified), start from now
+        const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
+          ? Date.now() 
+          : currentExpiry;
+
         const newExpiry =
           base + planMonths * 30 * 24 * 60 * 60 * 1000; // months * 30 days
 
@@ -2739,7 +2744,7 @@ export default function App() {
                                       <input
                                         type="checkbox"
                                         className="subscription-checkbox"
-                                        checked={userProfile?.subscribedToMarketing}
+                                        checked={userProfile?.subscribedToMarketing ?? true}
                                         onChange={handleSubscriptionChange}
                                       />
                                       <span className="toggle-slider"></span>
@@ -4258,6 +4263,7 @@ export default function App() {
                                 email: user.email,
                                 phone: normalizePhoneForStorage(countryCode + phoneNumber),
                                 createdAt: Date.now(),
+                                subscribedToMarketing: true,
                               });
                 
                               showMessage(t("signupSuccess"), "success");
