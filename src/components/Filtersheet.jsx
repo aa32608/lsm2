@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 const Filtersheet = React.memo(({
   t,
@@ -21,6 +21,21 @@ const Filtersheet = React.memo(({
   expiryFilter,
   setExpiryFilter,
 }) => {
+  const [localSearch, setLocalSearch] = useState(q);
+
+  useEffect(() => {
+    setLocalSearch(q);
+  }, [q]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== q) {
+        setQ(localSearch);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localSearch, q, setQ]);
+
   if (!filtersOpen) return null;
 
   return (
@@ -72,14 +87,17 @@ const Filtersheet = React.memo(({
                     type="search"
                     className="filter-search-input"
                     placeholder={t("searchPlaceholder")}
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
                   />
-                  {q && (
+                  {localSearch && (
                     <button
                       type="button"
                       className="filter-search-clear"
-                      onClick={() => setQ("")}
+                      onClick={() => {
+                        setLocalSearch("");
+                        setQ("");
+                      }}
                       aria-label={t("clearSearch")}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ minWidth: "24px" }}>

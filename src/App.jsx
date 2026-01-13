@@ -1,7 +1,7 @@
 // src/App.jsx
 
 import logo from "./assets/logo.png";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useDeferredValue } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
 import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo } from "firebase/database";
 import {
@@ -357,6 +357,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
   const [listings, setListings] = useState([]);
+  const deferredListings = useDeferredValue(listings);
   const [user, setUser] = useState(null);
   const [selectedListing, setSelectedListing] = useState(null);
   const [initialListingId, setInitialListingId] = useState(null);
@@ -554,6 +555,7 @@ export default function App() {
 
   /* Filters / search */
   const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q);
   const [catFilter, setCatFilter] = useState("");
   const [locFilter, setLocFilter] = useState("");
   const [sortBy, setSortBy] = useState("topRated");
@@ -566,6 +568,7 @@ export default function App() {
   const [myListingsExpiryFilter, setMyListingsExpiryFilter] = useState("all"); // "all" | "expiring" | "expired" | "active"
   const [myListingsSort, setMyListingsSort] = useState("newest"); // "newest" | "oldest" | "expiring" | "az"
   const [myListingsSearch, setMyListingsSearch] = useState("");
+  const deferredMyListingsSearch = useDeferredValue(myListingsSearch);
 
   /* Favorites */
   const [favorites, setFavorites] = useState(() => {
@@ -788,8 +791,8 @@ export default function App() {
 
   const myListingsRaw = useMemo(() => {
     if (!user) return [];
-    return listings.filter(l => l.userId === user.uid);
-  }, [listings, user]);
+    return deferredListings.filter(l => l.userId === user.uid);
+  }, [deferredListings, user]);
 
   /* Email-link sign-in (preserved) */
   useEffect(() => {
@@ -1391,26 +1394,26 @@ export default function App() {
 
   /* Derived data */
   const verifiedListings = useMemo(() => {
-    return listings.filter((l) => l.status === "verified" && (!l.expiresAt || l.expiresAt > Date.now()));
-  }, [listings]);
+    return deferredListings.filter((l) => l.status === "verified" && (!l.expiresAt || l.expiresAt > Date.now()));
+  }, [deferredListings]);
   const allLocations = useMemo(
     () => Array.from(new Set(verifiedListings.map((l) => (l.location || "").trim()).filter(Boolean))),
     [verifiedListings]
   );
   const feedbackAverages = useMemo(() => {
     const map = {};
-    listings.forEach((l) => {
+    deferredListings.forEach((l) => {
       map[l.id] = {
         count: l.feedbackCount || 0,
         avg: l.avgRating || null,
       };
     });
     return map;
-  }, [listings]);
+  }, [deferredListings]);
   const filtered = useMemo(() => {
     let arr = [...verifiedListings];
-    if (q.trim()) {
-      const term = q.trim().toLowerCase();
+    if (deferredQ.trim()) {
+      const term = deferredQ.trim().toLowerCase();
       arr = arr.filter(
         (l) =>
           (l.name || "").toLowerCase().includes(term) ||
@@ -1436,7 +1439,7 @@ export default function App() {
     if (sortBy === "expiring") arr.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
     if (sortBy === "az") arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return arr;
-  }, [verifiedListings, q, catFilter, locFilter, sortBy, feedbackAverages, t]);
+  }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, t]);
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filtered.length / pageSize)),
     [filtered.length, pageSize]
@@ -1484,8 +1487,8 @@ export default function App() {
     }
     
     // Search filter
-    if (myListingsSearch.trim()) {
-      const term = myListingsSearch.trim().toLowerCase();
+    if (deferredMyListingsSearch.trim()) {
+      const term = deferredMyListingsSearch.trim().toLowerCase();
       filtered = filtered.filter(
         (l) =>
           (l.name || "").toLowerCase().includes(term) ||
@@ -1514,7 +1517,7 @@ export default function App() {
     }
     
     return filtered;
-  }, [myListingsRaw, myListingsStatusFilter, myListingsExpiryFilter, myListingsSort, myListingsSearch]);
+  }, [myListingsRaw, myListingsStatusFilter, myListingsExpiryFilter, myListingsSort, deferredMyListingsSearch]);
   
   const myVerifiedCount = useMemo(
     () => myListingsRaw.filter((l) => l.status === "verified").length,
@@ -1538,7 +1541,7 @@ export default function App() {
   );
 
   const featuredByCategory = useMemo(() => {
-    const verified = listings.filter((l) => l.status === "verified");
+    const verified = deferredListings.filter((l) => l.status === "verified");
     const map = {};
 
     // Initialize map
@@ -1567,7 +1570,7 @@ export default function App() {
     });
 
     return map;
-  }, [feedbackAverages, listings]);
+  }, [feedbackAverages, deferredListings]);
 
   const featuredCategoryOrder = useMemo(
     () => featuredCategories.filter((cat) => featuredByCategory[cat]?.length),
@@ -1653,6 +1656,25 @@ export default function App() {
     }
   }, [feedbackDraft, user, t, listings, showMessage]);
 
+  const handleSelectListing = useCallback((l) => {
+    setSelectedListing(l);
+    const url = new URL(window.location.href);
+    url.searchParams.set("listing", l.id);
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  const handleOpenEdit = useCallback((l) => {
+    openEdit(l);
+  }, [openEdit]);
+
+  const handleStartExtendFlow = useCallback((l) => {
+    startExtendFlow(l);
+  }, [startExtendFlow]);
+
+  const handleConfirmDelete = useCallback((id) => {
+    confirmDelete(id);
+  }, [confirmDelete]);
+
   const handleShareListing = useCallback((listing) => {
     const url = `${window.location.origin}?listing=${encodeURIComponent(listing.id)}`;
     const text = `${listing.name || ""} • ${listing.location || ""} – ${
@@ -1720,8 +1742,8 @@ export default function App() {
     : "";
 
   const activeListingCount = listings.length;
-  const verifiedListingCount = useMemo(() => listings.filter((l) => l.status === "verified").length, [listings]);
-  const phoneVerifiedCount = useMemo(() => listings.filter((l) => l.phoneVerified).length, [listings]);
+  const verifiedListingCount = useMemo(() => deferredListings.filter((l) => l.status === "verified").length, [deferredListings]);
+  const phoneVerifiedCount = useMemo(() => deferredListings.filter((l) => l.phoneVerified).length, [deferredListings]);
   // current slides can be derived on render when needed
 
   // action cards are rendered inline in the UI
@@ -2176,12 +2198,12 @@ export default function App() {
                                 getDaysUntilExpiry={getDaysUntilExpiry}
                                 getListingStats={getListingStats}
                                 getDescriptionPreview={getDescriptionPreview}
-                                setSelectedListing={setSelectedListing}
-                                openEdit={openEdit}
-                                startExtendFlow={startExtendFlow}
+                                setSelectedListing={handleSelectListing}
+                                openEdit={handleOpenEdit}
+                                startExtendFlow={handleStartExtendFlow}
                                 showMessage={showMessage}
                                 handleShareListing={handleShareListing}
-                                confirmDelete={confirmDelete}
+                                confirmDelete={handleConfirmDelete}
                               />
                             ))}
                           </div>
@@ -2736,13 +2758,8 @@ export default function App() {
                                     categoryIcons={categoryIcons}
                                     getDescriptionPreview={getDescriptionPreview}
                                     getListingStats={getListingStats}
-                                    onSelect={() => {
-                                      setSelectedListing(l);
-                                      const url = new URL(window.location.href);
-                                      url.searchParams.set("listing", l.id);
-                                      window.history.replaceState({}, "", url.toString());
-                                    }}
-                                    onShare={() => handleShareListing(l)}
+                                    onSelect={handleSelectListing}
+                                    onShare={handleShareListing}
                                     showMessage={showMessage}
                                     toggleFav={toggleFav}
                                     isFavorite={favorites.includes(l.id)}
