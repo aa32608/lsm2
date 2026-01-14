@@ -1959,7 +1959,7 @@ export default function App() {
     intent: "capture",
     components: "buttons",
     "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
-    "locale": "en-US",
+    "locale": "en_US",
     "data-sdk-integration-source": "react-paypal-js",
     "data-namespace": "paypal_sdk"
   }), [PAYPAL_CLIENT_ID]);
