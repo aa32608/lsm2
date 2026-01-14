@@ -1304,25 +1304,15 @@ export default function App() {
 
   /* Capture create flow */
   async function handleServerCapture(orderID, listingId) {
-       console.log("handleServerCapture called with:", { orderID, listingId });
-       if (!orderID || !listingId) {
-         showMessage(t("error") + ": " + t("missingPaymentDetails"), "error");
-         return;
-       }
-      setIsProcessingPayment(true);
-      try {
-      console.log("Sending capture request to backend:", { orderID, listingId, action: "create_listing" });
+    if (!orderID || !listingId) return;
+    setIsProcessingPayment(true);
+    try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID, listingId, action: "create_listing" }),
+        body: JSON.stringify({ orderID }),
       });
       const json = await resp.json();
-
-      if (resp.status === 400 && json.recoverable && json.redirect) {
-        window.location.href = json.redirect;
-        return;
-      }
 
       if (json.ok) {
         const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
@@ -1367,16 +1357,8 @@ export default function App() {
           socialLink: "",
           imagePreview: null,
         });
-      } else if (json.recoverable && json.issue === "INSTRUMENT_DECLINED") {
-        if (json.redirect) {
-          try {
-            window.open(json.redirect, "_blank");
-          } catch { void 0; }
-        }
-        showMessage(t("paymentRetry"), "error");
-        await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
-        showMessage(t("paymentFailed") + " " + JSON.stringify(json.error), "error");
+        throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
       console.error(err);
@@ -1399,7 +1381,6 @@ export default function App() {
       return;
     }
 
-    // Use the listing's original plan as default (fallback 1 month)
     const planKey = String(listing.plan || "1");
     const amount = priceMap[planKey] ?? listing.price ?? 0;
 
@@ -1414,47 +1395,32 @@ export default function App() {
   }, [user, t, showMessage]);
 
   async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI) {
-     console.log("handleServerCaptureForExtend called with:", { orderID, listingId, planKeyFromUI });
-     if (!orderID || !listingId) {
-       showMessage(t("error") + ": " + t("missingPaymentDetails"), "error");
-       return;
-     }
+    if (!orderID || !listingId) return;
     setIsProcessingPayment(true);
     try {
-      console.log("Sending extend capture request to backend:", { orderID, listingId, action: "extend" });
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID, listingId, action: "extend" }),
+        body: JSON.stringify({ orderID }),
       });
       const json = await resp.json();
-
-      if (resp.status === 400 && json.recoverable && json.redirect) {
-        window.location.href = json.redirect;
-        return;
-      }
 
       if (json.ok) {
         const snapshot = await fetchListing(listingId);
         const currentExpiry = snapshot?.expiresAt || Date.now();
         const currentStatus = snapshot?.status || "verified";
 
-        // Use the plan chosen in the modal; fallback to listing.plan or 1
-        const effectivePlanKey =
-          planKeyFromUI || String(snapshot?.plan || "1");
+        const effectivePlanKey = planKeyFromUI || String(snapshot?.plan || "1");
         const planMonths = parseInt(effectivePlanKey, 10) || 1;
 
-        // If listing is expired or pending (not verified), start from now
         const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
           ? Date.now() 
           : currentExpiry;
 
-        const newExpiry =
-          base + planMonths * 30 * 24 * 60 * 60 * 1000; // months * 30 days
+        const newExpiry = base + planMonths * 30 * 24 * 60 * 60 * 1000;
 
         await update(dbRef(db, `listings/${listingId}`), {
           expiresAt: newExpiry,
-          // optional: track last extension choice
           lastExtendPlan: effectivePlanKey,
         });
 
@@ -1462,16 +1428,8 @@ export default function App() {
         setExtendTarget(null);
         setPaymentModalOpen(false);
         setPaymentIntent(null);
-      } else if (json.recoverable && json.issue === "INSTRUMENT_DECLINED") {
-        if (json.redirect) {
-          try {
-            window.open(json.redirect, "_blank");
-          } catch { void 0; }
-        }
-        showMessage(t("paymentRetry"), "error");
-        await update(dbRef(db, `listings/${listingId}`), { status: "pending_payment" });
       } else {
-        showMessage(t("extendFailed") + " " + JSON.stringify(json.error), "error");
+        throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
       console.error(err);
@@ -1982,7 +1940,7 @@ export default function App() {
       intent: "capture",
       components: "buttons",
       "disable-funding": "paylater,venmo",
-      "locale": "en_US"
+      "locale": "en_MK"
     }}>
       <HeadManager
         title={seoTitle}
@@ -3811,63 +3769,44 @@ export default function App() {
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
-                            const payload = { 
-                              listingId: paymentIntent.listingId, 
-                              amount: paymentIntent.amount, 
-                              action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
-                            };
-                            console.log("[PAYPAL_DEBUG] createOrder Payload:", payload);
                             try {
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify(payload),
+                                body: JSON.stringify({ 
+                                  listingId: paymentIntent.listingId, 
+                                  amount: paymentIntent.amount, 
+                                  action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                                }),
                               });
-                              
-                              if (!res.ok) {
-                                const errorData = await res.json().catch(() => ({}));
-                                console.error("[PAYPAL_DEBUG] createOrder Backend Error:", errorData);
-                                throw new Error(errorData.error || `Server error: ${res.status}`);
-                              }
-
                               const data = await res.json();
-                              console.log("[PAYPAL_DEBUG] createOrder Response:", data);
-                              if (!data.orderID) throw new Error("No orderID returned from backend");
+                              if (!res.ok) throw new Error(data.error || "Order creation failed");
                               return data.orderID;
                             } catch (err) {
-                              console.error("[PAYPAL_DEBUG] createOrder Exception:", err);
-                              showMessage(t("paypalError") + " " + (err.message || String(err)), "error");
+                              console.error("[PayPal] createOrder error:", err);
+                              showMessage(t("paypalError") + ": " + err.message, "error");
                               throw err;
                             }
                           }}
                           onApprove={async (data) => {
-                            console.log("[PAYPAL_DEBUG] onApprove data received:", data);
-                            const orderId = data.orderID;
+                            const { orderID } = data;
                             try {
                               if (paymentIntent.type === "extend") {
-                                console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
-                                await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
+                                await handleServerCaptureForExtend(orderID, paymentIntent.listingId, extendPlan);
                               } else {
-                                console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
-                                await handleServerCapture(orderId, paymentIntent.listingId);
+                                await handleServerCapture(orderID, paymentIntent.listingId);
                               }
-                              showMessage(t("thankYou"), "success");
                             } catch (err) {
-                              console.error("[PAYPAL_DEBUG] onApprove Exception:", err);
-                              showMessage(t("paypalError") + " " + String(err), "error");
+                              console.error("[PayPal] onApprove error:", err);
+                              showMessage(t("paypalError") + ": " + err.message, "error");
                             }
                           }}
-                          onCancel={(data) => {
-                            console.log("[PAYPAL_DEBUG] Payment Cancelled:", data);
+                          onCancel={() => {
+                            console.log("[PayPal] Payment cancelled");
                           }}
                           onError={(err) => {
-                            console.error("[PAYPAL_DEBUG] PayPal SDK Error:", err);
-                            const errorMsg = String(err);
-                            if (errorMsg.includes("INVALID_RESOURCE_ID")) {
-                              showMessage(t("paypalError") + ": Environment mismatch. Please check if your Client ID matches your backend environment (Sandbox/Live).", "error");
-                            } else {
-                              showMessage(t("paypalError") + " " + errorMsg, "error");
-                            }
+                            console.error("[PayPal] SDK error:", err);
+                            showMessage(t("paypalError"), "error");
                           }}
                         />
                       </div>

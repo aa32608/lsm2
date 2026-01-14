@@ -114,38 +114,27 @@ async function generateAccessToken() {
 app.post("/api/paypal/create-order", async (req, res) => {
   const { listingId, amount, action } = req.body;
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [PAYPAL_DEBUG] Create Order Request:`, { listingId, amount, action });
-
-  if (!listingId || !amount) {
-    console.error(`[${timestamp}] [PAYPAL_DEBUG] Error: Missing listingId or amount`);
-    return res.status(400).json({ error: "listingId and amount required" });
-  }
+  console.log(`[${timestamp}] [PayPal] Create Order:`, { listingId, amount, action });
 
   try {
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Fetching access token...`);
     const accessToken = await generateAccessToken();
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Access token obtained (Length: ${accessToken.length})`);
-
-    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase();
+    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
     const url = env === "sandbox"
       ? "https://api-m.sandbox.paypal.com/v2/checkout/orders"
       : "https://api-m.paypal.com/v2/checkout/orders";
 
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Target PayPal URL: ${url} (Env: ${env})`);
-
     const formattedAmount = parseFloat(amount).toFixed(2);
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Formatted amount: ${formattedAmount}`);
 
-    const orderPayload = {
+    const payload = {
       intent: "CAPTURE",
       purchase_units: [
         {
-          reference_id: String(listingId).substring(0, 50),
+          reference_id: `BC-${listingId}-${Date.now()}`.substring(0, 50),
           amount: {
             currency_code: "EUR",
             value: formattedAmount,
           },
-          description: `BizCall Listing Payment - ${action}`.substring(0, 127),
+          description: `BizCall Listing: ${listingId}`.substring(0, 127),
         },
       ],
       payment_source: {
@@ -153,66 +142,53 @@ app.post("/api/paypal/create-order", async (req, res) => {
           experience_context: {
             payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
             brand_name: "BizCall MK",
-            locale: "en-US",
+            locale: "en-MK",
             landing_page: "GUEST_CHECKOUT",
             user_action: "PAY_NOW",
-            shipping_preference: "NO_SHIPPING"
+            return_url: "https://bizcall.mk/payment-success",
+            cancel_url: "https://bizcall.mk/payment-cancelled"
           }
         }
       }
     };
 
-    const orderResponse = await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(orderPayload),
+      body: JSON.stringify(payload),
     });
 
-    const order = await orderResponse.json();
-    if (!orderResponse.ok || !order.id) {
-      console.error(`[${timestamp}] [PAYPAL_DEBUG] CRITICAL ERROR DETAILS:`, JSON.stringify(order, null, 2));
-      return res.status(orderResponse.status).json({ 
-        error: "PayPal order creation failed", 
-        details: order.message || (order.details && order.details[0]?.description) || "Schema violation",
-        paypal_response: order 
-      });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("[PayPal] Create Order Failed:", JSON.stringify(data, null, 2));
+      throw new Error(data.message || "PayPal order creation failed");
     }
 
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Order successfully created: ${order.id}, Status: ${order.status}`);
-    res.json({ orderID: order.id });
+    res.json({ orderID: data.id });
   } catch (err) {
-    console.error(`[${timestamp}] [PAYPAL_DEBUG] Create order exception:`, err);
-    res.status(500).json({ error: "Internal server error", message: err.message });
+    console.error("[PayPal] Create Order Exception:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 /* ----------------------- CAPTURE PAYPAL ORDER ----------------------- */
 
 app.post("/api/paypal/capture", async (req, res) => {
-  const { orderID, listingId, action } = req.body;
+  const { orderID } = req.body;
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [PAYPAL_DEBUG] Capture Request Received:`, { orderID, listingId, action });
-
-  if (!orderID || !listingId) {
-    console.error(`[${timestamp}] [PAYPAL_DEBUG] Error: Missing orderID or listingId in capture request`);
-    return res.status(400).json({ error: "orderID and listingId required" });
-  }
+  console.log(`[${timestamp}] [PayPal] Capture Order: ${orderID}`);
 
   try {
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Fetching access token for capture...`);
     const accessToken = await generateAccessToken();
-
-    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase();
+    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
     const url = env === "sandbox"
       ? `https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderID}/capture`
       : `https://api-m.paypal.com/v2/checkout/orders/${orderID}/capture`;
 
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Sending capture request to PayPal: ${url}`);
-
-    const captureResponse = await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -220,35 +196,26 @@ app.post("/api/paypal/capture", async (req, res) => {
       },
     });
 
-    const captureData = await captureResponse.json();
-    
-    if (!captureResponse.ok) {
-      console.error(`[${timestamp}] [PAYPAL_DEBUG] Capture failed:`, JSON.stringify(captureData, null, 2));
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("[PayPal] Capture Failed:", JSON.stringify(data, null, 2));
       
-      const errorDetail = captureData.details?.[0];
-      if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
-        return res.status(400).json({
-          ok: false,
-          recoverable: true,
-          issue: "INSTRUMENT_DECLINED",
-          error: "Your payment method was declined. Please try another card or the PayPal button.",
-          details: captureData
+      // Handle declined payments gracefully
+      if (data.details && data.details[0]?.issue === "INSTRUMENT_DECLINED") {
+        return res.status(400).json({ 
+          ok: false, 
+          recoverable: true, 
+          error: "Payment declined. Please try a different card." 
         });
       }
-
-      return res.status(captureResponse.status).json({
-        ok: false,
-        error: "PayPal capture failed",
-        details: captureData.message || "Unknown error",
-        paypal_response: captureData
-      });
+      throw new Error(data.message || "Capture failed");
     }
 
-    console.log(`[${timestamp}] [PAYPAL_DEBUG] Capture SUCCESS for order: ${orderID}. Status: ${captureData.status}`);
-    res.json({ ok: true, data: captureData });
+    console.log(`[PayPal] Capture Success: ${orderID}`);
+    res.json({ ok: true, data });
   } catch (err) {
-    console.error(`[${timestamp}] [PAYPAL_DEBUG] Capture exception:`, err);
-    res.status(500).json({ ok: false, error: "Internal server error during capture", message: err.message });
+    console.error("[PayPal] Capture Exception:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
