@@ -75,6 +75,7 @@ async function generateAccessToken() {
   const clientSecret = (process.env.PAYPAL_CLIENT_SECRET || "").trim();
 
   console.log(`[PayPal] [${new Date().toISOString()}] Generating access token for env: ${env}...`);
+  console.log(`[PayPal] Using Client ID: ${clientId.substring(0, 10)}...`);
   if (!clientId || !clientSecret) {
     console.error("[PayPal] ERROR: PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing from environment variables!");
     throw new Error("PayPal credentials missing");
