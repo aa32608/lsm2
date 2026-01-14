@@ -97,7 +97,7 @@ const featuredCategories = ["tech", "services", "homeRepair", "food", "electroni
 const FEATURED_SLIDE_SIZE = 3;
 const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
 
-const priceMap = { "1": 0.1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
+const priceMap = { "1": 1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
