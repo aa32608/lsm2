@@ -3852,7 +3852,13 @@ export default function App() {
                             }
                           }}
                           onError={(err) => {
-                            showMessage(t("paypalError") + " " + String(err), "error");
+                            console.error("PayPal SDK error:", err);
+                            const errorMsg = String(err);
+                            if (errorMsg.includes("INVALID_RESOURCE_ID")) {
+                              showMessage(t("paypalError") + ": Environment mismatch. Please check if your Client ID matches your backend environment (Sandbox/Live).", "error");
+                            } else {
+                              showMessage(t("paypalError") + " " + errorMsg, "error");
+                            }
                           }}
                         />
                       </PayPalScriptProvider>
