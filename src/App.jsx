@@ -1976,7 +1976,14 @@ export default function App() {
   };
 
   return (
-    <>
+    <PayPalScriptProvider options={{ 
+      "client-id": PAYPAL_CLIENT_ID, 
+      currency: "EUR", 
+      intent: "capture",
+      components: "buttons,card-fields",
+      "data-sdk-integration-source": "react-paypal-js",
+      "locale": "en_US"
+    }}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -3800,27 +3807,21 @@ export default function App() {
                         <p>{t("processingPayment") || "Processing Payment..."}</p>
                       </div>
                     ) : paymentIntent && (
-                      <PayPalScriptProvider options={{ 
-                        "client-id": PAYPAL_CLIENT_ID, 
-                        currency: "EUR", 
-                        intent: "capture",
-                        components: "buttons",
-                        "data-sdk-integration-source": "react-paypal-js",
-                        "locale": "en_US"
-                      }}>
+                      <div className="paypal-button-container">
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
-                            console.log("Button clicked! Initiating backend order creation...");
+                            const payload = { 
+                              listingId: paymentIntent.listingId, 
+                              amount: paymentIntent.amount, 
+                              action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                            };
+                            console.log("Frontend sending to backend:", payload);
                             try {
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ 
-                                  listingId: paymentIntent.listingId, 
-                                  amount: paymentIntent.amount, 
-                                  action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
-                                }),
+                                body: JSON.stringify(payload),
                               });
                               
                               if (!res.ok) {
@@ -3862,7 +3863,7 @@ export default function App() {
                             }
                           }}
                         />
-                      </PayPalScriptProvider>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -4750,6 +4751,6 @@ export default function App() {
         <div id="recaptcha-signup" style={{ display: "none" }} />
         <div id="recaptcha-container" style={{ display: "none" }} />
       </div>
-    </>
+    </PayPalScriptProvider>
   );
 }

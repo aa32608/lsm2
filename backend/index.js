@@ -137,30 +137,35 @@ app.post("/api/paypal/create-order", async (req, res) => {
         intent: "CAPTURE",
         purchase_units: [
           {
-            reference_id: listingId,
+            reference_id: String(listingId).substring(0, 50),
             amount: {
               currency_code: "EUR",
               value: String(amount),
             },
-            description: `BizCall Listing: ${listingId} (${action})`,
+            description: `BizCall Listing Payment`.substring(0, 127),
           },
         ],
-        application_context: {
-          brand_name: "Bizcall MK",
-          locale: "en-US",
-          landing_page: "GUEST_CHECKOUT",
-          user_action: "PAY_NOW",
-          shipping_preference: "NO_SHIPPING"
+        payment_source: {
+          paypal: {
+            experience_context: {
+              payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
+              brand_name: "BizCall MK",
+              locale: "en-US",
+              landing_page: "GUEST_CHECKOUT",
+              user_action: "PAY_NOW",
+              shipping_preference: "NO_SHIPPING"
+            }
+          }
         }
       }),
     });
 
     const order = await orderResponse.json();
     if (!orderResponse.ok || !order.id) {
-      console.error("[PayPal] Order creation failed:", JSON.stringify(order, null, 2));
+      console.error("[PayPal] CRITICAL ERROR DETAILS:", JSON.stringify(order, null, 2));
       return res.status(orderResponse.status).json({ 
         error: "PayPal order creation failed", 
-        details: order.message || "Unknown error",
+        details: order.message || (order.details && order.details[0]?.description) || "Schema violation",
         paypal_response: order 
       });
     }
