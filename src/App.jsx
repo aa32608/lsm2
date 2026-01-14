@@ -1960,8 +1960,7 @@ export default function App() {
     components: "buttons",
     "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
     "locale": "en_US",
-    "data-sdk-integration-source": "react-paypal-js",
-    "data-namespace": "paypal_sdk"
+    "data-sdk-integration-source": "react-paypal-js"
   }), [PAYPAL_CLIENT_ID]);
 
   return (
