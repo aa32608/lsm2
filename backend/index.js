@@ -138,13 +138,17 @@ app.post("/api/paypal/create-order", async (req, res) => {
               description: "Digital Service Listing Payment",
             },
           ],
-          application_context: {
-            brand_name: "BizCall MK",
-            landing_page: "NO_PREFERENCE",
-            user_action: "PAY_NOW",
-            shipping_preference: "NO_SHIPPING",
-            locale: "mk-MK",
-          },
+          payment_source: {
+            paypal: {
+              experience_context: {
+                brand_name: "BizCall MK",
+                locale: "mk-MK",
+                landing_page: "GUEST_CHECKOUT",
+                user_action: "PAY_NOW",
+                shipping_preference: "NO_SHIPPING"
+              }
+            }
+          }
         }),
       }
     );
