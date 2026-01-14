@@ -1980,8 +1980,8 @@ export default function App() {
       "client-id": PAYPAL_CLIENT_ID, 
       currency: "EUR", 
       intent: "capture",
-      components: "buttons,card-fields",
-      "data-sdk-integration-source": "react-paypal-js",
+      components: "buttons",
+      "enable-funding": "card",
       "locale": "en_US"
     }}>
       <HeadManager
@@ -3816,7 +3816,7 @@ export default function App() {
                               amount: paymentIntent.amount, 
                               action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
                             };
-                            console.log("Frontend sending to backend:", payload);
+                            console.log("[PAYPAL_DEBUG] createOrder Payload:", payload);
                             try {
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",
@@ -3826,35 +3826,42 @@ export default function App() {
                               
                               if (!res.ok) {
                                 const errorData = await res.json().catch(() => ({}));
-                                console.error("Backend error creating PayPal order:", errorData);
+                                console.error("[PAYPAL_DEBUG] createOrder Backend Error:", errorData);
                                 throw new Error(errorData.error || `Server error: ${res.status}`);
                               }
 
                               const data = await res.json();
+                              console.log("[PAYPAL_DEBUG] createOrder Response:", data);
                               if (!data.orderID) throw new Error("No orderID returned from backend");
                               return data.orderID;
                             } catch (err) {
-                              console.error("PayPal createOrder error:", err);
+                              console.error("[PAYPAL_DEBUG] createOrder Exception:", err);
                               showMessage(t("paypalError") + " " + (err.message || String(err)), "error");
                               throw err;
                             }
                           }}
                           onApprove={async (data) => {
+                            console.log("[PAYPAL_DEBUG] onApprove data received:", data);
                             const orderId = data.orderID;
                             try {
                               if (paymentIntent.type === "extend") {
+                                console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
                                 await handleServerCaptureForExtend(orderId, paymentIntent.listingId, extendPlan);
                               } else {
+                                console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
                                 await handleServerCapture(orderId, paymentIntent.listingId);
                               }
                               showMessage(t("thankYou"), "success");
                             } catch (err) {
-                              console.error("PayPal approval error:", err);
+                              console.error("[PAYPAL_DEBUG] onApprove Exception:", err);
                               showMessage(t("paypalError") + " " + String(err), "error");
                             }
                           }}
+                          onCancel={(data) => {
+                            console.log("[PAYPAL_DEBUG] Payment Cancelled:", data);
+                          }}
                           onError={(err) => {
-                            console.error("PayPal SDK error:", err);
+                            console.error("[PAYPAL_DEBUG] PayPal SDK Error:", err);
                             const errorMsg = String(err);
                             if (errorMsg.includes("INVALID_RESOURCE_ID")) {
                               showMessage(t("paypalError") + ": Environment mismatch. Please check if your Client ID matches your backend environment (Sandbox/Live).", "error");
