@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@paypal/react-paypal-js": "^8.9.2",
+    "@stripe/react-stripe-js": "^5.4.1",
+    "@stripe/stripe-js": "^8.6.1",
     "firebase": "^12.3.0",
     "framer-motion": "^12.23.24",
     "leaflet": "^1.9.4",

@@ -8,8 +8,11 @@ import admin from "firebase-admin";
 import cors from "cors";
 import { Resend } from "resend";
 import cron from "node-cron";
+import Stripe from "stripe";
 
 dotenv.config();
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 // Initialize Resend lazily to prevent crash if API key is missing during startup
 let resend;
@@ -108,6 +111,44 @@ async function generateAccessToken() {
     throw err;
   }
 }
+
+/* ----------------------- STRIPE CHECKOUT ------------------------ */
+
+app.post("/api/stripe/create-checkout-session", async (req, res) => {
+  const { listingId, amount, action, plan } = req.body;
+  
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: action === "extend" ? `Extend Listing: ${listingId}` : "New Listing Publication",
+              description: `Plan: ${plan} Months`,
+            },
+            unit_amount: Math.round(parseFloat(amount) * 100), // Stripe expects cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${req.headers.origin}/payment-success?session_id={CHECKOUT_SESSION_ID}&listingId=${listingId}&action=${action}&plan=${plan}`,
+      cancel_url: `${req.headers.origin}/payment-cancelled`,
+      metadata: {
+        listingId,
+        action,
+        plan,
+      },
+    });
+
+    res.json({ id: session.id, url: session.url });
+  } catch (err) {
+    console.error("[Stripe] Error creating session:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /* ----------------------- CREATE PAYPAL ORDER ------------------------ */
 
