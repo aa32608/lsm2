@@ -1951,16 +1951,19 @@ export default function App() {
     "url": canonicalUrl
   };
 
+  const paypalOptions = useMemo(() => ({
+    "client-id": PAYPAL_CLIENT_ID,
+    currency: "EUR",
+    intent: "capture",
+    components: "buttons",
+    "disable-funding": "paylater,venmo",
+    "locale": "en_US",
+    "data-sdk-integration-source": "react-paypal-js",
+    "data-user-id-token": ""
+  }), [PAYPAL_CLIENT_ID]);
+
   return (
-    <PayPalScriptProvider options={{ 
-      "client-id": PAYPAL_CLIENT_ID, 
-      currency: "EUR", 
-      intent: "capture",
-      components: "buttons",
-      "enable-funding": "card",
-      "disable-funding": "paylater,venmo",
-      "locale": "en_US"
-    }}>
+    <PayPalScriptProvider options={paypalOptions}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -3841,7 +3844,11 @@ export default function App() {
                           }}
                           onError={(err) => {
                             console.error("[PAYPAL_DEBUG] SDK error callback:", err);
-                            showMessage(t("paypalError"), "error");
+                            // Log the error details if available
+                            if (err && typeof err === 'object') {
+                              console.error("[PAYPAL_DEBUG] Error Details:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
+                            }
+                            showMessage(t("paypalError") || "PayPal error occurred", "error");
                           }}
                         />
                         </div>
