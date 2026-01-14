@@ -1979,7 +1979,7 @@ export default function App() {
     <PayPalScriptProvider options={{ 
       "client-id": PAYPAL_CLIENT_ID, 
       currency: "EUR", 
-      intent: "CAPTURE",
+      intent: "capture",
       components: "buttons",
       "disable-funding": "paylater,venmo",
       "locale": "en_US"
