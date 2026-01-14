@@ -1304,8 +1304,6 @@ export default function App() {
     }
   }
 
-  const isCreatingOrder = React.useRef(false);
-
   /* Capture create flow */
   async function handleServerCapture(orderID, listingId) {
     console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId });
@@ -1958,9 +1956,10 @@ export default function App() {
     currency: "EUR",
     intent: "capture",
     components: "buttons",
-    "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
+    "disable-funding": "paylater,venmo",
     "locale": "en_US",
-    "data-sdk-integration-source": "react-paypal-js"
+    "data-sdk-integration-source": "react-paypal-js",
+    "data-user-id-token": ""
   }), [PAYPAL_CLIENT_ID]);
 
   return (
@@ -3793,19 +3792,14 @@ export default function App() {
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
-                            if (isCreatingOrder.current) return;
-                            isCreatingOrder.current = true;
-                            console.log("[PAYPAL_DEBUG] createOrder triggered. paymentIntent:", paymentIntent);
+                            console.log("[PAYPAL_DEBUG] createOrder triggered");
                             try {
-                              if (!paymentIntent || !paymentIntent.listingId) {
-                                throw new Error("Missing listingId in paymentIntent");
-                              }
                               const body = { 
                                 listingId: paymentIntent.listingId, 
                                 amount: paymentIntent.amount, 
                                 action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
                               };
-                              console.log("[PAYPAL_DEBUG] Sending create-order request:", body);
+                              console.log("[PAYPAL_DEBUG] createOrder request body:", body);
                               
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",
@@ -3827,8 +3821,6 @@ export default function App() {
                               console.error("[PAYPAL_DEBUG] createOrder exception:", err);
                               showMessage(t("paypalError") + ": " + err.message, "error");
                               throw err;
-                            } finally {
-                              isCreatingOrder.current = false;
                             }
                           }}
                           onApprove={async (data) => {
