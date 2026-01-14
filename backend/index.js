@@ -142,7 +142,6 @@ app.post("/api/paypal/create-order", async (req, res) => {
           experience_context: {
             payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
             brand_name: "BizCall MK",
-            locale: "en-MK",
             landing_page: "GUEST_CHECKOUT",
             user_action: "PAY_NOW",
             return_url: "https://bizcall.mk/payment-success",

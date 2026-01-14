@@ -39,7 +39,7 @@ import { MK_CITIES } from "./mkCities";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
-  (typeof window !== "undefined" && window.location.hostname === "localhost"
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:5000"
     : "https://lsm-wozo.onrender.com");
 
@@ -1304,7 +1304,11 @@ export default function App() {
 
   /* Capture create flow */
   async function handleServerCapture(orderID, listingId) {
-    if (!orderID || !listingId) return;
+    console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId });
+    if (!orderID || !listingId) {
+      console.error("[PAYPAL_DEBUG] handleServerCapture missing params", { orderID, listingId });
+      return;
+    }
     setIsProcessingPayment(true);
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
@@ -1312,9 +1316,11 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderID }),
       });
+      console.log("[PAYPAL_DEBUG] handleServerCapture fetch status:", resp.status);
       const json = await resp.json();
 
       if (json.ok) {
+        console.log("[PAYPAL_DEBUG] handleServerCapture success, updating Firebase...");
         const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
         const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
         const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
@@ -1336,6 +1342,7 @@ export default function App() {
           createdAt: Date.now(),
           expiresAt: Date.now() + parseInt(plan) * 30 * 24 * 60 * 60 * 1000,
         });
+        console.log("[PAYPAL_DEBUG] Firebase updated successfully.");
         showMessage(t("paymentComplete"), "success");
         setPendingOrder(null);
         setPaymentModalOpen(false);
@@ -1358,10 +1365,11 @@ export default function App() {
           imagePreview: null,
         });
       } else {
+        console.error("[PAYPAL_DEBUG] handleServerCapture error from backend:", json.error);
         throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
-      console.error(err);
+      console.error("[PAYPAL_DEBUG] handleServerCapture exception:", err);
       showMessage(t("error") + " " + err.message, "error");
     } finally {
       setIsProcessingPayment(false);
@@ -1395,7 +1403,11 @@ export default function App() {
   }, [user, t, showMessage]);
 
   async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI) {
-    if (!orderID || !listingId) return;
+    console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend called", { orderID, listingId, planKeyFromUI });
+    if (!orderID || !listingId) {
+      console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend missing params");
+      return;
+    }
     setIsProcessingPayment(true);
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
@@ -1403,9 +1415,11 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderID }),
       });
+      console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend fetch status:", resp.status);
       const json = await resp.json();
 
       if (json.ok) {
+        console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend success, updating Firebase...");
         const snapshot = await fetchListing(listingId);
         const currentExpiry = snapshot?.expiresAt || Date.now();
         const currentStatus = snapshot?.status || "verified";
@@ -1424,15 +1438,17 @@ export default function App() {
           lastExtendPlan: effectivePlanKey,
         });
 
+        console.log("[PAYPAL_DEBUG] Firebase updated successfully (extend).");
         showMessage(t("extendSuccess"), "success");
         setExtendTarget(null);
         setPaymentModalOpen(false);
         setPaymentIntent(null);
       } else {
+        console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend error from backend:", json.error);
         throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
-      console.error(err);
+      console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend exception:", err);
       showMessage(t("error") + " " + err.message, "error");
     } finally {
       setIsProcessingPayment(false);
@@ -1939,8 +1955,9 @@ export default function App() {
       currency: "EUR", 
       intent: "capture",
       components: "buttons",
+      "enable-funding": "card",
       "disable-funding": "paylater,venmo",
-      "locale": "en_MK"
+      "locale": "en_US"
     }}>
       <HeadManager
         title={seoTitle}
@@ -3769,43 +3786,58 @@ export default function App() {
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
+                            console.log("[PAYPAL_DEBUG] createOrder triggered");
                             try {
+                              const body = { 
+                                listingId: paymentIntent.listingId, 
+                                amount: paymentIntent.amount, 
+                                action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                              };
+                              console.log("[PAYPAL_DEBUG] createOrder request body:", body);
+                              
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ 
-                                  listingId: paymentIntent.listingId, 
-                                  amount: paymentIntent.amount, 
-                                  action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
-                                }),
+                                body: JSON.stringify(body),
                               });
+                              
+                              console.log("[PAYPAL_DEBUG] createOrder fetch status:", res.status);
                               const data = await res.json();
-                              if (!res.ok) throw new Error(data.error || "Order creation failed");
+                              
+                              if (!res.ok) {
+                                console.error("[PAYPAL_DEBUG] createOrder error response:", data);
+                                throw new Error(data.error || "Order creation failed");
+                              }
+                              
+                              console.log("[PAYPAL_DEBUG] createOrder success, orderID:", data.orderID);
                               return data.orderID;
                             } catch (err) {
-                              console.error("[PayPal] createOrder error:", err);
+                              console.error("[PAYPAL_DEBUG] createOrder exception:", err);
                               showMessage(t("paypalError") + ": " + err.message, "error");
                               throw err;
                             }
                           }}
                           onApprove={async (data) => {
+                            console.log("[PAYPAL_DEBUG] onApprove triggered, data:", data);
                             const { orderID } = data;
                             try {
                               if (paymentIntent.type === "extend") {
+                                console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
                                 await handleServerCaptureForExtend(orderID, paymentIntent.listingId, extendPlan);
                               } else {
+                                console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
                                 await handleServerCapture(orderID, paymentIntent.listingId);
                               }
                             } catch (err) {
-                              console.error("[PayPal] onApprove error:", err);
+                              console.error("[PAYPAL_DEBUG] onApprove processing error:", err);
                               showMessage(t("paypalError") + ": " + err.message, "error");
                             }
                           }}
                           onCancel={() => {
-                            console.log("[PayPal] Payment cancelled");
+                            console.log("[PAYPAL_DEBUG] Payment cancelled by user");
                           }}
                           onError={(err) => {
-                            console.error("[PayPal] SDK error:", err);
+                            console.error("[PAYPAL_DEBUG] SDK error callback:", err);
                             showMessage(t("paypalError"), "error");
                           }}
                         />
