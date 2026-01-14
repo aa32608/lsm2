@@ -3806,11 +3806,12 @@ export default function App() {
                         intent: "capture",
                         components: "buttons",
                         "data-sdk-integration-source": "react-paypal-js",
-                        "locale": "en_MK"
+                        "locale": "en_US"
                       }}>
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
+                            console.log("Button clicked! Initiating backend order creation...");
                             try {
                               const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
                                 method: "POST",

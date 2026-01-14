@@ -145,16 +145,12 @@ app.post("/api/paypal/create-order", async (req, res) => {
             description: `BizCall Listing: ${listingId} (${action})`,
           },
         ],
-        payment_source: {
-          paypal: {
-            experience_context: {
-              brand_name: "BizCall MK",
-              locale: "en-US",
-              landing_page: "GUEST_CHECKOUT",
-              user_action: "PAY_NOW",
-              shipping_preference: "NO_SHIPPING"
-            }
-          }
+        application_context: {
+          brand_name: "Bizcall MK",
+          locale: "en-US",
+          landing_page: "GUEST_CHECKOUT",
+          user_action: "PAY_NOW",
+          shipping_preference: "NO_SHIPPING"
         }
       }),
     });
