@@ -1,5 +1,5 @@
 import React from "react";
-import { motion as Motion } from "framer-motion";
+import { motion } from "framer-motion";
 
 const EditListingModal = ({
   t,
@@ -20,7 +20,7 @@ const EditListingModal = ({
   if (!editingListing || !editForm) return null;
 
   return (
-    <Motion.div
+    <motion.div
       className="modal-overlay"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -31,7 +31,7 @@ const EditListingModal = ({
         setShowEditMapPicker(false);
       }}
     >
-      <Motion.div
+      <motion.div
         className="modal edit-modal"
         onClick={(e) => e.stopPropagation()}
         initial={{ y: 20, opacity: 0 }}
@@ -294,8 +294,8 @@ const EditListingModal = ({
             {t("saveChanges")}
           </button>
         </div>
-      </Motion.div>
-    </Motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 

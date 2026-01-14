@@ -137,20 +137,12 @@ app.post("/api/paypal/create-order", async (req, res) => {
           description: `BizCall Listing: ${listingId}`.substring(0, 127),
         },
       ],
-      payment_source: {
-        card: {
-          attributes: {
-            verification: {
-              method: "SCA_ALWAYS"
-            }
-          },
-          experience_context: {
-            brand_name: "BizCall MK",
-            return_url: "https://bizcall.mk/payment-success",
-            cancel_url: "https://bizcall.mk/payment-cancelled",
-            user_action: "PAY_NOW"
-          }
-        }
+      application_context: {
+        brand_name: "BizCall MK",
+        return_url: "https://bizcall.mk/payment-success",
+        cancel_url: "https://bizcall.mk/payment-cancelled",
+        user_action: "PAY_NOW",
+        shipping_preference: "NO_SHIPPING"
       }
     };
 
