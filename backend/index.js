@@ -114,7 +114,12 @@ async function generateAccessToken() {
 app.post("/api/paypal/create-order", async (req, res) => {
   const { listingId, amount, action } = req.body;
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [PayPal] Create Order:`, { listingId, amount, action });
+  console.log(`[${timestamp}] [PayPal] Create Order Request:`, { listingId, amount, action });
+
+  if (!listingId || !amount) {
+    console.error(`[PayPal] Missing required fields: listingId=${listingId}, amount=${amount}`);
+    return res.status(400).json({ error: "Missing listingId or amount" });
+  }
 
   try {
     const accessToken = await generateAccessToken();
@@ -125,39 +130,59 @@ app.post("/api/paypal/create-order", async (req, res) => {
 
     const formattedAmount = parseFloat(amount).toFixed(2);
 
+    if (isNaN(parseFloat(amount))) {
+      console.error(`[PayPal] Invalid amount received: ${amount}`);
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
+    // Clean listingId of any non-alphanumeric characters for reference_id
+    const cleanListingId = String(listingId).replace(/[^a-zA-Z0-9_-]/g, "");
+
+    const requestId = `req-${cleanListingId}-${Date.now()}`;
+
     const payload = {
       intent: "CAPTURE",
       purchase_units: [
         {
-          reference_id: `BC-${listingId}-${Date.now()}`.substring(0, 50),
+          reference_id: `BC-${cleanListingId}-${Date.now()}`.substring(0, 50),
           amount: {
             currency_code: "EUR",
             value: formattedAmount,
           },
-          description: `BizCall Listing: ${listingId}`.substring(0, 127),
+          description: `Listing ${listingId} - ${action}`,
         },
       ],
       application_context: {
-        brand_name: "BizCall MK",
-        return_url: "https://bizcall.mk/payment-success",
-        cancel_url: "https://bizcall.mk/payment-cancelled",
+        brand_name: "BizCall",
+        locale: "en-US",
+        landing_page: "BILLING",
+        shipping_preference: "NO_SHIPPING",
         user_action: "PAY_NOW",
-        shipping_preference: "NO_SHIPPING"
       }
     };
+
+    console.log(`[PayPal] Sending payload to PayPal:`, JSON.stringify(payload, null, 2));
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
+        "PayPal-Request-Id": requestId
       },
       body: JSON.stringify(payload),
     });
 
+    const debugId = response.headers.get("paypal-debug-id");
     const data = await response.json();
+    
     if (!response.ok) {
-      console.error("[PayPal] Create Order Failed:", JSON.stringify(data, null, 2));
+      console.error(`[PayPal] Create Order Failed. DebugID: ${debugId}`, JSON.stringify(data, null, 2));
+      if (data.details) {
+        data.details.forEach(detail => {
+          console.error(`[PayPal] Detail: ${detail.issue} - ${detail.description}`);
+        });
+      }
       throw new Error(data.message || "PayPal order creation failed");
     }
 
