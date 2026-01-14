@@ -70,6 +70,7 @@ app.use(bodyParser.json());
 /* --------------------------- PAYPAL HELPER --------------------------- */
 
 async function generateAccessToken() {
+  console.log("[PayPal] Generating access token...");
   const auth = Buffer.from(
     `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
   ).toString("base64");
@@ -79,22 +80,27 @@ async function generateAccessToken() {
       ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
       : "https://api-m.paypal.com/v1/oauth2/token";
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials",
-  });
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials",
+    });
 
-  const data = await response.json();
-  if (!response.ok) {
-    console.error("PayPal access token error:", data);
-    throw new Error("Failed to get PayPal access token");
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("[PayPal] Token Error:", data);
+      throw new Error("Failed to get PayPal access token");
+    }
+    console.log("[PayPal] Access token generated successfully.");
+    return data.access_token;
+  } catch (err) {
+    console.error("[PayPal] generateAccessToken exception:", err);
+    throw err;
   }
-
-  return data.access_token;
 }
 
 /* ----------------------- CREATE PAYPAL ORDER ------------------------ */
@@ -143,10 +149,10 @@ app.post("/api/paypal/create-order", async (req, res) => {
       }
     );
 
+    console.log("[PayPal] Create Order Status:", orderResponse.status, orderResponse.statusText);
     const order = await orderResponse.json();
     if (!order.id) {
-      console.error("PayPal order creation failed. Full response:", JSON.stringify(order, null, 2));
-      // If we get an error from PayPal, let's return it more clearly
+      console.error("[PayPal] Order creation failed. Full response:", JSON.stringify(order, null, 2));
       const errorMessage = order.message || (order.details && order.details[0] && order.details[0].description) || "Unknown PayPal error";
       return res.status(500).json({ 
         error: "PayPal order creation failed", 
@@ -155,6 +161,7 @@ app.post("/api/paypal/create-order", async (req, res) => {
       });
     }
 
+    console.log("[PayPal] Order created successfully:", order.id, "Status:", order.status);
     res.json({ orderID: order.id });
   } catch (err) {
     console.error("Create order error:", err);
@@ -166,7 +173,7 @@ app.post("/api/paypal/create-order", async (req, res) => {
 
 app.post("/api/paypal/capture", async (req, res) => {
   const { orderID, listingId, action } = req.body;
-  console.log("Capturing order:", orderID, "listingId:", listingId, "action:", action);
+  console.log("[PayPal] Capture request received:", { orderID, listingId, action });
 
   if (!orderID || !listingId) {
     console.error("❌ Missing orderID or listingId in request body. Received:", {
