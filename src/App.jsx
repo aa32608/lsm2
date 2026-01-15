@@ -56,7 +56,6 @@ const paypalOptions = {
   "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
   "locale": "en_MK",
   "data-sdk-integration-source": "react-paypal-js",
-  "data-user-id-token": "",
   vault: false
 };
 
