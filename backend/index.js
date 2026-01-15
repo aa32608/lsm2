@@ -383,7 +383,8 @@ async function sendMarketingEmails() {
 
     const selectedTemplate = templates[Math.floor(Math.random() * templates.length)];
 
-    const emailPromises = subscribedUsers.map(async (user) => {
+    const results = [];
+    for (const user of subscribedUsers) {
       const userLang = user.language || "sq";
       let finalTo = user.email;
       let finalSubject = selectedTemplate.subjects[userLang] || selectedTemplate.subjects["en"];
@@ -397,15 +398,19 @@ async function sendMarketingEmails() {
         finalSubject = `[TEST FOR ${user.email}] ${finalSubject}`;
       }
 
-      return resend.emails.send({
+      console.log(`[Marketing] Sending email to ${finalTo}...`);
+      const result = await resend.emails.send({
         from: finalFrom, 
         to: [finalTo],
         subject: finalSubject,
         text: finalText,
       });
-    });
+      results.push(result);
 
-    const results = await Promise.all(emailPromises);
+      // Wait 600ms between emails to respect Resend's 2 requests/second rate limit
+      await new Promise(resolve => setTimeout(resolve, 600));
+    }
+
     const errors = results.filter((r) => r.error);
     if (errors.length > 0) console.error("[Marketing] Some emails failed:", errors);
 
