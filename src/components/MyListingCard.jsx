@@ -11,6 +11,8 @@ const MyListingCard = React.memo(({
   openEdit,
   startExtendFlow,
   showMessage,
+  handleShareListing,
+  confirmDelete,
 }) => {
   const stats = getListingStats(l);
   const days = getDaysUntilExpiry(l.expiresAt);
@@ -159,6 +161,22 @@ const MyListingCard = React.memo(({
             aria-label={t("copy")}
           >
             📋
+          </button>
+          <button
+            className="btn btn-ghost small icon-only"
+            onClick={() => handleShareListing && handleShareListing(l)}
+            title={t("share")}
+            aria-label={t("share")}
+          >
+            🔗
+          </button>
+          <button
+            className="btn btn-ghost small icon-only"
+            onClick={() => confirmDelete && confirmDelete(l.id)}
+            title={t("confirmDelete")}
+            aria-label={t("confirmDelete")}
+          >
+            🗑️
           </button>
         </div>
       </div>

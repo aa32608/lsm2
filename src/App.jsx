@@ -1889,7 +1889,10 @@ export default function App() {
     : "";
 
   const activeListingCount = useMemo(() => deferredListings.length, [deferredListings]);
-  const verifiedListingCount = useMemo(() => deferredListings.filter((l) => l.status === "verified").length, [deferredListings]);
+  const verifiedListingCount = useMemo(
+    () => deferredListings.filter((l) => l.status === "verified").length,
+    [deferredListings]
+  );
   const phoneVerifiedCount = useMemo(() => deferredListings.filter((l) => l.phoneVerified).length, [deferredListings]);
   // current slides can be derived on render when needed
 
@@ -1904,7 +1907,7 @@ export default function App() {
   const primaryNav = useMemo(
     () => [
       { id: "main", label: t("homepage"), icon: "🏠" },
-      { id: "allListings", label: t("explore"), icon: "🧭", badge: listings.length },
+      { id: "allListings", label: t("explore"), icon: "🧭", badge: verifiedListings.length },
       ...(user
         ? [
             { id: "myListings", label: t("myListings"), icon: "📂", badge: myListingsRaw.length },
@@ -1912,7 +1915,7 @@ export default function App() {
           ]
         : []),
     ],
-    [t, listings.length, myListingsRaw.length, user]
+    [t, verifiedListings.length, myListingsRaw.length, user]
   );
 
   const currentSectionLabel = useMemo(() => {
