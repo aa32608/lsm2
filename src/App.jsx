@@ -48,6 +48,18 @@ const API_BASE =
 
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
 
+const paypalOptions = {
+  "client-id": PAYPAL_CLIENT_ID,
+  currency: "EUR",
+  intent: "capture",
+  components: "buttons",
+  "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
+  "locale": "en_MK",
+  "data-sdk-integration-source": "react-paypal-js",
+  "data-user-id-token": "",
+  vault: false
+};
+
 /* Data */
 const categories = [
   "food", "car", "electronics", "homeRepair", "health",
@@ -579,6 +591,7 @@ export default function App() {
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
+  const isCreatingOrder = React.useRef(false);
 
   /* Filters / search */
   const [q, setQ] = useState("");
@@ -1952,15 +1965,7 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={{ 
-      "client-id": PAYPAL_CLIENT_ID, 
-      currency: "EUR", 
-      intent: "capture",
-      components: "buttons",
-      "enable-funding": "card",
-      "disable-funding": "paylater,venmo",
-      "locale": "en_US"
-    }}>
+    <PayPalScriptProvider options={paypalOptions}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -3789,8 +3794,13 @@ export default function App() {
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
+                            if (isCreatingOrder.current) return;
+                            isCreatingOrder.current = true;
                             console.log("[PAYPAL_DEBUG] createOrder triggered");
                             try {
+                              if (!paymentIntent || !paymentIntent.listingId) {
+                                throw new Error("Missing listingId in paymentIntent");
+                              }
                               const body = { 
                                 listingId: paymentIntent.listingId, 
                                 amount: paymentIntent.amount, 
@@ -3818,6 +3828,8 @@ export default function App() {
                               console.error("[PAYPAL_DEBUG] createOrder exception:", err);
                               showMessage(t("paypalError") + ": " + err.message, "error");
                               throw err;
+                            } finally {
+                              isCreatingOrder.current = false;
                             }
                           }}
                           onApprove={async (data) => {
@@ -3838,10 +3850,12 @@ export default function App() {
                           }}
                           onCancel={() => {
                             console.log("[PAYPAL_DEBUG] Payment cancelled by user");
+                            isCreatingOrder.current = false;
                           }}
                           onError={(err) => {
                             console.error("[PAYPAL_DEBUG] SDK error callback:", err);
-                            showMessage(t("paypalError"), "error");
+                            showMessage(t("paypalError") + ": " + (err.message || "Unknown error"), "error");
+                            isCreatingOrder.current = false;
                           }}
                         />
                         </div>

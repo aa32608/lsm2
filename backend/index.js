@@ -133,14 +133,12 @@ app.post("/api/paypal/create-order", async (req, res) => {
           amount: {
             currency_code: "EUR",
             value: formattedAmount,
-          },
-          description: `BizCall Listing: ${listingId}`.substring(0, 127),
+          }
         },
       ],
       application_context: {
         brand_name: "BizCall MK",
-        return_url: "https://bizcall.mk/payment-success",
-        cancel_url: "https://bizcall.mk/payment-cancelled",
+        landing_page: "BILLING",
         user_action: "PAY_NOW",
         shipping_preference: "NO_SHIPPING"
       }
