@@ -138,14 +138,17 @@ app.post("/api/paypal/create-order", async (req, res) => {
         },
       ],
       payment_source: {
-        paypal: {
+        card: {
+          attributes: {
+            verification: {
+              method: "SCA_ALWAYS"
+            }
+          },
           experience_context: {
-            payment_method_preference: "IMMEDIATE_PAYMENT_REQUIRED",
             brand_name: "BizCall MK",
-            landing_page: "GUEST_CHECKOUT",
-            user_action: "PAY_NOW",
             return_url: "https://bizcall.mk/payment-success",
-            cancel_url: "https://bizcall.mk/payment-cancelled"
+            cancel_url: "https://bizcall.mk/payment-cancelled",
+            user_action: "PAY_NOW"
           }
         }
       }
