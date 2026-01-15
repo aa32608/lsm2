@@ -22,11 +22,8 @@ import {
   PhoneAuthProvider,
 } from "firebase/auth";
 
-import { 
-  PayPalScriptProvider, 
-  PayPalButtons
-} from "@paypal/react-paypal-js";
-import { AnimatePresence, motion } from "framer-motion";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { AnimatePresence, motion as Motion } from "framer-motion";
 import "./App.css";
 
 // Lazy loaded components
@@ -768,7 +765,6 @@ export default function App() {
 
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
-
   useEffect(() => {
     if (!user) {
       setUserProfile(null);
@@ -1250,6 +1246,8 @@ export default function App() {
   /* Create listing + open payment modal */
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user) { setShowAuthModal(true); showMessage(t("loginRequired"), "error"); return; }
+    if (!user.emailVerified) { showMessage(t("verifyEmailFirst"), "error"); return; }
 
     const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
 
@@ -1951,19 +1949,16 @@ export default function App() {
     "url": canonicalUrl
   };
 
-  const paypalOptions = useMemo(() => ({
-    "client-id": PAYPAL_CLIENT_ID,
-    currency: "EUR",
-    intent: "capture",
-    components: "buttons",
-    "disable-funding": "paylater,venmo",
-    "locale": "en_US",
-    "data-sdk-integration-source": "react-paypal-js",
-    "data-user-id-token": ""
-  }), [PAYPAL_CLIENT_ID]);
-
   return (
-    <PayPalScriptProvider options={paypalOptions}>
+    <PayPalScriptProvider options={{ 
+      "client-id": PAYPAL_CLIENT_ID, 
+      currency: "EUR", 
+      intent: "capture",
+      components: "buttons",
+      "enable-funding": "card",
+      "disable-funding": "paylater,venmo",
+      "locale": "en_US"
+    }}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -2083,14 +2078,14 @@ export default function App() {
         <AnimatePresence>
           {sidebarOpen && (
             <>
-              <motion.div
+              <Motion.div
                 className="sidebar-overlay"
                 onClick={() => setSidebarOpen(false)}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               />
-              <motion.aside
+              <Motion.aside
                 className="sidebar mobile-drawer"
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
@@ -2109,7 +2104,7 @@ export default function App() {
                     user={user}
                   />
                 </Suspense>
-              </motion.aside>
+              </Motion.aside>
             </>
           )}
         </AnimatePresence>
@@ -3109,14 +3104,14 @@ export default function App() {
 
         <AnimatePresence>
           {showPostForm && user && user.emailVerified && (
-            <motion.div
+            <Motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowPostForm(false)}
             >
-              <motion.aside
+              <Motion.aside
                 className="modal post-form-drawer"
                 onClick={(e) => e.stopPropagation()}
                 initial={{ x: "100%", opacity: 0 }}
@@ -3581,22 +3576,22 @@ export default function App() {
                   </section>
                 )}
                 </div>
-              </motion.aside>
-            </motion.div>
+              </Motion.aside>
+            </Motion.div>
           )}
         </AnimatePresence>
     
         {/* MAP PICKER MODAL */}
         <AnimatePresence>
           {showMapPicker && (
-            <motion.div
+            <Motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMapPicker(false)}
             >
-              <motion.div
+              <Motion.div
                 className="modal map-modal"
                 onClick={(e) => e.stopPropagation()}
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -3631,14 +3626,14 @@ export default function App() {
                     />
                   </Suspense>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
         <AnimatePresence>
           {showEditMapPicker && editForm && (
-            <motion.div
+            <Motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -3646,7 +3641,7 @@ export default function App() {
               exit={{ opacity: 0 }}
               onClick={() => setShowEditMapPicker(false)}
             >
-              <motion.div
+              <Motion.div
                 className="modal map-modal"
                 onClick={(e) => e.stopPropagation()}
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -3681,8 +3676,8 @@ export default function App() {
                     />
                   </Suspense>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
@@ -3712,8 +3707,8 @@ export default function App() {
         {/* ===== PAYMENT MODAL (restored) ===== */}
         <AnimatePresence>
           {paymentModalOpen && paymentIntent && (
-            <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }}>
-              <motion.div className="modal payment-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}>
+            <Motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }}>
+              <Motion.div className="modal payment-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}>
                 <div className="modal-header">
                   <h3 className="modal-title">
                     {paymentIntent.type === "extend" ? `${t("extend")} • ${extendTarget?.name || ""}` : t("paypalCheckout")}
@@ -3787,8 +3782,7 @@ export default function App() {
                         <p>{t("processingPayment") || "Processing Payment..."}</p>
                       </div>
                     ) : paymentIntent && (
-                      <div className="payment-options">
-                        <div className="paypal-button-container">
+                      <div className="paypal-button-container">
                         <PayPalButtons
                           style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
                           createOrder={async () => {
@@ -3844,14 +3838,9 @@ export default function App() {
                           }}
                           onError={(err) => {
                             console.error("[PAYPAL_DEBUG] SDK error callback:", err);
-                            // Log the error details if available
-                            if (err && typeof err === 'object') {
-                              console.error("[PAYPAL_DEBUG] Error Details:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
-                            }
-                            showMessage(t("paypalError") || "PayPal error occurred", "error");
+                            showMessage(t("paypalError"), "error");
                           }}
                         />
-                        </div>
                       </div>
                     )}
                   </div>
@@ -3862,22 +3851,22 @@ export default function App() {
                     {t("cancel")}
                   </button>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
         {/* ===== AUTH MODAL (login + signup, email + phone) ===== */}
         <AnimatePresence>
           {showAuthModal && (
-            <motion.div
+            <Motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAuthModal(false)}
             >
-              <motion.div
+              <Motion.div
                 className="modal auth-modal"
                 onClick={(e) => e.stopPropagation()}
                 initial={{ y: 20, opacity: 0 }}
@@ -4365,21 +4354,21 @@ export default function App() {
                     </div>
                   </div>
                 )}
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
         <AnimatePresence>
           {postSignupVerifyOpen && (
-            <motion.div
+            <Motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setPostSignupVerifyOpen(false)}
             >
-              <motion.div
+              <Motion.div
                 className="modal verify-email-modal"
                 onClick={(e) => e.stopPropagation()}
                 initial={{ y: 20, opacity: 0 }}
@@ -4450,15 +4439,15 @@ export default function App() {
                     {t("verifyFootnote")}
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
         
         {/* LISTING DETAILS MODAL */}
         <AnimatePresence>
           {selectedListing && (
-            <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
+            <Motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} 
               onClick={() => {
                 setSelectedListing(null);
                 const url = new URL(window.location.href);
@@ -4466,7 +4455,7 @@ export default function App() {
                 window.history.replaceState({}, "", url.toString());
               }}
             >
-              <motion.div className="modal listing-details-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.3 }}>
+              <Motion.div className="modal listing-details-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} transition={{ duration: 0.3 }}>
                 <div className="modal-header category-banner" style={{ background: "linear-gradient(135deg, #2563eb, #3b82f6)", color: "#fff" }}>
                   <div className="flex items-center gap-2">
                     <span className="category-icon" style={{ fontSize: "1.5rem" }}>
@@ -4728,8 +4717,8 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            </motion.div>
+              </Motion.div>
+            </Motion.div>
           )}
         </AnimatePresence>
 
