@@ -2065,15 +2065,18 @@ export default function App() {
     "url": canonicalUrl
   };
 
+  const paypalOptions = useMemo(() => ({
+    "client-id": PAYPAL_CLIENT_ID,
+    currency: "EUR",
+    intent: "capture",
+    components: "buttons",
+    "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
+    "locale": "en_US",
+    "data-sdk-integration-source": "react-paypal-js"
+  }), [PAYPAL_CLIENT_ID]);
+
   return (
-    <PayPalScriptProvider options={{ 
-      "client-id": PAYPAL_CLIENT_ID, 
-      currency: "EUR", 
-      intent: "capture",
-      components: "buttons,card-fields",
-      "disable-funding": "paylater,venmo",
-      "locale": "en_US"
-    }}>
+    <PayPalScriptProvider options={paypalOptions}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
