@@ -48,16 +48,6 @@ const API_BASE =
 
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
 
-const paypalOptions = {
-  "client-id": PAYPAL_CLIENT_ID,
-  currency: "EUR",
-  intent: "capture",
-  components: "buttons",
-  "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
-  "locale": "en_US",
-  "data-sdk-integration-source": "react-paypal-js"
-};
-
 /* Data */
 const categories = [
   "food", "car", "electronics", "homeRepair", "health",
@@ -779,77 +769,6 @@ export default function App() {
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
 
-  // Handle Stripe Success Redirect
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get("session_id");
-    const listingId = urlParams.get("listingId");
-    const action = urlParams.get("action");
-    const planFromUrl = urlParams.get("plan");
-
-    if (sessionId && listingId) {
-      // Clear the URL params so it doesn't run twice
-      window.history.replaceState({}, document.title, "/");
-      
-      const processStripePayment = async () => {
-        setIsProcessingPayment(true);
-        try {
-          // In a real app, you would verify the session on the backend
-          // but for now we'll assume success if we got back with a sessionId
-          if (action === "extend") {
-            const extraDays = parseInt(planFromUrl || "1") * 30;
-            const snapshot = await fetchListing(listingId);
-            const currentExpiry = snapshot?.expiresAt || Date.now();
-            const currentStatus = snapshot?.status || "verified";
-            const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
-              ? Date.now() 
-              : currentExpiry;
-            const newExpiry = base + extraDays * 24 * 60 * 60 * 1000;
-
-            await update(dbRef(db, `listings/${listingId}`), {
-              expiresAt: newExpiry,
-              lastExtendPlan: planFromUrl,
-              status: "verified",
-            });
-            showMessage(t("extendSuccess"), "success");
-          } else {
-            // New listing flow - we need to use the form data
-            // Since we lost the form state on redirect, we should have saved it to localStorage
-            const savedForm = localStorage.getItem("pending_listing_form");
-            const parsedForm = savedForm ? JSON.parse(savedForm) : null;
-            
-            if (parsedForm) {
-              const normalizedContact = normalizePhoneForStorage(parsedForm.contact);
-              const offerpriceStr = formatOfferPrice(parsedForm.offerMin, parsedForm.offerMax, parsedForm.offerCurrency);
-              const finalLocation = buildLocationString(parsedForm.locationCity, parsedForm.locationExtra);
-
-              await update(dbRef(db, `listings/${listingId}`), {
-                ...parsedForm,
-                status: "verified",
-                pricePaid: priceMap[planFromUrl || "1"],
-                contact: normalizedContact,
-                offerprice: offerpriceStr || "",
-                location: finalLocation,
-                plan: planFromUrl || "1",
-                id: listingId,
-                createdAt: Date.now(),
-                expiresAt: Date.now() + parseInt(planFromUrl || "1") * 30 * 24 * 60 * 60 * 1000,
-              });
-              localStorage.removeItem("pending_listing_form");
-              showMessage(t("paymentComplete"), "success");
-            }
-          }
-        } catch (err) {
-          console.error("[Stripe] Post-payment error:", err);
-          showMessage(t("error") + " " + err.message, "error");
-        } finally {
-          setIsProcessingPayment(false);
-        }
-      };
-      processStripePayment();
-    }
-  }, [t, showMessage]);
-
   useEffect(() => {
     if (!user) {
       setUserProfile(null);
@@ -1331,8 +1250,6 @@ export default function App() {
   /* Create listing + open payment modal */
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!user) { setShowAuthModal(true); showMessage(t("loginRequired"), "error"); return; }
-    if (!user.emailVerified) { showMessage(t("verifyEmailFirst"), "error"); return; }
 
     const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
 
@@ -2035,7 +1952,15 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={paypalOptions}>
+    <PayPalScriptProvider options={{ 
+      "client-id": PAYPAL_CLIENT_ID, 
+      currency: "EUR", 
+      intent: "capture",
+      components: "buttons",
+      "enable-funding": "card",
+      "disable-funding": "paylater,venmo",
+      "locale": "en_US"
+    }}>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
