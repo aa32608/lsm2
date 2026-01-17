@@ -20,6 +20,7 @@ import {
   linkWithPhoneNumber,
   updatePhoneNumber,
   PhoneAuthProvider,
+  updateProfile,
 } from "firebase/auth";
 
 import { 
@@ -435,6 +436,7 @@ export default function App() {
   const [authTab, setAuthTab] = useState("email");   // "email" | "phone" (login method)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [countryCode, setCountryCode] = useState("+389");
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -794,6 +796,13 @@ export default function App() {
 
     return () => unsubscribe();
   }, [user]);
+
+  const friendlyName = useMemo(() => {
+    if (userProfile?.name && userProfile.name.trim()) return userProfile.name.trim();
+    if (user?.displayName) return user.displayName;
+    if (user?.email) return user.email.split("@")[0];
+    return "";
+  }, [userProfile, user]);
 
   // Sync merged listings
   useEffect(() => {
@@ -2129,6 +2138,11 @@ export default function App() {
                   <div className="dashboard-topbar">
                     <div className="dashboard-meta">
                       <p className="eyebrow subtle">{t("dashboard")}</p>
+                      {friendlyName && (
+                        <p className="dashboard-greeting">
+                          {`Hello ${friendlyName}`}
+                        </p>
+                      )}
                       <h2 className="dashboard-heading">{t("manageListings")}</h2>
                     </div>
                     <div className="topbar-tabs">
@@ -4109,7 +4123,7 @@ export default function App() {
                           </div>
                         )}
         
-                        {/* <div id="recaptcha-container" className="recaptcha"></div> */}
+                        <div id="recaptcha-container" className="recaptcha"></div>
                       </div>
                     )}
                   </>
@@ -4121,6 +4135,16 @@ export default function App() {
                       {t("signupSubtitle") ||
                         "Create a BizCall account to post and manage your listings."}
                     </p>
+                
+                    <div className="auth-field-group">
+                      <span className="field-label">{t("name")}</span>
+                      <input
+                        className="input"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </div>
                 
                     {/* EMAIL */}
                     <div className="auth-field-group">
@@ -4195,6 +4219,9 @@ export default function App() {
                         onClick={async () => {
                           if (!validateEmail(email))
                             return showMessage(t("enterValidEmail"), "error");
+                          
+                          if (!displayName.trim())
+                            return showMessage(t("enterName"), "error");
                 
                           if (password.length < 6)
                             return showMessage(t("passwordTooShort"), "error");
@@ -4268,10 +4295,15 @@ export default function App() {
                                 password
                               );
                               await linkWithCredential(user, emailCred);
+
+                              if (displayName.trim()) {
+                                await updateProfile(user, { displayName: displayName.trim() });
+                              }
                 
                               await sendEmailVerification(user);
                 
                               await set(dbRef(db, `users/${user.uid}`), {
+                                name: displayName.trim() || null,
                                 email: user.email,
                                 phone: normalizePhoneForStorage(countryCode + phoneNumber),
                                 createdAt: Date.now(),
@@ -4296,7 +4328,7 @@ export default function App() {
                       </>
                     )}
                 
-                    {/* <div id="recaptcha-signup" className="recaptcha" /> */}
+                    <div id="recaptcha-signup" className="recaptcha" />
                   </div>
                 )}
 

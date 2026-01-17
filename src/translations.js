@@ -285,6 +285,7 @@ export const TRANSLATIONS = {
     other: "Other",
 
     enterPhone: "Please enter your phone number",
+    enterName: "Please enter your name",
     loginToPost: "Please log in to post a listing",
     mustLoginToCreate: "You must be logged in to create a listing",
 
@@ -914,6 +915,7 @@ export const TRANSLATIONS = {
     emailSameAsCurrent: "Ju lutemi jepni një adresë tjetër email-i",
     emailUpdateSuccessVerify: "Email-i u përditësua me sukses! Ju lutemi kontrolloni email-in tuaj të ri për verifikim.",
     enterPhone: "Ju lutemi shkruani numrin tuaj të telefonit",
+    enterName: "Ju lutemi shkruani emrin tuaj",
     errorOccured: "Ndodhi një gabim. Ju lutemi provoni përsëri më vonë.",
     exploreHeroSubtitle: "Përdorni filtrat e shpejtë për të mbajtur kartat e rregullta dhe hapni detajet kur të jeni gati.",
     exploreHeroTitle: "Eksploroni njoftimet lokale të besuara",
@@ -1434,6 +1436,7 @@ export const TRANSLATIONS = {
     emailSameAsCurrent: "Ве молиме внесете различна е-пошта",
     emailUpdateSuccessVerify: "Е-поштата е успешно ажурирана! Ве молиме проверете ја вашата нова е-пошта за верификација.",
     enterPhone: "Ве молиме внесете го вашиот телефонски број",
+    enterName: "Ве молиме внесете го вашето име",
     errorOccured: "Се појави грешка. Ве молиме обидете се подоцна.",
     exploreHeroSubtitle: "Користете ги брзите филтри за да ги одржувате картичките уредни и отворете ги деталите кога ќе бидете подготвени.",
     exploreHeroTitle: "Истражете доверливи локални огласи",

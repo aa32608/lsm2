@@ -4999,6 +4999,12 @@ body {
   color: #475569;
 }
 
+.dashboard-greeting {
+  margin-top: 2px;
+  font-size: 0.9rem;
+  color: #1f2933;
+}
+
 .topbar-tabs {
   display: flex;
   justify-content: flex-end;
