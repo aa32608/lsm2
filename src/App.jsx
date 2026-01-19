@@ -380,6 +380,7 @@ export default function App() {
     tags: "",
     socialLink: "",
     imagePreview: null, // local-only preview
+    images: [],         // array of base64 strings (max 4)
   });
   const [plan, setPlan] = useState("1");
 
@@ -1188,46 +1189,101 @@ export default function App() {
   }, [accountPhone]);
 
   const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 600;
-        let width = img.width;
-        let height = img.height;
+    // Determine which state to update and current image count
+    const isEdit = !!editingListing;
+    const currentImages = isEdit ? (editForm?.images || []) : (form.images || []);
+    
+    // Check limit
+    if (currentImages.length + files.length > 4) {
+      showMessage(t("maxImagesError") || "Maximum 4 images allowed", "error");
+      return;
+    }
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 600;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
           }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Compress with 0.7 quality
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        setForm((f) => ({ ...f, imagePreview: dataUrl }));
-        if (editingListing) {
-          setEditForm((f) => ({ ...f, imagePreview: dataUrl }));
-        }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Compress with 0.7 quality
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          
+          if (isEdit) {
+            setEditForm(prev => {
+              const newImages = [...(prev.images || []), dataUrl];
+              return { 
+                ...prev, 
+                images: newImages,
+                imagePreview: newImages[0] // Set first image as preview
+              };
+            });
+          } else {
+            setForm(prev => {
+              const newImages = [...(prev.images || []), dataUrl];
+              return { 
+                ...prev, 
+                images: newImages,
+                imagePreview: newImages[0] // Set first image as preview
+              };
+            });
+          }
+        };
+        img.src = ev.target?.result;
       };
-      img.src = ev.target?.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input
+    e.target.value = "";
+  };
+
+  const handleRemoveImage = (index, isEdit = false) => {
+    if (isEdit) {
+      setEditForm(prev => {
+        const newImages = [...(prev.images || [])];
+        newImages.splice(index, 1);
+        return {
+          ...prev,
+          images: newImages,
+          imagePreview: newImages.length > 0 ? newImages[0] : null
+        };
+      });
+    } else {
+      setForm(prev => {
+        const newImages = [...(prev.images || [])];
+        newImages.splice(index, 1);
+        return {
+          ...prev,
+          images: newImages,
+          imagePreview: newImages.length > 0 ? newImages[0] : null
+        };
+      });
+    }
   };
 
   async function createListingInFirebase(obj) {
@@ -1507,6 +1563,7 @@ export default function App() {
       tags: listing.tags || "",
       socialLink: listing.socialLink || "",
       imagePreview: listing.imagePreview || null,
+      images: listing.images || (listing.imagePreview ? [listing.imagePreview] : []),
     });
   }, [accountPhone, userProfile]);
   const saveEdit = async () => {
@@ -1536,6 +1593,7 @@ export default function App() {
       tags: stripDangerous(editForm.tags || ""),
       socialLink: stripDangerous(editForm.socialLink || ""),
       imagePreview: editForm.imagePreview || null,
+      images: editForm.images || [],
     };
     await update(dbRef(db, `listings/${editingListing.id}`), updates);
     showMessage(t("saveSuccess"), "success");
@@ -3423,20 +3481,45 @@ export default function App() {
                           className="input"
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleImageUpload}
                         />
-                
-                        {form.imagePreview && (
-                          <img
-                            src={form.imagePreview}
-                            alt={t("previewAlt")}
-                            style={{
-                              width: "100%",
-                              borderRadius: 12,
-                              border: "1px solid #e5e7eb",
-                              marginTop: 8,
-                            }}
-                          />
+
+                        {form.images && form.images.length > 0 && (
+                          <div className="listing-gallery" style={{ marginTop: 8 }}>
+                            {form.images.map((img, idx) => (
+                              <div key={idx} style={{ position: "relative" }}>
+                                <img
+                                  src={img}
+                                  alt={`Upload ${idx + 1}`}
+                                  className="listing-hero-image"
+                                  style={{ height: "120px" }}
+                                />
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  style={{
+                                    position: "absolute",
+                                    top: 4,
+                                    right: 4,
+                                    background: "rgba(0,0,0,0.5)",
+                                    color: "white",
+                                    borderRadius: "50%",
+                                    width: 24,
+                                    height: 24,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "none",
+                                    cursor: "pointer"
+                                  }}
+                                  onClick={() => handleRemoveImage(idx)}
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         )}
                 
                         <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
@@ -3722,6 +3805,8 @@ export default function App() {
               plan={plan}
               setSelectedTab={setSelectedTab}
               handleShareListing={handleShareListing}
+              handleImageUpload={handleImageUpload}
+              handleRemoveImage={handleRemoveImage}
             />
           </Suspense>
         </AnimatePresence>
@@ -4613,7 +4698,22 @@ export default function App() {
                         </div>
                       </div>
 
-                      {selectedListing.imagePreview && <img src={selectedListing.imagePreview} alt={t("previewAlt")} className="listing-hero-image" loading="lazy" />}
+                      {selectedListing.images && selectedListing.images.length > 0 ? (
+                        <div className="listing-gallery" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginTop: "16px" }}>
+                          {selectedListing.images.map((img, idx) => (
+                            <img 
+                              key={idx} 
+                              src={img} 
+                              alt={`${t("previewAlt")} ${idx + 1}`} 
+                              className="listing-hero-image" 
+                              loading="lazy" 
+                              style={{ width: "100%", borderRadius: "12px", objectFit: "cover", maxHeight: "400px" }}
+                            />
+                          ))}
+                        </div>
+                      ) : selectedListing.imagePreview && (
+                        <img src={selectedListing.imagePreview} alt={t("previewAlt")} className="listing-hero-image" loading="lazy" />
+                      )}
 
                       <div className="listing-section">
                         <div className="section-heading">

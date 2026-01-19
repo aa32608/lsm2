@@ -244,38 +244,66 @@ const EditListingModal = ({
 
           <div className="field-group">
             <label className="field-label">
-              {t("coverImage")}
+              {t("images") || "Images"} (Max 4)
             </label>
             <div className="edit-image-row">
               <label className="btn btn-ghost small" htmlFor="edit-image">
-                {t("uploadCoverLocal")}
+                {t("uploadImages") || "Upload Images"}
               </label>
               <input
                 id="edit-image"
                 style={{ display: "none" }}
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = (ev) =>
-                    setEditForm((f) => ({
-                      ...f,
-                      imagePreview: ev.target?.result || null,
-                    }));
-                  reader.readAsDataURL(file);
-                }}
+                multiple
+                onChange={handleImageUpload}
               />
             </div>
-            {editForm.imagePreview && (
-              <img
-                src={editForm.imagePreview}
-                alt={t("previewAlt")}
-                className="edit-image-preview"
-                style={{ marginTop: 12, borderRadius: 12, maxWidth: "100%", height: "auto" }}
-              />
-            )}
+            
+            {/* Image Grid */}
+            <div className="image-preview-grid" style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
+              gap: '10px', 
+              marginTop: '12px' 
+            }}>
+              {(editForm.images && editForm.images.length > 0 ? editForm.images : (editForm.imagePreview ? [editForm.imagePreview] : [])).map((img, index) => (
+                <div key={index} className="preview-item" style={{ position: 'relative' }}>
+                  <img
+                    src={img}
+                    alt={`${t("previewAlt")} ${index + 1}`}
+                    style={{ 
+                      width: '100%', 
+                      aspectRatio: '1', 
+                      objectFit: 'cover', 
+                      borderRadius: '8px' 
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(index, true)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '24px',
+                      height: '24px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: 0
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
