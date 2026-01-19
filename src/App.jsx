@@ -644,6 +644,7 @@ export default function App() {
   const [feedbackDraft, setFeedbackDraft] = useState({ rating: 4, comment: "" });
   const [feedbackSaving, setFeedbackSaving] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false); // Start closed, user can toggle
+  const [modalImageIndex, setModalImageIndex] = useState(0); // For modal carousel
 
   /* Featured carousel removal - no longer used but kept state for reference previously */
 
@@ -1872,6 +1873,7 @@ export default function App() {
 
   const handleSelectListing = useCallback((l) => {
     setSelectedListing(l);
+    setModalImageIndex(0);
     const url = new URL(window.location.href);
     url.searchParams.set("listing", l.id);
     window.history.replaceState({}, "", url.toString());
@@ -4646,6 +4648,89 @@ export default function App() {
                         </div>
                       </div>
 
+                      {/* CAROUSEL SECTION */}
+                      {(() => {
+                        const images = selectedListing.images && selectedListing.images.length > 0 
+                          ? selectedListing.images 
+                          : (selectedListing.imagePreview ? [selectedListing.imagePreview] : []);
+                        
+                        if (images.length === 0) return null;
+
+                        return (
+                          <>
+                          <div className="modal-carousel-container">
+                            <img 
+                              src={images[modalImageIndex] || images[0]} 
+                              alt={selectedListing.name} 
+                              className="modal-carousel-image"
+                            />
+                            
+                            {images.length > 1 && (
+                              <>
+                                <button 
+                                  className="modal-carousel-btn prev"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setModalImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1);
+                                  }}
+                                >
+                                  ‹
+                                </button>
+                                <button 
+                                  className="modal-carousel-btn next"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setModalImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1);
+                                  }}
+                                >
+                                  ›
+                                </button>
+                                <div className="modal-carousel-dots">
+                                  {images.map((_, idx) => (
+                                    <div 
+                                      key={idx} 
+                                      className={`modal-carousel-dot ${idx === modalImageIndex ? 'active' : ''}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setModalImageIndex(idx);
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              </>
+                            )}
+                            
+                            {/* Overlay Badges */}
+                            <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 8, zIndex: 5 }}>
+                               {selectedListing.offerprice && (
+                                 <span className="pill pill-price" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                                   {selectedListing.offerprice}
+                                 </span>
+                               )}
+                            </div>
+                          </div>
+                          
+                          {/* THUMBNAILS */}
+                          {images.length > 1 && (
+                            <div className="modal-carousel-thumbs">
+                              {images.map((img, idx) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt={`Thumb ${idx}`}
+                                  className={`modal-carousel-thumb ${idx === modalImageIndex ? 'active' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setModalImageIndex(idx);
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          </>
+                        );
+                      })()}
+
                       <div className="mobile-cta-bar">
                         <div className="mobile-cta-meta">
                           <span className="pill pill-soft">{listingLocationLabel}</span>
@@ -4698,22 +4783,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {selectedListing.images && selectedListing.images.length > 0 ? (
-                        <div className="listing-gallery" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px", marginTop: "16px" }}>
-                          {selectedListing.images.map((img, idx) => (
-                            <img 
-                              key={idx} 
-                              src={img} 
-                              alt={`${t("previewAlt")} ${idx + 1}`} 
-                              className="listing-hero-image" 
-                              loading="lazy" 
-                              style={{ width: "100%", borderRadius: "12px", objectFit: "cover", maxHeight: "400px" }}
-                            />
-                          ))}
-                        </div>
-                      ) : selectedListing.imagePreview && (
-                        <img src={selectedListing.imagePreview} alt={t("previewAlt")} className="listing-hero-image" loading="lazy" />
-                      )}
+
 
                       <div className="listing-section">
                         <div className="section-heading">
