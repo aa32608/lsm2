@@ -1188,12 +1188,12 @@ export default function App() {
     setForm((f) => ({ ...f, contact: accountPhone }));
   }, [accountPhone]);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e, isEditOverride = null) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     // Determine which state to update and current image count
-    const isEdit = !!editingListing;
+    const isEdit = isEditOverride !== null ? isEditOverride : !!editingListing;
     const currentImages = isEdit ? (editForm?.images || []) : (form.images || []);
     
     // Check limit

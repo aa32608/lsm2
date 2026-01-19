@@ -16,6 +16,8 @@ const EditListingModal = ({
   plan,
   setSelectedTab,
   handleShareListing,
+  handleImageUpload,
+  handleRemoveImage,
 }) => {
   if (!editingListing || !editForm) return null;
 
@@ -256,7 +258,7 @@ const EditListingModal = ({
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={handleImageUpload}
+                onChange={(e) => handleImageUpload(e, true)}
               />
             </div>
             
