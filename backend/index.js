@@ -437,20 +437,12 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 
 /* ----------------------- CRON SCHEDULER ----------------------- */
 
-// Schedule the marketing emails to run 5 minutes from now and then every week at this time.
-// Since the exact current server time might vary, we'll calculate the cron expression dynamically.
-const now = new Date();
-const targetDate = new Date(now.getTime() + 1 * 60 * 1000); // 5 minutes from now
-
-const minute = targetDate.getMinutes();
-const hour = targetDate.getHours();
-const dayOfWeek = targetDate.getDay(); // 0-6 (Sun-Sat)
-
+// Schedule the marketing emails to run every Monday at 9:00 AM UTC.
 // Cron expression: minute hour dayOfMonth month dayOfWeek
-// To run every week at this exact time:
-const cronExpression = `${minute} ${hour} * * ${dayOfWeek}`;
+// 0 9 * * 1 = At 09:00 on Monday
+const cronExpression = "0 9 * * 1";
 
-console.log(`[Cron] Marketing emails scheduled to start at ${targetDate.toLocaleTimeString()} and repeat every week (Cron: ${cronExpression})`);
+console.log(`[Cron] Marketing emails scheduled for every Monday at 9:00 AM UTC (Cron: ${cronExpression})`);
 
 cron.schedule(cronExpression, async () => {
   console.log("[Cron] Triggering weekly marketing emails...");

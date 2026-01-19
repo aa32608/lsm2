@@ -2140,7 +2140,7 @@ export default function App() {
                       <p className="eyebrow subtle">{t("dashboard")}</p>
                       {friendlyName && (
                         <p className="dashboard-greeting">
-                          {`Hello ${friendlyName}`}
+                          <span className="wave">👋</span> {t("hello") || "Hello"}, <span className="highlight-name">{friendlyName}</span>
                         </p>
                       )}
                       <h2 className="dashboard-heading">{t("manageListings")}</h2>
@@ -4289,32 +4289,38 @@ export default function App() {
                                 verificationCode
                               );
                               const user = result.user;
-                
-                              const emailCred = EmailAuthProvider.credential(
-                                email,
-                                password
-                              );
-                              await linkWithCredential(user, emailCred);
 
-                              if (displayName.trim()) {
-                                await updateProfile(user, { displayName: displayName.trim() });
+                              try {
+                                const emailCred = EmailAuthProvider.credential(
+                                  email,
+                                  password
+                                );
+                                await linkWithCredential(user, emailCred);
+
+                                if (displayName.trim()) {
+                                  await updateProfile(user, { displayName: displayName.trim() });
+                                }
+
+                                await set(dbRef(db, `users/${user.uid}`), {
+                                  name: displayName.trim() || null,
+                                  email: user.email,
+                                  phone: normalizePhoneForStorage(countryCode + phoneNumber),
+                                  createdAt: Date.now(),
+                                  subscribedToMarketing: true,
+                                });
+
+                                await sendEmailVerification(user);
+
+                                showMessage(t("signupSuccess"), "success");
+
+                                setAuthMode("verify");
+                                setConfirmationResult(null);
+                                setVerificationCode("");
+                              } catch (innerErr) {
+                                console.error("Signup incomplete, rolling back user creation:", innerErr);
+                                await user.delete().catch(cleanupErr => console.error("Failed to cleanup user:", cleanupErr));
+                                throw innerErr;
                               }
-                
-                              await sendEmailVerification(user);
-                
-                              await set(dbRef(db, `users/${user.uid}`), {
-                                name: displayName.trim() || null,
-                                email: user.email,
-                                phone: normalizePhoneForStorage(countryCode + phoneNumber),
-                                createdAt: Date.now(),
-                                subscribedToMarketing: true,
-                              });
-                
-                              showMessage(t("signupSuccess"), "success");
-                
-                              setAuthMode("verify");
-                              setConfirmationResult(null);
-                              setVerificationCode("");
                             } catch (err) {
                               console.error(err);
                               showMessage(err.message, "error");
