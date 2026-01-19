@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const ListingCard = React.memo(({
   listing: l,
@@ -10,41 +10,76 @@ const ListingCard = React.memo(({
   onShare,
 }) => {
   const stats = getListingStats(l);
+  const [imgIndex, setImgIndex] = useState(0);
+
+  // Determine images to display
+  const images = l.images && l.images.length > 0 
+    ? l.images 
+    : (l.imagePreview ? [l.imagePreview] : []);
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+  };
 
   return (
     <article
       className="listing-card explore-card-modern"
       onClick={() => onSelect(l)}
     >
-      <header className="listing-header listing-header-dense">
-        <div className="listing-title-wrap">
-          <div className="listing-title-row">
-            <span className="listing-icon-bubble">
-              {categoryIcons[l.category] || "🏷️"}
-            </span>
-            <div>
-              <h3 className="listing-title">{l.name}</h3>
-              <div className="listing-meta pill-row-tight">
-                <span className="pill pill-category">{t(l.category) || l.category}</span>
-                <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
-                {l.expiresAt && (
-                  <span className="pill pill-ghost subtle-pill">
-                    ⏱️ {new Date(l.expiresAt).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            </div>
+      <div className="listing-card-image-container">
+        {images.length > 0 ? (
+          <>
+            <img 
+              src={images[imgIndex]} 
+              alt={`${l.name}`} 
+              className="listing-card-image"
+              loading="lazy"
+            />
+            {images.length > 1 && (
+              <>
+                <button className="carousel-btn prev" onClick={handlePrev}>‹</button>
+                <button className="carousel-btn next" onClick={handleNext}>›</button>
+                <div className="carousel-dots">
+                  {images.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`carousel-dot ${idx === imgIndex ? 'active' : ''}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        ) : (
+          <div className="listing-card-placeholder">
+            {categoryIcons[l.category] || "🏷️"}
+          </div>
+        )}
+        
+        <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', zIndex: 4, pointerEvents: 'none' }}>
+           <div style={{ display: 'flex', gap: '6px' }}>
+             {l.offerprice && <span className="pill pill-price" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>{l.offerprice}</span>}
+           </div>
+           <span className="badge verified" style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(4px)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)', color: '#0f172a' }}>✓ {t("verified")}</span>
+        </div>
+      </div>
+
+      <div className="listing-card-content" style={{ padding: '0 8px 8px 8px' }}>
+        <div style={{ marginBottom: '8px' }}>
+          <h3 className="listing-title" style={{ fontSize: '1.1rem', marginBottom: '4px' }}>{l.name}</h3>
+          <div className="listing-meta pill-row-tight">
+             <span className="pill pill-category">{t(l.category) || l.category}</span>
+             <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
           </div>
         </div>
 
-        <div className="listing-badges dense-badges">
-          {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
-          <span className="badge verified">✓ {t("verified")}</span>
-        </div>
-      </header>
-
-      <div className="listing-card-body">
-        <p className="listing-description listing-description-clamp listing-description-preview">
+        <p className="listing-description listing-description-clamp listing-description-preview" style={{ marginBottom: '12px' }}>
           {getDescriptionPreview(l.description, 30)}
         </p>
 
@@ -52,28 +87,14 @@ const ListingCard = React.memo(({
           <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
           <span className="stat-chip">💬 {stats.feedbackCount}</span>
           <span className="stat-chip subtle">🔥 {stats.engagement}</span>
-          {l.tags && (
-            <span className="pill pill-tags">
-              {l.tags.split(",")[0]?.trim()}
-              {l.tags.split(",").length > 1 ? " +" : ""}
-            </span>
-          )}
         </div>
       </div>
 
-      <div
-        className="listing-footer-row"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="listing-footer-row" onClick={(e) => e.stopPropagation()} style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '8px', paddingRight: '8px' }}>
         <div className="listing-footer-left">
           {l.contact && (
             <span className="pill pill-contact ghost-pill">
               📞 {l.contact}
-            </span>
-          )}
-          {l.socialLink && (
-            <span className="pill pill-ghost subtle-pill">
-              🔗 {t("websiteLabel")}
             </span>
           )}
         </div>
