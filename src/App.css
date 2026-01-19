@@ -2043,21 +2043,21 @@ body {
 
 .listing-description-clamp {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  min-height: 64px;
+  min-height: auto;
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
 }
 
 .listing-description-preview {
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  min-height: 24px;
-  margin-bottom: 0;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  min-height: auto;
+  margin-bottom: 8px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: 100%;
@@ -3083,7 +3083,7 @@ body {
 
 .listing-grid-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
   gap: 28px;
   width: 100%;
   max-width: 1600px;
@@ -3092,7 +3092,7 @@ body {
 
 @media (min-width: 1600px) {
   .listing-grid-grid {
-    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
     gap: 32px;
   }
 }
@@ -3113,7 +3113,7 @@ body {
   overflow: hidden;
   background: #f1f5f9;
   border-radius: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px; /* Reduced from 12px */
   isolation: isolate;
 }
 
@@ -7509,15 +7509,26 @@ input:checked + .toggle-slider:before {
 /* Enhanced Modal Styles */
 @media (min-width: 768px) {
   .modal.listing-details-modal {
-    max-width: 1200px;
-    width: 90vw;
+    max-width: 98vw;
+    width: 98vw;
+    height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   
+  .modal.listing-details-modal .modal-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+  }
+
   .listing-layout {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
+    grid-template-columns: 1.8fr 1fr;
     gap: 32px;
     align-items: start;
+    height: 100%;
   }
 }
 
