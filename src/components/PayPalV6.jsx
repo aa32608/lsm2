@@ -28,16 +28,48 @@ export default function PayPalV6({
     
     const script = document.createElement("script");
     script.id = "paypal-sdk-v6";
-    // Using live or sandbox based on backend token, but for v6 script URL:
-    // "https://www.paypal.com/web-sdk/v6/core" for live
-    // "https://www.sandbox.paypal.com/web-sdk/v6/core" for sandbox
-    // Ideally this should be dynamic or env var driven. For now switching to live as requested.
     script.src = "https://www.paypal.com/web-sdk/v6/core";
     script.async = true;
     script.onload = () => setIsReady(true);
     script.onerror = () => setError("Failed to load PayPal SDK");
     document.body.appendChild(script);
   }, []);
+
+  // Define createOrder function
+  const createOrderFn = async () => {
+    try {
+      // Save pending data if needed (optional, but good for safety)
+      if (formData && type === "create") {
+        localStorage.setItem("pendingListing", JSON.stringify(formData));
+      }
+
+      const response = await fetch(`${API_BASE}/api/paypal/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          listingId,
+          amount,
+          action: type,
+          returnUrl: window.location.origin,
+          cancelUrl: window.location.origin,
+        }),
+      });
+
+      const orderData = await response.json();
+      if (!response.ok) {
+        throw new Error(orderData.error || "Failed to create order");
+      }
+      
+      console.log("[PayPal V6] Order Created:", orderData.id);
+      return orderData.id;
+    } catch (err) {
+      console.error("[PayPal V6] Create Order Error:", err);
+      setError(err.message);
+      throw err;
+    }
+  };
 
   // Initialize SDK and Session
   useEffect(() => {

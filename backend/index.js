@@ -119,35 +119,48 @@ async function generateAccessToken() {
   }
 }
 
-/* ----------------------- GET PAYPAL TOKEN (for v6 SDK) ---------------- */
+async function generateClientToken() {
+  const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
+  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
+  const clientSecret = (process.env.PAYPAL_CLIENT_SECRET || "").trim();
 
-app.get("/api/paypal/token", async (req, res) => {
+  if (!clientId || !clientSecret) {
+    throw new Error("PayPal credentials missing");
+  }
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const url = env === "sandbox"
+    ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
+    : "https://api-m.paypal.com/v1/oauth2/token";
+
   try {
-    // 1. Get basic Access Token
-    const accessToken = await generateAccessToken();
-
-    // 2. Exchange it for a Client Token (JWT)
-    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
-    const url = env === "sandbox"
-      ? "https://api-m.sandbox.paypal.com/v1/identity/generate-token"
-      : "https://api-m.paypal.com/v1/identity/generate-token";
-
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      }
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "grant_type=client_credentials&response_type=client_token",
     });
 
     const data = await response.json();
     if (!response.ok) {
-      console.error("[PayPal] Client Token Error:", JSON.stringify(data, null, 2));
-      throw new Error("Failed to generate client token");
+      console.error("[PayPal] Client Token Gen Error:", JSON.stringify(data, null, 2));
+      throw new Error(`PayPal Token Error: ${data.error_description || data.error}`);
     }
+    return data.access_token;
+  } catch (err) {
+    console.error("[PayPal] generateClientToken exception:", err);
+    throw err;
+  }
+}
 
-    // Return the client_token (JWT)
-    res.json({ accessToken: data.client_token });
+/* ----------------------- GET PAYPAL TOKEN (for v6 SDK) ---------------- */
+
+app.get("/api/paypal/token", async (req, res) => {
+  try {
+    const clientToken = await generateClientToken();
+    res.json({ accessToken: clientToken });
   } catch (err) {
     console.error("[PayPal] Token Endpoint Error:", err);
     res.status(500).json({ error: "Failed to generate token" });
