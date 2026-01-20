@@ -1827,7 +1827,7 @@ export default function App() {
       comment,
       createdAt: Date.now(),
       userId: user?.uid || null,
-      author: user?.email || user?.phoneNumber || null,
+      author: user?.displayName || user?.email || user?.phoneNumber || null,
     };
 
     setFeedbackSaving(true);
@@ -4932,6 +4932,9 @@ export default function App() {
                           ) : (
                             feedbackStats.entries.map((entry, idx) => (
                               <div className="feedback-item" key={idx}>
+                                {entry.author && (
+                                  <div className="feedback-author">{entry.author}</div>
+                                )}
                                 <div className="feedback-meta">
                                   <span className="pill pill-soft">{entry.rating}/5</span>
                                   <span className="small-muted">{new Date(entry.createdAt).toLocaleDateString()}</span>
