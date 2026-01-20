@@ -35,40 +35,46 @@ export default function PayPalV6({
     document.body.appendChild(script);
   }, []);
 
-  // Define createOrder function
   const createOrderFn = async () => {
-    try {
-      // Save pending data if needed (optional, but good for safety)
-      if (formData && type === "create") {
-        localStorage.setItem("pendingListing", JSON.stringify(formData));
+    console.log("[PayPal V6] Creating Order...");
+    
+    // Save state for redirects
+    if (type === "create" || type === "create_listing") {
+      if (formData) {
+         localStorage.setItem("pending_listing_data", JSON.stringify({
+           ...formData,
+           plan: plan
+         }));
       }
-
-      const response = await fetch(`${API_BASE}/api/paypal/create-order`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          listingId,
-          amount,
-          action: type,
-          returnUrl: window.location.origin,
-          cancelUrl: window.location.origin,
-        }),
-      });
-
-      const orderData = await response.json();
-      if (!response.ok) {
-        throw new Error(orderData.error || "Failed to create order");
-      }
-      
-      console.log("[PayPal V6] Order Created:", orderData.id);
-      return orderData.id;
-    } catch (err) {
-      console.error("[PayPal V6] Create Order Error:", err);
-      setError(err.message);
-      throw err;
     }
+
+    const returnUrlObj = new URL(window.location.origin + window.location.pathname);
+    returnUrlObj.searchParams.set("paypal_return", "true");
+    returnUrlObj.searchParams.set("listingId", listingId);
+    returnUrlObj.searchParams.set("paymentType", type);
+    if (type === "extend" && plan) {
+      returnUrlObj.searchParams.set("plan", plan);
+    }
+
+    const body = { 
+      listingId, 
+      amount, 
+      action: type === "extend" ? "extend" : "create_listing",
+      returnUrl: returnUrlObj.toString(),
+      cancelUrl: window.location.href
+    };
+
+    const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Order creation failed");
+    
+    console.log("[PayPal V6] Order Created:", data.orderID);
+    return data.orderID;
   };
 
   // Initialize SDK and Session
@@ -153,47 +159,7 @@ export default function PayPalV6({
     };
   }, [isReady]);
 
-  const createOrderFn = async () => {
-      console.log("[PayPal V6] Creating Order...");
-      
-      // Save state for redirects
-      if (type === "create" || type === "create_listing") {
-        if (formData) {
-           localStorage.setItem("pending_listing_data", JSON.stringify({
-             ...formData,
-             plan: plan
-           }));
-        }
-      }
 
-      const returnUrlObj = new URL(window.location.origin + window.location.pathname);
-      returnUrlObj.searchParams.set("paypal_return", "true");
-      returnUrlObj.searchParams.set("listingId", listingId);
-      returnUrlObj.searchParams.set("paymentType", type);
-      if (type === "extend" && plan) {
-        returnUrlObj.searchParams.set("plan", plan);
-      }
-
-      const body = { 
-        listingId, 
-        amount, 
-        action: type === "extend" ? "extend" : "create_listing",
-        returnUrl: returnUrlObj.toString(),
-        cancelUrl: window.location.href
-      };
-
-      const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Order creation failed");
-      
-      console.log("[PayPal V6] Order Created:", data.orderID);
-      return { orderId: data.orderID };
-  };
 
   if (error) return <div className="text-red-500 text-sm p-2 bg-red-50 rounded">Error: {error}</div>;
 
