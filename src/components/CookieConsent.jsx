@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import './App.css'; // Ensure styles are available if not global
 
 export default function CookieConsent({ t }) {
   const [visible, setVisible] = useState(false);
