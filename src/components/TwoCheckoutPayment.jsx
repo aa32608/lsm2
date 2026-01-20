@@ -43,8 +43,24 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.log("Initializing 2Checkout Component...");
       const jsPaymentClient = new window.TwoPayClient.TwoPayClient(MERCHANT_CODE);
       
-      // Create the card component
-      const component = jsPaymentClient.components.create('card');
+      // Create the card component with styling
+      const component = jsPaymentClient.components.create('card', {
+        style: {
+          base: {
+             fontFamily: '"Inter", sans-serif',
+             fontSize: '16px',
+             color: '#374151',
+             lineHeight: '24px',
+             fontWeight: '400',
+             '::placeholder': {
+               color: '#9CA3AF'
+             }
+          },
+          invalid: {
+             color: '#EF4444'
+          }
+        }
+      });
       
       // Mount it to the #card-element div
       component.mount('#card-element');
@@ -137,20 +153,31 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       </div>
       
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
         <input 
           type="text" 
-          className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
+          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow shadow-sm"
           placeholder="John Doe"
           value={billingName}
           onChange={e => setBillingName(e.target.value)}
         />
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Card Details</label>
+      <div className="mb-6 relative">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Card Details</label>
         {/* 2Checkout will inject the iframe here */}
-        <div id="card-element" className="p-3 border rounded bg-gray-50 min-h-[50px]"></div>
+        <div 
+          id="card-element" 
+          className="p-3 border border-gray-300 rounded-md bg-white shadow-sm min-h-[50px] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+          style={{ minHeight: '60px' }} 
+        >
+           {/* Visual placeholder that gets covered/removed by the iframe */}
+           {!componentRef.current && (
+             <div className="flex items-center justify-center h-full text-gray-400 text-sm py-2">
+                <span className="animate-pulse">Loading secure payment form...</span>
+             </div>
+           )}
+        </div>
       </div>
 
       <button 
