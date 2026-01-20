@@ -130,10 +130,11 @@ export default function PayPalV6({
             const handleClick = async () => {
               if (!sessionRef.current) return;
               try {
-                await sessionRef.current.start(
-                  { presentationMode: "auto" },
-                  createOrderFn()
-                );
+                const orderId = await createOrderFn();
+                await sessionRef.current.start({
+                  presentationMode: "auto",
+                  orderId: orderId
+                });
               } catch (err) {
                 console.error("[PayPal V6] Start Error:", err);
                 if (onError) onError(err);
