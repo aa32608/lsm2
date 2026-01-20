@@ -22,30 +22,40 @@ if (process.env.RESEND_API_KEY) {
 /* -------------------- FIREBASE SETUP (Render-friendly) -------------------- */
 
 // We now load the full service account JSON from an environment variable
-if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-  console.error("FIREBASE_SERVICE_ACCOUNT_JSON is not set in env!");
-  process.exit(1);
-}
-
 let serviceAccount;
-try {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-} catch (err) {
-  console.error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON:", err);
-  process.exit(1);
+let isFirebaseInitialized = false;
+
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  console.warn("WARNING: FIREBASE_SERVICE_ACCOUNT_JSON is not set in env! Firebase features will be disabled.");
+} else {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+    
+    if (!process.env.FIREBASE_DATABASE_URL) {
+      console.warn("WARNING: FIREBASE_DATABASE_URL is not set in env! Firebase features will be disabled.");
+    } else {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: process.env.FIREBASE_DATABASE_URL,
+      });
+      isFirebaseInitialized = true;
+      console.log("[Firebase] Initialized successfully.");
+    }
+  } catch (err) {
+    console.error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON:", err);
+  }
 }
 
-if (!process.env.FIREBASE_DATABASE_URL) {
-  console.error("FIREBASE_DATABASE_URL is not set in env!");
-  process.exit(1);
-}
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
-});
-
-const db = admin.database();
+const db = isFirebaseInitialized ? admin.database() : {
+  ref: () => ({
+    child: () => ({
+      get: async () => ({ val: () => null, exists: () => false }),
+      set: async () => {},
+      update: async () => {},
+      remove: async () => {}
+    })
+  })
+};
 
 /* --------------------------- EXPRESS SETUP --------------------------- */
 
