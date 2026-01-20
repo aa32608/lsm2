@@ -2,6 +2,10 @@
 
 export const TRANSLATIONS = {
   en: {
+    // Cookie Consent
+    cookieConsentText: "We use cookies to ensure you get the best experience on our website.",
+    accept: "Accept",
+    
     // General
     ",": ",",
     title: "Local Support Market",
@@ -103,6 +107,8 @@ export const TRANSLATIONS = {
     legal: "Legal",
     termsOfService: "Terms of Service",
     privacyPolicy: "Privacy Policy",
+    readTerms: "Read our terms",
+    readPrivacy: "Read our privacy policy",
     reportListing: "Report Listing",
     reportReason: "Reason for reporting",
     spam: "Spam",
@@ -1049,6 +1055,23 @@ export const TRANSLATIONS = {
     help: "Ndihmë",
     faq: "Pyetjet e shpeshta",
     contactUs: "Na kontaktoni",
+    reportListing: "Raporto Listimin",
+    reportReason: "Arsyeja e raportimit",
+    spam: "Spam",
+    inappropriate: "Përmbajtje e papërshtatshme",
+    other: "Tjetër",
+    sendReport: "Dërgo Raportin",
+    reportSuccess: "Listimi u raportua. Faleminderit.",
+    deleteAccount: "Fshi Llogarinë",
+    deleteAccountConfirm: "Jeni të sigurt se dëshironi të fshini llogarinë tuaj? Ky veprim nuk mund të zhbëhet dhe do të fshijë të gjitha listimet tuaja.",
+    dangerZoneDesc: "Veprime të pakthyeshme të llogarisë",
+    deleteAccountWarning: "Pasi të fshini llogarinë tuaj, nuk ka kthim prapa. Ju lutemi të jeni të sigurt.",
+    editProfile: "Ndrysho Profilin",
+    displayName: "Emri i shfaqjes",
+    profileUpdated: "Profili u përditësua me sukses",
+    accountDeleted: "Llogaria juaj është fshirë",
+    dangerZone: "Zona e Rrezikut",
+    report: "Raporto",
     termsOfService: "Kushtet e Shërbimit",
     reviewNotificationSubject: "Recension i ri për oazën tuaj",
     reviewNotificationText: "Përshëndetje, dikush sapo ka lënë një recension për oazën tuaj.",
@@ -1112,7 +1135,33 @@ export const TRANSLATIONS = {
   },
 
   mk: {
+    // Cookie Consent
+    cookieConsentText: "Користиме колачиња за да се осигураме дека ќе го добиете најдоброто искуство на нашата веб-страница.",
+    accept: "Прифати",
+
     // General
+    updateProfileDesc: "Ажурирајте го вашиот јавен профил",
+    displayName: "Име за Приказ",
+    displayNamePlaceholder: "Внесете го вашиот приказен имиња",
+    saveChanges: "Зачувај Промени",
+    accountSettings: "Поставки за Сметка",
+    dangerZone: "Опасна Зона",
+    dangerZoneDesc: "Неповратни акции со сметката",
+    deleteAccount: "Избриши Сметка",
+    deleteAccountWarning: "Откако ќе ја избришете вашата сметка, нема повраток. Ве молиме бидете сигурни.",
+    legal: "Правни",
+    readTerms: "Прочитајте ги нашите услови",
+    readPrivacy: "Прочитајте ја нашата политика за приватност",
+    reportListing: "Пријави оглас",
+    reportReason: "Причина за пријавување",
+    spam: "Спам",
+    inappropriate: "Несоодветна содржина",
+    other: "Друго",
+    sendReport: "Испрати пријава",
+    reportSuccess: "Огласот е пријавен. Ви благодариме.",
+    accountDeleted: "Вашата сметка е избришана",
+    profileUpdated: "Профилот е успешно ажуриран",
+    report: "Пријави",
     ",": ",",
     title: "Локален пазар за поддршка",
     appName: "Локален пазар за поддршка",

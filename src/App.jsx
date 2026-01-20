@@ -42,6 +42,7 @@ import MyListingCard from "./components/MyListingCard";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
+import CookieConsent from "./components/CookieConsent";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -5188,6 +5189,9 @@ export default function App() {
         {/* Legal Modals */}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} t={t} />}
         {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} t={t} />}
+        
+        {/* Cookie Consent */}
+        <CookieConsent t={t} />
 
         {/* FOOTER */}
         <footer className="footer">
