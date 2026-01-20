@@ -8,6 +8,9 @@ export const TRANSLATIONS = {
     
     // General
     ",": ",",
+    reauthRequired: "Please log out and log in again to delete your account.",
+    images: "Images",
+    uploadImages: "Upload Images",
     title: "Local Support Market",
     appName: "Local Support Market",
     bizcallLogo: "BizCall logo",
@@ -596,8 +599,15 @@ export const TRANSLATIONS = {
   },
 
   sq: {
+    // Cookie Consent
+    cookieConsentText: "Ne përdorim cookies për të siguruar që të merrni përvojën më të mirë në faqen tonë të internetit.",
+    accept: "Prano",
+
     // General
     ",": ",",
+    reauthRequired: "Ju lutemi dilni dhe hyni përsëri për të fshirë llogarinë tuaj.",
+    images: "Imazhe",
+    uploadImages: "Ngarko Imazhe",
     title: "Tregu Lokal i Ndihmës",
     appName: "Tregu Lokal i Ndihmës",
     bizcallLogo: "Logo BizCall",
@@ -1140,6 +1150,9 @@ export const TRANSLATIONS = {
     accept: "Прифати",
 
     // General
+    reauthRequired: "Ве молиме одјавете се и најавете се повторно за да ја избришете вашата сметка.",
+    images: "Слики",
+    uploadImages: "Вчитај слики",
     updateProfileDesc: "Ажурирајте го вашиот јавен профил",
     displayName: "Име за Приказ",
     displayNamePlaceholder: "Внесете го вашиот приказен имиња",
