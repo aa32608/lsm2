@@ -74,8 +74,8 @@ export default function PayPalV6({
     if (!res.ok) throw new Error(data.error || "Order creation failed");
     
     console.log("[PayPal V6] Order Created:", data.orderID);
-    // SDK v6 expects a Promise that resolves to { orderId: "..." }
-    return { orderId: data.orderID };
+    // Return the Promise that resolves to the order ID string
+    return data.orderID;
   };
 
   // Initialize SDK and Session
