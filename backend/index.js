@@ -123,8 +123,31 @@ async function generateAccessToken() {
 
 app.get("/api/paypal/token", async (req, res) => {
   try {
+    // 1. Get basic Access Token
     const accessToken = await generateAccessToken();
-    res.json({ accessToken });
+
+    // 2. Exchange it for a Client Token (JWT)
+    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
+    const url = env === "sandbox"
+      ? "https://api-m.sandbox.paypal.com/v1/identity/generate-token"
+      : "https://api-m.paypal.com/v1/identity/generate-token";
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("[PayPal] Client Token Error:", JSON.stringify(data, null, 2));
+      throw new Error("Failed to generate client token");
+    }
+
+    // Return the client_token (JWT)
+    res.json({ accessToken: data.client_token });
   } catch (err) {
     console.error("[PayPal] Token Endpoint Error:", err);
     res.status(500).json({ error: "Failed to generate token" });
