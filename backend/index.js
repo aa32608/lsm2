@@ -109,6 +109,18 @@ async function generateAccessToken() {
   }
 }
 
+/* ----------------------- GET PAYPAL TOKEN (for v6 SDK) ---------------- */
+
+app.get("/api/paypal/token", async (req, res) => {
+  try {
+    const accessToken = await generateAccessToken();
+    res.json({ accessToken });
+  } catch (err) {
+    console.error("[PayPal] Token Endpoint Error:", err);
+    res.status(500).json({ error: "Failed to generate token" });
+  }
+});
+
 /* ----------------------- CREATE PAYPAL ORDER ------------------------ */
 
 app.post("/api/paypal/create-order", async (req, res) => {

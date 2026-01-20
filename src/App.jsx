@@ -24,11 +24,8 @@ import {
   deleteUser,
 } from "firebase/auth";
 
-import { 
-  PayPalScriptProvider, 
-  PayPalButtons
-} from "@paypal/react-paypal-js";
 import { AnimatePresence, motion } from "framer-motion";
+import PayPalV6 from "./components/PayPalV6";
 import "./App.css";
 
 // Lazy loaded components
@@ -49,19 +46,6 @@ const API_BASE =
   (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
     ? "http://localhost:5000"
     : "https://lsm-wozo.onrender.com");
-
-const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "";
-
-const paypalOptions = {
-  "client-id": PAYPAL_CLIENT_ID,
-  currency: "EUR",
-  intent: "capture",
-  components: "buttons",
-  // "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
-  "locale": "en_MK",
-  "data-sdk-integration-source": "react-paypal-js",
-  vault: false
-};
 
 /* Data */
 const categories = [
@@ -2251,7 +2235,7 @@ export default function App() {
   };
 
   return (
-    <PayPalScriptProvider options={paypalOptions}>
+    <>
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -4176,74 +4160,24 @@ export default function App() {
                     ) : paymentIntent && (
                       <div className="payment-options">
                         <div className="paypal-button-container">
-                        <PayPalButtons
-                          style={{ layout: "vertical", color: "gold", shape: "pill", label: "paypal" }}
-                          createOrder={async () => {
-                            if (isCreatingOrder.current) return;
-                            isCreatingOrder.current = true;
-                            console.log("[PAYPAL_DEBUG] createOrder triggered");
-                            try {
-                              if (!paymentIntent || !paymentIntent.listingId) {
-                                throw new Error("Missing listingId in paymentIntent");
-                              }
-                              const returnUrlObj = new URL(window.location.origin + window.location.pathname);
-                              returnUrlObj.searchParams.set("paypal_return", "true");
-                              returnUrlObj.searchParams.set("listingId", paymentIntent.listingId);
-                              returnUrlObj.searchParams.set("paymentType", paymentIntent.type);
-                              if (paymentIntent.type === "extend") {
-                                returnUrlObj.searchParams.set("plan", extendPlan);
-                              }
-
-                              if (paymentIntent.type === "create" || paymentIntent.type === "create_listing") {
-                                localStorage.setItem("pending_listing_data", JSON.stringify({
-                                  ...form,
-                                  plan: plan
-                                }));
-                              }
-
-                              const body = { 
-                                listingId: paymentIntent.listingId, 
-                                amount: paymentIntent.amount, 
-                                action: paymentIntent.type === "extend" ? "extend" : "create_listing",
-                                returnUrl: returnUrlObj.toString(),
-                                cancelUrl: window.location.href
-                              };
-                              console.log("[PAYPAL_DEBUG] createOrder request body:", body);
-                              
-                              const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify(body),
-                              });
-                              
-                              console.log("[PAYPAL_DEBUG] createOrder fetch status:", res.status);
-                              const data = await res.json();
-                              
-                              if (!res.ok) {
-                                console.error("[PAYPAL_DEBUG] createOrder error response:", data);
-                                throw new Error(data.error || "Order creation failed");
-                              }
-                              
-                              console.log("[PAYPAL_DEBUG] createOrder success, orderID:", data.orderID);
-                              return data.orderID;
-                            } catch (err) {
-                              console.error("[PAYPAL_DEBUG] createOrder exception:", err);
-                              showMessage(t("paypalError") + ": " + err.message, "error");
-                              throw err;
-                            } finally {
-                              isCreatingOrder.current = false;
-                            }
-                          }}
-                          onApprove={async (data) => {
-                            console.log("[PAYPAL_DEBUG] onApprove triggered, data:", data);
-                            const { orderID } = data;
+                        <PayPalV6
+                          amount={paymentIntent.amount}
+                          listingId={paymentIntent.listingId}
+                          type={paymentIntent.type}
+                          plan={extendPlan}
+                          formData={form}
+                          onSuccess={async (data) => {
+                            console.log("[PAYPAL_DEBUG] onSuccess triggered, data:", data);
+                            // v6 data object contains orderId
+                            const id = data.orderID || data.orderId;
+                            
                             try {
                               if (paymentIntent.type === "extend") {
                                 console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
-                                await handleServerCaptureForExtend(orderID, paymentIntent.listingId, extendPlan);
+                                await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan);
                               } else {
                                 console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
-                                await handleServerCapture(orderID, paymentIntent.listingId);
+                                await handleServerCapture(id, paymentIntent.listingId);
                               }
                             } catch (err) {
                               console.error("[PAYPAL_DEBUG] onApprove processing error:", err);
@@ -5339,6 +5273,6 @@ export default function App() {
         <div id="recaptcha-signup" style={{ display: "none" }} />
         <div id="recaptcha-container" style={{ display: "none" }} />
       </div>
-    </PayPalScriptProvider>
+    </>
   );
 }
