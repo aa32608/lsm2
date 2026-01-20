@@ -28,8 +28,11 @@ export default function PayPalV6({
     
     const script = document.createElement("script");
     script.id = "paypal-sdk-v6";
-    // Using sandbox as per instructions. For production, this should be configurable.
-    script.src = "https://www.sandbox.paypal.com/web-sdk/v6/core";
+    // Using live or sandbox based on backend token, but for v6 script URL:
+    // "https://www.paypal.com/web-sdk/v6/core" for live
+    // "https://www.sandbox.paypal.com/web-sdk/v6/core" for sandbox
+    // Ideally this should be dynamic or env var driven. For now switching to live as requested.
+    script.src = "https://www.paypal.com/web-sdk/v6/core";
     script.async = true;
     script.onload = () => setIsReady(true);
     script.onerror = () => setError("Failed to load PayPal SDK");
