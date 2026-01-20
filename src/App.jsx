@@ -26,7 +26,7 @@ import {
 
 import { AnimatePresence, motion } from "framer-motion";
 import PayPalV6 from "./components/PayPalV6";
-import StripePayment from "./components/StripePayment";
+import TwoCheckoutPayment from "./components/TwoCheckoutPayment";
 import "./App.css";
 
 // Lazy loaded components
@@ -4180,12 +4180,11 @@ export default function App() {
                         </div>
 
                         {paymentMethod === 'card' ? (
-                          <StripePayment 
+                          <TwoCheckoutPayment 
                             amount={paymentIntent.amount}
                             onSuccess={async () => {
-                              // Simulate successful payment capture for now
-                              // In real integration this would verify the Stripe PaymentIntent
-                              const mockOrderId = "STRIPE_DEMO_" + Date.now(); 
+                              // Simulate successful payment capture
+                              const mockOrderId = "2CO_DEMO_" + Date.now(); 
                               try {
                                 if (paymentIntent.type === "extend") {
                                   await handleServerCaptureForExtend(mockOrderId, paymentIntent.listingId, extendPlan);
@@ -4193,7 +4192,7 @@ export default function App() {
                                   await handleServerCapture(mockOrderId, paymentIntent.listingId);
                                 }
                               } catch (err) {
-                                console.error("Stripe payment capture error:", err);
+                                console.error("Payment capture error:", err);
                                 showMessage(t("error") + ": " + err.message, "error");
                               }
                             }}

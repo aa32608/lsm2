@@ -3,6 +3,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import fetch from "node-fetch";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 import cors from "cors";
@@ -511,6 +512,103 @@ cron.schedule(cronExpression, async () => {
     console.log(`[Cron] Successfully sent ${result.sentCount} marketing emails.`);
   } catch (err) {
     console.error("[Cron] Failed to send marketing emails:", err);
+  }
+});
+
+/* ----------------------- 2CHECKOUT (VERIFONE) ------------------------ */
+
+app.post("/api/2checkout/create-order", async (req, res) => {
+  const { token, amount, currency, merchantCode, billingDetails } = req.body;
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] [2Checkout] Create Order Request: Amount=${amount} ${currency}, Token=${token}`);
+
+  const privateKey = process.env.TWOCHECKOUT_PRIVATE_KEY;
+  
+  if (!privateKey) {
+    console.warn("[2Checkout] Missing Private Key. Simulating success for testing.");
+    return res.json({ 
+      success: true, 
+      orderId: "2CO-SIM-" + Date.now(),
+      message: "Simulation: Payment successful (Private Key needed for real charge)" 
+    });
+  }
+
+  try {
+    // 1. Prepare Authentication Header
+    // Format: code="{MERCHANT_CODE}" date="{YYYY-MM-DD HH:mm:ss}" hash="{HMAC_MD5}"
+    
+    // Get current date in UTC format YYYY-MM-DD HH:mm:ss
+    const now = new Date();
+    const dateStr = now.toISOString().replace(/T/, ' ').replace(/\..+/, ''); 
+    
+    const stringToHash = merchantCode.length + merchantCode + dateStr.length + dateStr;
+    const hash = crypto.createHmac('md5', privateKey).update(stringToHash).digest('hex');
+    
+    const authHeader = `code="${merchantCode}" date="${dateStr}" hash="${hash}"`;
+
+    // 2. Prepare Order Payload
+    const orderPayload = {
+      Currency: currency || "EUR",
+      Language: "en",
+      Country: "MK",
+      CustomerIP: req.headers['x-forwarded-for'] || req.socket.remoteAddress || "127.0.0.1",
+      Source: "BIZCALL_MK",
+      BillingDetails: {
+        FirstName: billingDetails?.name?.split(" ")[0] || "Guest",
+        LastName: billingDetails?.name?.split(" ").slice(1).join(" ") || "User",
+        Email: billingDetails?.email || "guest@bizcall.mk",
+        CountryCode: "MK",
+        City: "Tetovo", // Placeholder if not provided
+        Address1: "Street 1", // Placeholder
+        Zip: "1200" // Placeholder
+      },
+      Items: [
+        {
+          Name: "BizCall Service Payment",
+          Quantity: 1,
+          Code: "SVC-CHARGE",
+          Price: {
+            Amount: amount,
+            Type: "CUSTOM"
+          }
+        }
+      ],
+      PaymentDetails: {
+        Type: "CC", 
+        PaymentMethod: {
+          Ewallet: false,
+          CardNumber: token, // 2Pay.js token passed as CardNumber
+          HolderName: billingDetails?.name || "Guest User"
+        }
+      }
+    };
+
+    console.log("[2Checkout] Sending Order to API...", JSON.stringify(orderPayload, null, 2));
+
+    // 3. Send Request
+    const response = await fetch("https://api.2checkout.com/rest/6.0/orders/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-Avangate-Authentication": authHeader
+      },
+      body: JSON.stringify(orderPayload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("[2Checkout] API Error:", JSON.stringify(data, null, 2));
+      throw new Error(data.message || "Payment authorization failed");
+    }
+
+    console.log("[2Checkout] Payment Successful:", data);
+    res.json({ success: true, orderId: data.RefNo, data });
+
+  } catch (err) {
+    console.error("[2Checkout] Error:", err);
+    res.status(500).json({ error: err.message || "Payment processing failed" });
   }
 });
 

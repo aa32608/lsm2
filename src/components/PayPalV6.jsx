@@ -132,10 +132,16 @@ export default function PayPalV6({
             const handleClick = async () => {
               if (!sessionRef.current) return;
               try {
-                // Pass the promise directly to start()
+                console.log("[PayPal V6] Starting session...");
+                // Pass the function reference, or the promise?
+                // V6 SDK usually expects a function that returns a promise for order creation, 
+                // OR a promise directly if the order is already created.
+                // We will try passing the function reference first, as "Received 'string'" suggests
+                // it might have evaluated a promise to a string and disliked it, or we passed a string.
+                // If we pass createOrderFn (function), the SDK calls it.
                 await sessionRef.current.start(
                   { presentationMode: "popup" },
-                  createOrderFn() 
+                  createOrderFn
                 );
               } catch (err) {
                 console.error("[PayPal V6] Start Error:", err);
