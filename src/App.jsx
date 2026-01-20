@@ -409,7 +409,7 @@ export default function App() {
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedTab, setSelectedTabState] = useState("main"); // myListings | account | allListings
-  const [viewMode, setViewMode] = useState("grid"); // "grid" | "list"
+  const [viewMode, setViewMode] = useState("list"); // "grid" | "list"
   const [showPostForm, setShowPostForm] = useState(false);
 
   // Wrapper to scroll to top when tab changes
