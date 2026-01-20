@@ -3210,9 +3210,17 @@ body {
 
 .listing-grid-list .listing-card {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 280px 1fr auto;
   gap: 20px;
   padding: 20px;
+  align-items: start;
+}
+
+.listing-grid-list .listing-card-image-container {
+  width: 100%; /* Fills the 280px column */
+  height: 200px;
+  margin-bottom: 0;
+  border-radius: 8px;
 }
 
 .listing-grid-list .listing-icon-bubble {
@@ -3378,6 +3386,10 @@ body {
     flex-direction: column;
     gap: .5px;
     padding: 1px;
+  }
+
+  .listing-grid-list .listing-card-image-container {
+    height: 160px;
   }
 
   .listing-grid-list .listing-icon-bubble {

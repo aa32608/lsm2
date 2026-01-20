@@ -21,6 +21,7 @@ import {
   updatePhoneNumber,
   PhoneAuthProvider,
   updateProfile,
+  deleteUser,
 } from "firebase/auth";
 
 import { 
@@ -40,6 +41,7 @@ import ListingCard from "./components/ListingCard";
 import MyListingCard from "./components/MyListingCard";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
+import { TermsModal, PrivacyModal } from "./components/LegalModals";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -428,6 +430,12 @@ export default function App() {
   const [extendPlan, setExtendPlan] = useState("1");
 
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("spam");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportingListingId, setReportingListingId] = useState(null);
 
   /* Auth modal */
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -587,6 +595,78 @@ export default function App() {
       setPasswordForm((f) => ({ ...f, currentPassword: "" }));
     }
   };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm(t("deleteAccountConfirm"))) return;
+    
+    try {
+      setLoading(true);
+      const uid = user.uid;
+      // Delete from DB first (optional, but good practice if rules allow)
+      // await remove(dbRef(db, `users/${uid}`)); // Keeping user data for safety/logs usually, but here we can keep it simple.
+      // Actually, let's just delete the Auth user. The DB cleanup might need admin privs or specific rules.
+      
+      await deleteUser(user);
+      
+      showMessage(t("accountDeleted"), "success");
+      setUser(null);
+      setUserProfile(null);
+      setSelectedTab("main");
+    } catch (err) {
+      console.error("Delete account error:", err);
+      if (err.code === 'auth/requires-recent-login') {
+        showMessage(t("reauthRequired") || "Please log out and log in again to delete your account.", "error");
+      } else {
+        showMessage(err.message, "error");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!displayName.trim()) return;
+    
+    try {
+      setLoading(true);
+      await updateProfile(user, { displayName: displayName.trim() });
+      await update(dbRef(db, `users/${user.uid}`), { name: displayName.trim() });
+      
+      setUserProfile(prev => ({ ...prev, name: displayName.trim() }));
+      showMessage(t("profileUpdated"), "success");
+    } catch (err) {
+      console.error(err);
+      showMessage(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (!reportingListingId) return;
+    
+    try {
+      const reportRef = push(dbRef(db, "reports"));
+      await set(reportRef, {
+        listingId: reportingListingId,
+        reason: reportReason,
+        description: reportDescription,
+        reporterId: user ? user.uid : "anonymous",
+        createdAt: Date.now()
+      });
+      
+      showMessage(t("reportSuccess"), "success");
+      setShowReportModal(false);
+      setReportReason("spam");
+      setReportDescription("");
+      setReportingListingId(null);
+    } catch (err) {
+      console.error(err);
+      showMessage(t("error") + ": " + err.message, "error");
+    }
+  };
+
 
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -1209,8 +1289,8 @@ export default function App() {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 800;
-          const MAX_HEIGHT = 600;
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
           let width = img.width;
           let height = img.height;
 
@@ -2701,11 +2781,58 @@ export default function App() {
                                   </div>
                                   <span className="quick-link-arrow">→</span>
                                 </button>
+                                <button 
+                                  className="account-quick-link-item"
+                                  onClick={() => setShowTerms(true)}
+                                >
+                                  <span className="quick-link-icon">📜</span>
+                                  <div className="quick-link-content">
+                                    <p className="quick-link-title">{t("termsOfService")}</p>
+                                    <p className="quick-link-subtitle">{t("readTerms") || "Read our terms"}</p>
+                                  </div>
+                                  <span className="quick-link-arrow">→</span>
+                                </button>
+                                <button 
+                                  className="account-quick-link-item"
+                                  onClick={() => setShowPrivacy(true)}
+                                >
+                                  <span className="quick-link-icon">🔒</span>
+                                  <div className="quick-link-content">
+                                    <p className="quick-link-title">{t("privacyPolicy")}</p>
+                                    <p className="quick-link-subtitle">{t("readPrivacy") || "Read our privacy policy"}</p>
+                                  </div>
+                                  <span className="quick-link-arrow">→</span>
+                                </button>
                               </div>
                             </div>
                           </div>
 
                           <div className="account-column">
+                            {/* Edit Profile Card */}
+                            <div className="card account-card-enhanced account-profile-section">
+                              <div className="account-card-header">
+                                <h3 className="account-card-title">👤 {t("editProfile")}</h3>
+                                <p className="account-card-subtitle">{t("updateProfileDesc") || "Update your public profile information"}</p>
+                              </div>
+                              <form className="account-form-enhanced" onSubmit={handleUpdateProfile}>
+                                <div className="account-form-field">
+                                  <label className="account-form-label">{t("displayName")}</label>
+                                  <input
+                                    type="text"
+                                    className="input account-form-input"
+                                    value={displayName}
+                                    onChange={(e) => setDisplayName(e.target.value)}
+                                    placeholder={t("displayNamePlaceholder") || "Enter your display name"}
+                                  />
+                                </div>
+                                <div className="account-form-actions">
+                                  <button type="submit" className="btn small" disabled={loading}>
+                                    {loading ? t("saving") : t("updateProfile")}
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+
                             {/* Security Settings Card */}
                             <div className="card account-card-enhanced account-security-section">
                               <div className="account-card-header">
@@ -2828,6 +2955,26 @@ export default function App() {
                                     </div>
                                   </label>
                                 </div>
+                              </div>
+                            </div>
+
+                            {/* Danger Zone */}
+                            <div className="card account-card-enhanced account-danger-zone" style={{ marginTop: '20px', borderColor: '#fee2e2' }}>
+                              <div className="account-card-header">
+                                <h3 className="account-card-title" style={{ color: '#ef4444' }}>⚠️ {t("dangerZone")}</h3>
+                                <p className="account-card-subtitle">{t("dangerZoneDesc") || "Irreversible account actions"}</p>
+                              </div>
+                              <div className="account-form-section">
+                                <p className="account-form-section-desc" style={{ marginBottom: '16px' }}>
+                                  {t("deleteAccountWarning") || "Once you delete your account, there is no going back. Please be certain."}
+                                </p>
+                                <button 
+                                  className="btn btn-danger full-width"
+                                  onClick={handleDeleteAccount}
+                                  style={{ backgroundColor: '#ef4444', color: 'white' }}
+                                >
+                                  {t("deleteAccount")}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -4765,6 +4912,16 @@ export default function App() {
                           <button className="quick-action-btn ghost" onClick={() => handleShareListing(selectedListing)}>
                             🔗 {t("share")}
                           </button>
+                          <button 
+                            className="quick-action-btn ghost" 
+                            style={{ color: '#ef4444', borderColor: '#fee2e2' }}
+                            onClick={() => {
+                              setReportingListingId(selectedListing.id);
+                              setShowReportModal(true);
+                            }}
+                          >
+                            🚩 {t("report")}
+                          </button>
                         </div>
                       </div>
 
@@ -4872,6 +5029,10 @@ export default function App() {
                           {selectedListing.locationData?.mapsUrl && (
                             <button className="quick-action-btn ghost" onClick={() => window.open(selectedListing.locationData.mapsUrl, "_blank")}>🗺️ {t("openInMaps")}</button>
                           )}
+                          <button className="quick-action-btn ghost" onClick={() => {
+                            setReportingListingId(selectedListing.id);
+                            setShowReportModal(true);
+                          }}>🚩 {t("report")}</button>
                         </div>
                       </div>
 
@@ -4964,6 +5125,69 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Report Listing Modal */}
+        <AnimatePresence>
+          {showReportModal && (
+            <motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowReportModal(false)}
+            >
+              <motion.div
+                className="modal"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                style={{ maxWidth: '500px' }}
+              >
+                <div className="modal-header">
+                  <h3 className="modal-title">{t("reportListing")}</h3>
+                  <button className="icon-btn" onClick={() => setShowReportModal(false)}>✕</button>
+                </div>
+                <div className="modal-body" style={{ padding: '20px' }}>
+                  <div className="field-group">
+                    <label className="field-label">{t("reportReason")}</label>
+                    <select
+                      className="select"
+                      value={reportReason}
+                      onChange={(e) => setReportReason(e.target.value)}
+                    >
+                      <option value="spam">{t("spam")}</option>
+                      <option value="inappropriate">{t("inappropriate")}</option>
+                      <option value="other">{t("other")}</option>
+                    </select>
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">{t("description")}</label>
+                    <textarea
+                      className="input"
+                      rows="4"
+                      value={reportDescription}
+                      onChange={(e) => setReportDescription(e.target.value)}
+                      placeholder={t("reportReason")}
+                    />
+                  </div>
+                  <div className="modal-actions">
+                    <button className="btn btn-ghost" onClick={() => setShowReportModal(false)}>
+                      {t("cancel")}
+                    </button>
+                    <button className="btn" onClick={handleReportSubmit}>
+                      {t("sendReport")}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Legal Modals */}
+        {showTerms && <TermsModal onClose={() => setShowTerms(false)} t={t} />}
+        {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} t={t} />}
 
         {/* FOOTER */}
         <footer className="footer">
