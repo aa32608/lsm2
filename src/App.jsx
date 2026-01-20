@@ -1822,12 +1822,24 @@ export default function App() {
       return;
     }
 
+    let authorName = user?.displayName;
+    if (!authorName && user?.uid) {
+      try {
+        const snapshot = await get(dbRef(db, `users/${user.uid}/name`));
+        if (snapshot.exists()) {
+          authorName = snapshot.val();
+        }
+      } catch (e) {
+        console.error("Error fetching user name for feedback:", e);
+      }
+    }
+
     const entry = {
       rating,
       comment,
       createdAt: Date.now(),
       userId: user?.uid || null,
-      author: user?.displayName || user?.email || user?.phoneNumber || null,
+      author: authorName || (user?.email ? user.email.split('@')[0] : "User"),
     };
 
     setFeedbackSaving(true);

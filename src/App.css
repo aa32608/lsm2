@@ -3109,7 +3109,7 @@ body {
 .listing-card-image-container {
   position: relative;
   width: 100%;
-  aspect-ratio: 2.5/1;
+  height: 160px; /* Fixed height for consistency */
   overflow: hidden;
   background: #f1f5f9;
   border-radius: 12px;
@@ -7537,7 +7537,8 @@ input:checked + .toggle-slider:before {
     grid-template-columns: 1.8fr 1fr;
     gap: 32px;
     align-items: start;
-    height: 100%;
+    height: auto;
+    padding-bottom: 60px;
   }
 }
 
