@@ -13,6 +13,7 @@ export default function PayPalV6({
   onCancel 
 }) {
   const [error, setError] = useState(null);
+  const [proxyError, setProxyError] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const buttonRef = useRef(null);
   const sessionRef = useRef(null);
@@ -138,6 +139,11 @@ export default function PayPalV6({
                 );
               } catch (err) {
                 console.error("[PayPal V6] Start Error:", err);
+                // Check for IDE proxy error
+                if (err.toString().includes("property 'replace' is a read-only")) {
+                  setProxyError(true);
+                  return;
+                }
                 if (onError) onError(err);
               }
             };
@@ -164,6 +170,16 @@ export default function PayPalV6({
 
 
   if (error) return <div className="text-red-500 text-sm p-2 bg-red-50 rounded">Error: {error}</div>;
+
+  if (proxyError) {
+    return (
+      <div className="text-amber-600 text-sm p-4 bg-amber-50 rounded border border-amber-200">
+        <p className="font-bold mb-2">Development Environment Limitation</p>
+        <p>The PayPal payment popup cannot be opened inside this preview window due to security restrictions (Proxy Error).</p>
+        <p className="mt-2">Please open <a href={window.location.href} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">this page in a new browser tab</a> to complete the payment.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex justify-center py-2">
