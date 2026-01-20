@@ -130,10 +130,13 @@ export default function PayPalV6({
             const handleClick = async () => {
               if (!sessionRef.current) return;
               try {
-                const orderId = await createOrderFn();
-                await sessionRef.current.start({
-                  presentationMode: "auto",
-                }, orderId);
+                // Pass the promise directly to start()
+                // Do NOT await it here, and do NOT pass the resolved string.
+                // The SDK wants the Promise itself.
+                await sessionRef.current.start(
+                  { presentationMode: "auto" },
+                  createOrderFn() 
+                );
               } catch (err) {
                 console.error("[PayPal V6] Start Error:", err);
                 if (onError) onError(err);
