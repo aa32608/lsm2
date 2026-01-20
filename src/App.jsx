@@ -26,6 +26,7 @@ import {
 
 import { AnimatePresence, motion } from "framer-motion";
 import PayPalV6 from "./components/PayPalV6";
+import StripePayment from "./components/StripePayment";
 import "./App.css";
 
 // Lazy loaded components
@@ -656,6 +657,7 @@ export default function App() {
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
+  const [paymentMethod, setPaymentMethod] = useState("card"); // "paypal" | "card" - default to card as requested
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
   const isCreatingOrder = React.useRef(false);
@@ -4159,42 +4161,82 @@ export default function App() {
                       </div>
                     ) : paymentIntent && (
                       <div className="payment-options">
-                        <div className="paypal-button-container">
-                        <PayPalV6
-                          amount={paymentIntent.amount}
-                          listingId={paymentIntent.listingId}
-                          type={paymentIntent.type}
-                          plan={extendPlan}
-                          formData={form}
-                          onSuccess={async (data) => {
-                            console.log("[PAYPAL_DEBUG] onSuccess triggered, data:", data);
-                            // v6 data object contains orderId
-                            const id = data.orderID || data.orderId;
-                            
-                            try {
-                              if (paymentIntent.type === "extend") {
-                                console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
-                                await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan);
-                              } else {
-                                console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
-                                await handleServerCapture(id, paymentIntent.listingId);
-                              }
-                            } catch (err) {
-                              console.error("[PAYPAL_DEBUG] onApprove processing error:", err);
-                              showMessage(t("paypalError") + ": " + err.message, "error");
-                            }
-                          }}
-                          onCancel={() => {
-                            console.log("[PAYPAL_DEBUG] Payment cancelled by user");
-                            isCreatingOrder.current = false;
-                          }}
-                          onError={(err) => {
-                            console.error("[PAYPAL_DEBUG] SDK error callback:", err);
-                            showMessage(t("paypalError") + ": " + (err.message || "Unknown error"), "error");
-                            isCreatingOrder.current = false;
-                          }}
-                        />
+                        {/* Payment Method Toggle */}
+                        <div className="payment-method-toggle" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                          <button 
+                            className={`btn ${paymentMethod === 'card' ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={() => setPaymentMethod('card')}
+                          >
+                            💳 {t("card") || "Card"}
+                          </button>
+                          <button 
+                            className={`btn ${paymentMethod === 'paypal' ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={() => setPaymentMethod('paypal')}
+                          >
+                            <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>Pay</span><span style={{ fontWeight: 'bold' }}>Pal</span>
+                          </button>
                         </div>
+
+                        {paymentMethod === 'card' ? (
+                          <StripePayment 
+                            amount={paymentIntent.amount}
+                            onSuccess={async () => {
+                              // Simulate successful payment capture for now
+                              // In real integration this would verify the Stripe PaymentIntent
+                              const mockOrderId = "STRIPE_DEMO_" + Date.now(); 
+                              try {
+                                if (paymentIntent.type === "extend") {
+                                  await handleServerCaptureForExtend(mockOrderId, paymentIntent.listingId, extendPlan);
+                                } else {
+                                  await handleServerCapture(mockOrderId, paymentIntent.listingId);
+                                }
+                              } catch (err) {
+                                console.error("Stripe payment capture error:", err);
+                                showMessage(t("error") + ": " + err.message, "error");
+                              }
+                            }}
+                            onError={(err) => showMessage(err.message, "error")}
+                          />
+                        ) : (
+                          <div className="paypal-button-container">
+                          <PayPalV6
+                            amount={paymentIntent.amount}
+                            listingId={paymentIntent.listingId}
+                            type={paymentIntent.type}
+                            plan={extendPlan}
+                            formData={form}
+                            onSuccess={async (data) => {
+                              console.log("[PAYPAL_DEBUG] onSuccess triggered, data:", data);
+                              // v6 data object contains orderId
+                              const id = data.orderID || data.orderId;
+                              
+                              try {
+                                if (paymentIntent.type === "extend") {
+                                  console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
+                                  await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan);
+                                } else {
+                                  console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
+                                  await handleServerCapture(id, paymentIntent.listingId);
+                                }
+                              } catch (err) {
+                                console.error("[PAYPAL_DEBUG] onApprove processing error:", err);
+                                showMessage(t("paypalError") + ": " + err.message, "error");
+                              }
+                            }}
+                            onCancel={() => {
+                              console.log("[PAYPAL_DEBUG] Payment cancelled by user");
+                              isCreatingOrder.current = false;
+                            }}
+                            onError={(err) => {
+                              console.error("[PAYPAL_DEBUG] SDK error callback:", err);
+                              showMessage(t("paypalError") + ": " + (err.message || "Unknown error"), "error");
+                              isCreatingOrder.current = false;
+                            }}
+                          />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
