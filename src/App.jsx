@@ -1403,7 +1403,7 @@ export default function App() {
         await update(dbRef(db, `listings/${listingId}`), { status: "expired" });
         await deleteListing(listingId);
       }
-    }, 60000);
+    }, 300000); // 5 minutes
   }
 
   /* Create listing + open payment modal */
@@ -1471,6 +1471,54 @@ export default function App() {
       return;
     }
     setIsProcessingPayment(true);
+
+    const finalizeSuccess = async () => {
+      console.log("[PAYPAL_DEBUG] handleServerCapture success, updating Firebase...");
+      const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
+      const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
+      const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
+
+      await update(dbRef(db, `listings/${listingId}`), {
+        ...form,
+        status: "verified",
+        pricePaid: priceMap[plan],
+        contact: normalizedContact,
+        offerprice: offerpriceStr || "",
+        location: finalLocation,
+        locationCity: form.locationCity,
+        locationExtra: form.locationExtra,
+        plan,
+        price: priceMap[plan],
+        id: listingId,
+        userId: user?.uid || null,
+        userEmail: user?.email || null,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + parseInt(plan) * 30 * 24 * 60 * 60 * 1000,
+      });
+      console.log("[PAYPAL_DEBUG] Firebase updated successfully.");
+      showMessage(t("paymentComplete"), "success");
+      setPendingOrder(null);
+      setPaymentModalOpen(false);
+      setPaymentIntent(null);
+      setForm({
+        step: 1,
+        name: "",
+        category: "",
+        locationCity: "",
+        locationExtra: "",
+        locationData: null,
+        description: "",
+        contact: "",
+        offerMin: "",
+        offerMax: "",
+        offerCurrency: "EUR",
+        offerprice: "",
+        tags: "",
+        socialLink: "",
+        imagePreview: null,
+      });
+    };
+
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
@@ -1481,56 +1529,44 @@ export default function App() {
       const json = await resp.json();
 
       if (json.ok) {
-        console.log("[PAYPAL_DEBUG] handleServerCapture success, updating Firebase...");
-        const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
-        const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
-        const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
-
-        await update(dbRef(db, `listings/${listingId}`), {
-          ...form,
-          status: "verified",
-          pricePaid: priceMap[plan],
-          contact: normalizedContact,
-          offerprice: offerpriceStr || "",
-          location: finalLocation,
-          locationCity: form.locationCity,
-          locationExtra: form.locationExtra,
-          plan,
-          price: priceMap[plan],
-          id: listingId,
-          userId: user?.uid || null,
-          userEmail: user?.email || null,
-          createdAt: Date.now(),
-          expiresAt: Date.now() + parseInt(plan) * 30 * 24 * 60 * 60 * 1000,
-        });
-        console.log("[PAYPAL_DEBUG] Firebase updated successfully.");
-        showMessage(t("paymentComplete"), "success");
-        setPendingOrder(null);
-        setPaymentModalOpen(false);
-        setPaymentIntent(null);
-        setForm({
-          step: 1,
-          name: "",
-          category: "",
-          locationCity: "",
-          locationExtra: "",
-          locationData: null,
-          description: "",
-          contact: "",
-          offerMin: "",
-          offerMax: "",
-          offerCurrency: "EUR",
-          offerprice: "",
-          tags: "",
-          socialLink: "",
-          imagePreview: null,
-        });
+        await finalizeSuccess();
       } else {
         console.error("[PAYPAL_DEBUG] handleServerCapture error from backend:", json.error);
+        
+        // Fallback: Verify order status if capture failed (e.g. timeout, duplicate)
+        if (json.error !== "Payment declined. Please try a different card.") {
+           console.log("[PAYPAL_DEBUG] Attempting to verify order status as fallback...");
+           try {
+             const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
+             const verifyJson = await verifyResp.json();
+             if (verifyJson.ok) {
+                console.log("[PAYPAL_DEBUG] Order verified as COMPLETED. Proceeding with success logic.");
+                await finalizeSuccess();
+                return;
+             }
+           } catch (verifyErr) {
+             console.error("[PAYPAL_DEBUG] Verification fallback failed:", verifyErr);
+           }
+        }
+        
         throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
       console.error("[PAYPAL_DEBUG] handleServerCapture exception:", err);
+      // Try verify one last time if it was a fetch exception (network error)
+      try {
+          console.log("[PAYPAL_DEBUG] Exception occurred, attempting verification fallback...");
+          const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
+          const verifyJson = await verifyResp.json();
+          if (verifyJson.ok) {
+            console.log("[PAYPAL_DEBUG] Order verified as COMPLETED after exception. Proceeding.");
+            await finalizeSuccess();
+            return;
+          }
+      } catch (e) {
+         console.error("[PAYPAL_DEBUG] Final verification attempt failed:", e);
+      }
+      
       showMessage(t("error") + " " + err.message, "error");
     } finally {
       setIsProcessingPayment(false);
@@ -1570,6 +1606,34 @@ export default function App() {
       return;
     }
     setIsProcessingPayment(true);
+
+    const finalizeSuccessExtend = async () => {
+      console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend success, updating Firebase...");
+      const snapshot = await fetchListing(listingId);
+      const currentExpiry = snapshot?.expiresAt || Date.now();
+      const currentStatus = snapshot?.status || "verified";
+
+      const effectivePlanKey = planKeyFromUI || String(snapshot?.plan || "1");
+      const planMonths = parseInt(effectivePlanKey, 10) || 1;
+
+      const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
+        ? Date.now() 
+        : currentExpiry;
+
+      const newExpiry = base + planMonths * 30 * 24 * 60 * 60 * 1000;
+
+      await update(dbRef(db, `listings/${listingId}`), {
+        expiresAt: newExpiry,
+        lastExtendPlan: effectivePlanKey,
+      });
+
+      console.log("[PAYPAL_DEBUG] Firebase updated successfully (extend).");
+      showMessage(t("extendSuccess"), "success");
+      setExtendTarget(null);
+      setPaymentModalOpen(false);
+      setPaymentIntent(null);
+    };
+
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
         method: "POST",
@@ -1580,36 +1644,43 @@ export default function App() {
       const json = await resp.json();
 
       if (json.ok) {
-        console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend success, updating Firebase...");
-        const snapshot = await fetchListing(listingId);
-        const currentExpiry = snapshot?.expiresAt || Date.now();
-        const currentStatus = snapshot?.status || "verified";
-
-        const effectivePlanKey = planKeyFromUI || String(snapshot?.plan || "1");
-        const planMonths = parseInt(effectivePlanKey, 10) || 1;
-
-        const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
-          ? Date.now() 
-          : currentExpiry;
-
-        const newExpiry = base + planMonths * 30 * 24 * 60 * 60 * 1000;
-
-        await update(dbRef(db, `listings/${listingId}`), {
-          expiresAt: newExpiry,
-          lastExtendPlan: effectivePlanKey,
-        });
-
-        console.log("[PAYPAL_DEBUG] Firebase updated successfully (extend).");
-        showMessage(t("extendSuccess"), "success");
-        setExtendTarget(null);
-        setPaymentModalOpen(false);
-        setPaymentIntent(null);
+        await finalizeSuccessExtend();
       } else {
         console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend error from backend:", json.error);
+        
+        // Fallback: Verify order status
+        if (json.error !== "Payment declined. Please try a different card.") {
+           console.log("[PAYPAL_DEBUG] Attempting to verify order status (extend) as fallback...");
+           try {
+             const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
+             const verifyJson = await verifyResp.json();
+             if (verifyJson.ok) {
+                console.log("[PAYPAL_DEBUG] Order verified as COMPLETED (extend). Proceeding with success logic.");
+                await finalizeSuccessExtend();
+                return;
+             }
+           } catch (verifyErr) {
+             console.error("[PAYPAL_DEBUG] Verification fallback failed (extend):", verifyErr);
+           }
+        }
+
         throw new Error(json.error || "Capture failed");
       }
     } catch (err) {
       console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend exception:", err);
+      // Try verify one last time
+      try {
+          console.log("[PAYPAL_DEBUG] Exception occurred (extend), attempting verification fallback...");
+          const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
+          const verifyJson = await verifyResp.json();
+          if (verifyJson.ok) {
+            console.log("[PAYPAL_DEBUG] Order verified as COMPLETED after exception (extend). Proceeding.");
+            await finalizeSuccessExtend();
+            return;
+          }
+      } catch (e) {
+         console.error("[PAYPAL_DEBUG] Final verification attempt failed (extend):", e);
+      }
       showMessage(t("error") + " " + err.message, "error");
     } finally {
       setIsProcessingPayment(false);
