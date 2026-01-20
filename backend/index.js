@@ -112,7 +112,7 @@ async function generateAccessToken() {
 /* ----------------------- CREATE PAYPAL ORDER ------------------------ */
 
 app.post("/api/paypal/create-order", async (req, res) => {
-  const { listingId, amount, action } = req.body;
+  const { listingId, amount, action, returnUrl, cancelUrl } = req.body;
   const timestamp = new Date().toISOString();
   console.log(`[${timestamp}] [PayPal] Create Order:`, { listingId, amount, action });
 
@@ -140,7 +140,9 @@ app.post("/api/paypal/create-order", async (req, res) => {
         brand_name: "BizCall MK",
         landing_page: "BILLING",
         user_action: "PAY_NOW",
-        shipping_preference: "NO_SHIPPING"
+        shipping_preference: "NO_SHIPPING",
+        return_url: returnUrl || "https://bizcall.mk",
+        cancel_url: cancelUrl || "https://bizcall.mk"
       }
     };
 

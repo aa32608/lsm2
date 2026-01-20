@@ -57,7 +57,7 @@ const paypalOptions = {
   currency: "EUR",
   intent: "capture",
   components: "buttons",
-  "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
+  // "disable-funding": "paylater,venmo,credit,ideal,p24,sofort",
   "locale": "en_MK",
   "data-sdk-integration-source": "react-paypal-js",
   vault: false
@@ -815,6 +815,51 @@ export default function App() {
     setPage(1);
   }, [q, catFilter, locFilter, sortBy, pageSize, selectedTab]);
 
+  // Handle PayPal Redirect Return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isPaypalReturn = params.get("paypal_return");
+    const token = params.get("token"); // PayPal appends this (Order ID)
+    const listingId = params.get("listingId");
+    const type = params.get("paymentType");
+    const planParam = params.get("plan");
+
+    if (isPaypalReturn && token && listingId) {
+      console.log("[PAYPAL_DEBUG] Returned from PayPal redirect", { token, listingId, type });
+      
+      // Clean URL immediately
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+
+      // Restore UI state
+      setIsProcessingPayment(true);
+      
+      if (type === "extend") {
+        handleServerCaptureForExtend(token, listingId, planParam);
+      } else {
+        // Restore form data from localStorage
+        try {
+          const savedData = localStorage.getItem("pending_listing_data");
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            setForm(parsedData);
+            if (parsedData.plan) setPlan(parsedData.plan);
+            
+            // Proceed with capture using restored data
+            handleServerCapture(token, listingId, parsedData);
+          } else {
+            console.error("[PAYPAL_DEBUG] No saved form data found for create listing return");
+            showMessage(t("error") + " Session expired, please try again.", "error");
+            setIsProcessingPayment(false);
+          }
+        } catch (e) {
+          console.error("[PAYPAL_DEBUG] Error restoring form data", e);
+          setIsProcessingPayment(false);
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!initialListingId || !listings.length) return;
   
@@ -1464,7 +1509,7 @@ export default function App() {
   }
 
   /* Capture create flow */
-  async function handleServerCapture(orderID, listingId) {
+  async function handleServerCapture(orderID, listingId, formDataOverride = null) {
     console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId });
     if (!orderID || !listingId) {
       console.error("[PAYPAL_DEBUG] handleServerCapture missing params", { orderID, listingId });
@@ -1472,34 +1517,40 @@ export default function App() {
     }
     setIsProcessingPayment(true);
 
+    const currentForm = formDataOverride || form;
+    const currentPlan = formDataOverride?.plan || plan;
+
     const finalizeSuccess = async () => {
       console.log("[PAYPAL_DEBUG] handleServerCapture success, updating Firebase...");
-      const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
-      const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
-      const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
+      const normalizedContact = normalizePhoneForStorage(accountPhone || currentForm.contact);
+      const offerpriceStr = formatOfferPrice(currentForm.offerMin, currentForm.offerMax, currentForm.offerCurrency);
+      const finalLocation = buildLocationString(currentForm.locationCity, currentForm.locationExtra);
 
       await update(dbRef(db, `listings/${listingId}`), {
-        ...form,
+        ...currentForm,
         status: "verified",
-        pricePaid: priceMap[plan],
+        pricePaid: priceMap[currentPlan],
         contact: normalizedContact,
         offerprice: offerpriceStr || "",
         location: finalLocation,
-        locationCity: form.locationCity,
-        locationExtra: form.locationExtra,
-        plan,
-        price: priceMap[plan],
+        locationCity: currentForm.locationCity,
+        locationExtra: currentForm.locationExtra,
+        plan: currentPlan,
+        price: priceMap[currentPlan],
         id: listingId,
         userId: user?.uid || null,
         userEmail: user?.email || null,
         createdAt: Date.now(),
-        expiresAt: Date.now() + parseInt(plan) * 30 * 24 * 60 * 60 * 1000,
+        expiresAt: Date.now() + parseInt(currentPlan) * 30 * 24 * 60 * 60 * 1000,
       });
       console.log("[PAYPAL_DEBUG] Firebase updated successfully.");
       showMessage(t("paymentComplete"), "success");
       setPendingOrder(null);
       setPaymentModalOpen(false);
       setPaymentIntent(null);
+      // Clear local storage if we used it
+      localStorage.removeItem("pending_listing_data");
+      
       setForm({
         step: 1,
         name: "",
@@ -4135,10 +4186,27 @@ export default function App() {
                               if (!paymentIntent || !paymentIntent.listingId) {
                                 throw new Error("Missing listingId in paymentIntent");
                               }
+                              const returnUrlObj = new URL(window.location.origin + window.location.pathname);
+                              returnUrlObj.searchParams.set("paypal_return", "true");
+                              returnUrlObj.searchParams.set("listingId", paymentIntent.listingId);
+                              returnUrlObj.searchParams.set("paymentType", paymentIntent.type);
+                              if (paymentIntent.type === "extend") {
+                                returnUrlObj.searchParams.set("plan", extendPlan);
+                              }
+
+                              if (paymentIntent.type === "create" || paymentIntent.type === "create_listing") {
+                                localStorage.setItem("pending_listing_data", JSON.stringify({
+                                  ...form,
+                                  plan: plan
+                                }));
+                              }
+
                               const body = { 
                                 listingId: paymentIntent.listingId, 
                                 amount: paymentIntent.amount, 
-                                action: paymentIntent.type === "extend" ? "extend" : "create_listing" 
+                                action: paymentIntent.type === "extend" ? "extend" : "create_listing",
+                                returnUrl: returnUrlObj.toString(),
+                                cancelUrl: window.location.href
                               };
                               console.log("[PAYPAL_DEBUG] createOrder request body:", body);
                               
