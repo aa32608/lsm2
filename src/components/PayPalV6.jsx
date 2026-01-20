@@ -132,10 +132,8 @@ export default function PayPalV6({
               if (!sessionRef.current) return;
               try {
                 // Pass the promise directly to start()
-                // Do NOT await it here, and do NOT pass the resolved string.
-                // The SDK wants the Promise itself.
                 await sessionRef.current.start(
-                  { presentationMode: "auto" },
+                  { presentationMode: "popup" },
                   createOrderFn() 
                 );
               } catch (err) {
