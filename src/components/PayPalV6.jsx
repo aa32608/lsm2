@@ -133,8 +133,7 @@ export default function PayPalV6({
                 const orderId = await createOrderFn();
                 await sessionRef.current.start({
                   presentationMode: "auto",
-                  orderId: orderId
-                });
+                }, orderId);
               } catch (err) {
                 console.error("[PayPal V6] Start Error:", err);
                 if (onError) onError(err);
