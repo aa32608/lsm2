@@ -36,16 +36,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (request.method !== 'GET') return;
+  
+  // Skip caching for API requests, especially localhost/dev environment APIs
+  if (url.pathname.startsWith('/api/') || url.hostname === 'localhost') return;
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request)
         .then((response) => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => cached);
+        .catch(() => {
+          // If network fails and no cache, just return undefined (browser handles it) or a custom offline response
+          return cached || new Response(null, { status: 404, statusText: "Not Found" }); 
+        });
     })
   );
 });
