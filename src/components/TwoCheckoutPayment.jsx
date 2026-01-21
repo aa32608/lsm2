@@ -6,6 +6,8 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const componentRef = useRef(null);
+  const clientRef = useRef(null);
   const [billingData, setBillingData] = useState({
     name: "",
     email: "",
