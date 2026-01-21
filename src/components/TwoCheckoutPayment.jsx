@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 // Redirects user to secure 2Checkout page to complete payment.
 // Solves "Precondition Required" errors and ensures 2Monetize compliance.
 
-export default function TwoCheckoutPayment({ amount, listingId, plan, paymentType, onSuccess, onError, onWillRedirect }) {
+export default function TwoCheckoutPayment({ amount, listingId, plan, paymentType, onSuccess, onError, onWillRedirect, productCode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   
@@ -16,6 +16,9 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
 
   // Use environment variable for Buy Link if provided (Static Link Fallback)
   const BUY_LINK = import.meta.env.VITE_TWOCHECKOUT_BUY_LINK;
+  
+  // 2Checkout Merchant Code
+  const MERCHANT_CODE = import.meta.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255485315409";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -35,7 +38,40 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
     setIsProcessing(true);
 
     try {
-      // Option 1: Use Static Buy Link (if provided in env)
+      // Option 1: Use Product Code (Static Product Method) - MOST RELIABLE
+      if (productCode) {
+        console.log(`Redirecting to 2Checkout for Product Code: ${productCode}`);
+        
+        // Construct Return URL with query params
+        const baseUrl = window.location.origin + window.location.pathname;
+        const returnUrl = `${baseUrl}?2checkout_return=true&listingId=${listingId}&plan=${plan}&paymentType=${paymentType}`;
+        
+        // Build Direct Buy Link (No backend signature needed for standard products)
+        const params = new URLSearchParams({
+          merchant: MERCHANT_CODE,
+          prod: productCode,
+          qty: "1",
+          type: "digital", // or "tangible" depending on product settings
+          "return-type": "redirect",
+          "return-url": returnUrl,
+          name: billingData.name,
+          email: billingData.email,
+          country: "MK"
+        });
+        
+        const directUrl = `https://secure.2checkout.com/checkout/buy?${params.toString()}`;
+        
+        console.log("Direct Link:", directUrl);
+        
+        if (onWillRedirect) {
+          onWillRedirect();
+        }
+
+        window.location.href = directUrl;
+        return;
+      }
+
+      // Option 2: Use Static Buy Link (if provided in env)
       if (BUY_LINK) {
         console.log("Redirecting to Static Buy Link...");
         window.location.href = BUY_LINK;

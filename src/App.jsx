@@ -102,6 +102,14 @@ const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
 
 const priceMap = { "1": 1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
 
+// TODO: Replace these with your actual 2Checkout Product Codes from the Dashboard
+const productCodeMap = {
+  "1": "1MONTH",  // Replace with actual code for 1 Month Plan
+  "3": "3MONTH", // Replace with actual code for 3 Month Plan
+  "6": "6MONTH", // Replace with actual code for 6 Month Plan
+  "12": "12MONTH" // Replace with actual code for 12 Month Plan
+};
+
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
 
@@ -4319,6 +4327,7 @@ export default function App() {
                             amount={paymentIntent.amount}
                             listingId={paymentIntent.listingId}
                             plan={paymentIntent.type === 'extend' ? extendPlan : plan}
+                            productCode={productCodeMap[paymentIntent.type === 'extend' ? extendPlan : plan]}
                             paymentType={paymentIntent.type}
                             onWillRedirect={() => {
                               // Save form data to localStorage for retrieval after return
