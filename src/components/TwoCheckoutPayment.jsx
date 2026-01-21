@@ -8,6 +8,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [billingName, setBillingName] = useState("");
   const componentRef = useRef(null);
+  const clientRef = useRef(null);
   
   // REAL KEYS provided by user
   const MERCHANT_CODE = "255881426731"; 
@@ -43,6 +44,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.log("Initializing 2Checkout Component...");
       // Fix: Use window.TwoPayClient directly as constructor
       const jsPaymentClient = new window.TwoPayClient(MERCHANT_CODE);
+      clientRef.current = jsPaymentClient;
       
       // Create the card component with styling
       const component = jsPaymentClient.components.create('card', {
@@ -78,7 +80,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   const handlePay = async (e) => {
     e.preventDefault();
     
-    if (!componentRef.current) {
+    if (!componentRef.current || !clientRef.current) {
       alert("Payment system not ready. Please refresh.");
       return;
     }
@@ -98,7 +100,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
         name: billingName
       };
       
-      const result = await componentRef.current.tokens.generate(billingDetails);
+      const result = await clientRef.current.tokens.generate(componentRef.current, billingDetails);
       
       console.log("Token generation result:", result);
       
