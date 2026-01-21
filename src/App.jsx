@@ -822,6 +822,7 @@ export default function App() {
                console.log("Found pending listing in DB, activating...");
                await update(listingRef, { 
                  status: "verified",
+                 orderId: refNo, // Save the 2Checkout Order ID
                  expiresAt: Date.now() + parseInt(snapshot.val().plan || planParam) * 30 * 24 * 60 * 60 * 1000
                });
                showMessage(t("paymentComplete"), "success");

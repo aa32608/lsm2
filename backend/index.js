@@ -334,7 +334,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     zip: billingDetails?.zip || "1200",
     phone: billingDetails?.phone || "070123456",
     country: "MK",
-    ref: listingId // Track listing ID in 2Checkout
+    "external-ref": listingId // Track listing ID in 2Checkout as "External Reference"
   };
 
   // Remove undefined/empty keys from params to ensure consistency

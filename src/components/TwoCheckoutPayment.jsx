@@ -58,7 +58,7 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
           email: billingData.email,
           country: "MK",
           currency: "EUR", // Force currency to EUR
-          ref: listingId // Track listing ID in 2Checkout
+          "external-ref": listingId // Track listing ID in 2Checkout as External Reference
         });
         
         const directUrl = `https://secure.2checkout.com/checkout/buy?${params.toString()}`;
