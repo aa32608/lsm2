@@ -547,10 +547,13 @@ app.post("/api/2checkout/create-order", async (req, res) => {
     const authHeader = `code="${merchantCode}" date="${dateStr}" hash="${hash}"`;
 
     // 2. Prepare Order Payload
+    // NOTE: For "2Monetize" accounts, accurate Billing Details are MANDATORY for tax calculation.
+    // If you use dummy data ("Tetovo, MK"), 2Checkout will charge MK VAT (18%).
+    // Ensure "Dynamic Products" is ENABLED in your 2Checkout Dashboard -> Integrations -> Webhooks & API.
     const orderPayload = {
       Currency: currency || "EUR",
       Language: "en",
-      Country: "MK",
+      Country: "MK", // Customer's Country Code (Required for 2Monetize)
       CustomerIP: req.headers['x-forwarded-for'] || req.socket.remoteAddress || "127.0.0.1",
       Source: "BIZCALL_MK",
       BillingDetails: {

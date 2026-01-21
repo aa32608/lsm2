@@ -20,7 +20,8 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   
   // REAL KEYS provided by user
   // Ensure this is your "Merchant Code" from the 2Checkout Dashboard -> API section
-  const MERCHANT_CODE = "255881426731"; 
+  // We now load this from the .env file (VITE_TWOCHECKOUT_MERCHANT_CODE)
+  const MERCHANT_CODE = import.meta.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
   
   // Load 2Pay.js script
   useEffect(() => {
