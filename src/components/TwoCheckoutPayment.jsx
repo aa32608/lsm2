@@ -92,11 +92,11 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
       // Prepare full billing details with defaults
       const fullBillingDetails = {
         ...billingData,
-        address: "Street 1",
-        city: "Tetovo",
-        state: "Tetovo",
-        zip: "1200",
-        phone: "070123456"
+        address: "N/A",
+        city: "N/A",
+        state: "N/A",
+        zip: "",
+        phone: ""
       };
 
       const response = await fetch(`${API_BASE}/api/2checkout/payment-url`, {
