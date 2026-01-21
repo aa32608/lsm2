@@ -293,6 +293,8 @@ function generateSignature(params, secretWord) {
     serialized += value.length + value;
   });
 
+  console.log(`[2Checkout] Serialized String for Signature: "${serialized}"`);
+
   // 3. Encrypt using HMAC-MD5 (Standard for 2Checkout Buy Links)
   const signature = crypto.createHmac('md5', secretWord)
     .update(serialized)
@@ -324,7 +326,6 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     type: "digital",
     "return-type": "redirect",
     "return-url": returnUrl || "https://bizcall.mk",
-    expiration: Math.floor(Date.now() / 1000) + 3600,
     name: billingDetails?.name || undefined,
     email: billingDetails?.email || undefined,
     country: "MK",
@@ -335,13 +336,19 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     Object.entries(rawParams).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
   );
 
+  // Debug: Log the params being signed
+  console.log("[2Checkout] Params for Signature:", JSON.stringify(params, null, 2));
+
   // For ConvertPlus/2Checkout Buy Links with signature:
-  // ALL parameters sent in the URL must be included in the signature calculation (except the signature itself).
+  // ALL parameters sent in the URL must be included in the signature calculation.
   const signatureParams = { ...params };
 
   try {
     const signature = generateSignature(signatureParams, secretKey);
     
+    // Debug: Log the signature result
+    console.log(`[2Checkout] Generated Signature: ${signature}`);
+
     // Construct final URL
     const baseUrl = "https://secure.2checkout.com/checkout/buy";
     const urlParams = new URLSearchParams();
