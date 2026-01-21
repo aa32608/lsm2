@@ -674,6 +674,7 @@ export default function App() {
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
   const [paymentMethod, setPaymentMethod] = useState("card"); // "paypal" | "card" - default to card as requested
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentReturnStatus, setPaymentReturnStatus] = useState("none"); // "none" | "processing" | "success" | "error"
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
   const isCreatingOrder = React.useRef(false);
 
@@ -844,42 +845,53 @@ export default function App() {
     if (is2CheckoutReturn && listingId) {
       console.log("[2CHECKOUT] Payment return detected via URL", { listingId, refNo });
       
+      // Show Processing Overlay immediately
+      setPaymentReturnStatus("processing");
+
       // Clean URL immediately
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
 
-      // Attempt to notify opener (Main Tab)
-      let messageSent = false;
-      if (window.opener && window.opener !== window) {
-        console.log("[2CHECKOUT] Sending message to opener...");
+      const processReturn = async () => {
         try {
-            window.opener.postMessage({
-              type: "2CHECKOUT_RETURN",
-              payload: { refNo, listingId, planParam, type }
-            }, window.location.origin);
-            messageSent = true;
-            
-            // Show success message and attempt close
-            document.body.innerHTML = `
-              <div style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;padding:20px;'>
-                <div style="width:60px;height:60px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px;">✓</div>
-                <h2 style='color:#1e293b;margin:0 0 10px 0;'>Payment Successful!</h2>
-                <p style='color:#64748b;margin:0 0 20px 0;'>Your listing has been verified.</p>
-                <p style='color:#94a3b8;font-size:0.9em;'>Closing window...</p>
-                <button onclick="window.close()" style="margin-top:20px;padding:10px 24px;background:#2563eb;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:background 0.2s;">Close Window</button>
-              </div>
-            `;
-            setTimeout(() => window.close(), 2500);
-        } catch (e) {
-            console.error("[2CHECKOUT] Failed to message opener:", e);
-        }
-      }
+          // 1. Notify opener (Best Effort for UI Sync)
+          if (window.opener && window.opener !== window) {
+            console.log("[2CHECKOUT] Sending message to opener...");
+            try {
+                window.opener.postMessage({
+                  type: "2CHECKOUT_RETURN",
+                  payload: { refNo, listingId, planParam, type }
+                }, window.location.origin);
+            } catch (e) {
+                console.warn("[2CHECKOUT] Failed to message opener:", e);
+            }
+          }
 
-      // Fallback: If message wasn't sent (opener lost) or we are the main window, verify here
-      if (!messageSent) {
-          console.log("[2CHECKOUT] Processing verification in current window (Fallback)...");
-          verify2CheckoutOrder(refNo, listingId, planParam, type);
-      }
+          // 2. Verify Order (CRITICAL: Always run in current window to ensure DB update)
+          console.log("[2CHECKOUT] Verifying order in current window...");
+          await verify2CheckoutOrder(refNo, listingId, planParam, type);
+          
+          // 3. Show Success
+          setPaymentReturnStatus("success");
+          
+          // 4. Close window if it's a popup
+          setTimeout(() => {
+             if (window.opener && window.opener !== window) {
+                window.close();
+             } else {
+                // If main window, just hide overlay
+                setPaymentReturnStatus("none");
+             }
+          }, 2500);
+
+        } catch (err) {
+          console.error("[2CHECKOUT] Return processing error:", err);
+          setPaymentReturnStatus("error");
+          // Keep error overlay visible so user can see what happened
+        }
+      };
+
+      processReturn();
     }
   }, []);
 
@@ -2403,6 +2415,61 @@ export default function App() {
 
   return (
     <>
+      {/* 2Checkout Return Overlay */}
+      {paymentReturnStatus !== "none" && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 99999,
+          background: "#f8fafc", display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", fontFamily: "sans-serif"
+        }}>
+          {paymentReturnStatus === "processing" && (
+            <>
+               <div style={{
+                  border: "4px solid #f3f3f3", borderTop: "4px solid #3b82f6", borderRadius: "50%",
+                  width: "40px", height: "40px", animation: "spin 1s linear infinite", marginBottom: "20px"
+               }}></div>
+               <h3 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Verifying Payment...</h3>
+               <p style={{color: "#64748b"}}>Please wait while we confirm your order.</p>
+            </>
+          )}
+          {paymentReturnStatus === "success" && (
+             <>
+                <div style={{
+                   width:"60px", height:"60px", borderRadius:"50%", background:"#dcfce7", color:"#16a34a",
+                   display:"flex", alignItems:"center", justifyContent:"center", fontSize:"30px", marginBottom:"20px"
+                }}>✓</div>
+                <h2 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Payment Successful!</h2>
+                <p style={{color: "#64748b"}}>Your listing has been verified.</p>
+                {typeof window !== 'undefined' && window.opener ? (
+                   <p style={{color: "#94a3b8", fontSize: "0.9em", marginTop: "10px"}}>Closing window...</p>
+                ) : (
+                   <button onClick={() => setPaymentReturnStatus("none")} style={{
+                      marginTop:"20px", padding:"10px 24px", background:"#2563eb", color:"white",
+                      border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:600
+                   }}>Continue to Dashboard</button>
+                )}
+             </>
+          )}
+          {paymentReturnStatus === "error" && (
+             <>
+                <div style={{
+                   width:"60px", height:"60px", borderRadius:"50%", background:"#fee2e2", color:"#ef4444",
+                   display:"flex", alignItems:"center", justifyContent:"center", fontSize:"30px", marginBottom:"20px"
+                }}>✕</div>
+                <h2 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Verification Failed</h2>
+                <p style={{color: "#64748b", maxWidth: "400px", textAlign: "center"}}>
+                   We couldn't automatically verify your payment. Please contact support if you were charged.
+                </p>
+                <button onClick={() => setPaymentReturnStatus("none")} style={{
+                   marginTop:"20px", padding:"10px 24px", background:"#ef4444", color:"white",
+                   border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:600
+                }}>Close</button>
+             </>
+          )}
+          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+        </div>
+      )}
+
       <HeadManager
         title={seoTitle}
         description={seoDescription}
@@ -4382,8 +4449,6 @@ export default function App() {
                                    console.log("Pending listing saved to DB.");
                                  } catch (err) {
                                    console.error("Failed to save pending listing:", err);
-                                   // Fallback to local storage if DB fails
-                                   localStorage.setItem("pending_listing_data", JSON.stringify({ ...form, plan }));
                                  }
                               }
                             }}
