@@ -838,7 +838,8 @@ export default function App() {
     const listingId = params.get("listingId");
     const planParam = params.get("plan");
     const type = params.get("paymentType");
-    const refNo = params.get("refno"); 
+    // 2Checkout standard parameter is 'refno' (lowercase), but we check variations
+    const refNo = params.get("refno") || params.get("refNo") || params.get("order_number") || params.get("orderRef"); 
 
     if (is2CheckoutReturn && listingId) {
       console.log("[2CHECKOUT] Payment return detected via URL", { listingId, refNo });
@@ -847,22 +848,38 @@ export default function App() {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
 
-      // If inside a popup/new tab opened by the main app
+      // Attempt to notify opener (Main Tab)
+      let messageSent = false;
       if (window.opener && window.opener !== window) {
-        console.log("[2CHECKOUT] Sending message to opener and closing...");
-        window.opener.postMessage({
-          type: "2CHECKOUT_RETURN",
-          payload: { refNo, listingId, planParam, type }
-        }, window.location.origin);
-        
-        // Show a brief message before closing
-        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><h3>Payment Successful! Closing window...</h3></div>";
-        setTimeout(() => window.close(), 1500);
-        return;
+        console.log("[2CHECKOUT] Sending message to opener...");
+        try {
+            window.opener.postMessage({
+              type: "2CHECKOUT_RETURN",
+              payload: { refNo, listingId, planParam, type }
+            }, window.location.origin);
+            messageSent = true;
+            
+            // Show success message and attempt close
+            document.body.innerHTML = `
+              <div style='display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;text-align:center;padding:20px;'>
+                <div style="width:60px;height:60px;border-radius:50%;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px;">✓</div>
+                <h2 style='color:#1e293b;margin:0 0 10px 0;'>Payment Successful!</h2>
+                <p style='color:#64748b;margin:0 0 20px 0;'>Your listing has been verified.</p>
+                <p style='color:#94a3b8;font-size:0.9em;'>Closing window...</p>
+                <button onclick="window.close()" style="margin-top:20px;padding:10px 24px;background:#2563eb;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:background 0.2s;">Close Window</button>
+              </div>
+            `;
+            setTimeout(() => window.close(), 2500);
+        } catch (e) {
+            console.error("[2CHECKOUT] Failed to message opener:", e);
+        }
       }
 
-      // Fallback: Process in this window if not a popup
-      verify2CheckoutOrder(refNo, listingId, planParam, type);
+      // Fallback: If message wasn't sent (opener lost) or we are the main window, verify here
+      if (!messageSent) {
+          console.log("[2CHECKOUT] Processing verification in current window (Fallback)...");
+          verify2CheckoutOrder(refNo, listingId, planParam, type);
+      }
     }
   }, []);
 
