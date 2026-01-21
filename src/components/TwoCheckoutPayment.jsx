@@ -57,6 +57,7 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
           name: billingData.name,
           email: billingData.email,
           country: "MK",
+          currency: "EUR", // Force currency to EUR
           ref: listingId // Track listing ID in 2Checkout
         });
         
