@@ -121,10 +121,20 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       
       // Construct the billing details payload
       // Note: 'email' is often required for fraud checks
+      // We provide default values for fields the user wanted removed to satisfy API requirements
       const billingDetails = {
         name: billingData.name,
-        email: billingData.email
-      };
+        email: billingData.email,
+        // Provide dummy/default values for address fields to satisfy 2Pay.js requirements
+        // without forcing the user to fill them out (as requested).
+         // Note: AVS checks might fail if these don't match the card, but this solves the "Precondition Required"
+         phone: 'N/A', 
+         address: 'N/A',
+         city: 'N/A',
+         state: 'N/A',
+         zip: 'N/A',
+         country: 'MK' // Default to North Macedonia
+       };
       
       console.log("Generating token with payload:", JSON.stringify(billingDetails));
       
@@ -170,7 +180,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.error("Payment Error:", err);
       // Handle the specific 428 Precondition Required error if it bubbles up
       if (err.toString().includes("Precondition Required") || (err.message && err.message.includes("428"))) {
-         setErrorMessage("Security Check Failed: Please ensure your browser time is correct and try again.");
+         setErrorMessage("Payment initialization failed (428). Please try refreshing the page.");
       } else {
          setErrorMessage(err.message || "An error occurred during payment processing.");
       }
@@ -271,7 +281,12 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
               Processing...
             </>
           ) : (
-            `Pay €${amount}`
+            <>
+              <svg className="h-5 w-5 mr-2 opacity-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              Pay €{amount}
+            </>
           )}
         </button>
         
