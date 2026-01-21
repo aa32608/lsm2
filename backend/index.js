@@ -295,7 +295,7 @@ function generateSignature(params, secretWord) {
 }
 
 app.post("/api/2checkout/payment-url", (req, res) => {
-  const { amount, currency, billingDetails } = req.body;
+  const { amount, currency, billingDetails, returnUrl } = req.body;
   
   // Configuration
   const merchantCode = process.env.TWOCHECKOUT_MERCHANT_CODE || process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
@@ -317,7 +317,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     qty: "1",
     type: "digital", // or 'product'
     "return-type": "redirect",
-    "return-url": "https://bizcall.mk", // Default return URL
+    "return-url": returnUrl || "https://bizcall.mk", // Use provided return URL or default
     expiration: Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
     name: billingDetails?.name || "", // Prefill Name
     email: billingDetails?.email || "", // Prefill Email
@@ -325,21 +325,13 @@ app.post("/api/2checkout/payment-url", (req, res) => {
   };
 
   // Parameters that REQUIRE signature for Dynamic Products:
-  // currency, prod, price, qty, type, expiration, return-url, return-type, etc.
-  // Note: 'merchant' and 'dynamic' are NOT signed usually, but let's follow the strict list.
-  // The documentation says: currency, prod, price, qty, type, opt, description, recurrence, duration, renewal-price, item-ext-ref, return-url, return-type, expiration.
+  // Docs state that ALL optional parameters included in the buy-link must be signed.
+  // We exclude ONLY 'merchant' and 'dynamic' (and potentially 'refno', etc. if used).
   
-  // We need to create a subset object for signature generation
-  const signatureParams = {
-    currency: params.currency,
-    prod: params.prod,
-    price: params.price,
-    qty: params.qty,
-    type: params.type,
-    expiration: params.expiration,
-    "return-url": params["return-url"],
-    "return-type": params["return-type"]
-  };
+  // Create a copy of params to determine what to sign
+  const signatureParams = { ...params };
+  delete signatureParams.merchant;
+  delete signatureParams.dynamic;
 
   try {
     const signature = generateSignature(signatureParams, secretKey);

@@ -4,11 +4,11 @@ import React, { useState } from 'react';
 // Redirects user to secure 2Checkout page to complete payment.
 // Solves "Precondition Required" errors and ensures 2Monetize compliance.
 
-export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
+export default function TwoCheckoutPayment({ amount, listingId, plan, paymentType, onSuccess, onError, onWillRedirect }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   
-  // Form State - Only minimal info needed for pre-filling
+  // Form State
   const [billingData, setBillingData] = useState({
     name: "",
     email: ""
@@ -45,7 +45,11 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       // Option 2: Generate Dynamic Link via Backend
       console.log("Generating Dynamic Payment URL...");
       // Determine API URL based on environment
-      const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://lsm-wozo.onrender.com");
+      
+      // Construct Return URL with query params so we can handle post-payment logic
+      const baseUrl = window.location.origin + window.location.pathname;
+      const returnUrl = `${baseUrl}?2checkout_return=true&listingId=${listingId}&plan=${plan}&paymentType=${paymentType}`;
       
       const response = await fetch(`${API_BASE}/api/2checkout/payment-url`, {
         method: "POST",
@@ -53,7 +57,11 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
         body: JSON.stringify({
           amount: amount,
           currency: "EUR",
-          billingDetails: billingData
+          billingDetails: billingData,
+          listingId,
+          plan,
+          paymentType,
+          returnUrl: returnUrl
         })
       });
 
@@ -64,6 +72,11 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       }
 
       console.log("Redirecting to:", data.url);
+      
+      if (onWillRedirect) {
+        onWillRedirect();
+      }
+
       window.location.href = data.url;
 
     } catch (err) {

@@ -755,6 +755,75 @@ export default function App() {
       setInitialListingId(listingId);
     }
   }, []);
+
+  // Handle 2Checkout Return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const is2CheckoutReturn = params.get("2checkout_return");
+    const listingId = params.get("listingId");
+    const planParam = params.get("plan");
+    const type = params.get("paymentType");
+    
+    // 2Checkout adds 'refno' (Reference Number) on success
+    const refNo = params.get("refno"); 
+
+    if (is2CheckoutReturn && listingId) {
+      console.log("[2CHECKOUT] Payment return detected", { listingId, refNo, type, planParam });
+      
+      // Clean URL immediately
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+
+      setIsProcessingPayment(true);
+      
+      const process2Checkout = async () => {
+         try {
+           // Wait a bit to ensure Firebase auth is ready if needed, though usually it persists.
+           // Check if we have a refNo. If not, maybe it was a cancel or error?
+           // 2Checkout sends 'refno' on success.
+           if (!refNo) {
+              console.warn("No refno found in 2Checkout return. Payment might have failed or been cancelled.");
+              showMessage("Payment processing incomplete. Please contact support if you were charged.", "info");
+              setIsProcessingPayment(false);
+              return;
+           }
+
+           if (type === "extend") {
+             await handleServerCaptureForExtend(refNo, listingId, planParam, true); // true = skipBackendCapture
+           } else {
+             // Restore form data from localStorage
+             try {
+               const savedData = localStorage.getItem("pending_listing_data");
+               if (savedData) {
+                 const parsedData = JSON.parse(savedData);
+                 setForm(parsedData);
+                 if (parsedData.plan) setPlan(parsedData.plan);
+                 
+                 // Proceed with capture using restored data
+                 // We pass refNo as orderID, but skip backend capture
+                 await handleServerCapture(refNo, listingId, parsedData, true); 
+               } else {
+                 console.error("[2CHECKOUT] No saved form data found for create listing return");
+                 // Attempt to just activate if it exists?
+                 // For now, show error.
+                 showMessage(t("error") + " Session expired, please try again.", "error");
+                 setIsProcessingPayment(false);
+               }
+             } catch (e) {
+               console.error("[2CHECKOUT] Error restoring form data", e);
+               setIsProcessingPayment(false);
+             }
+           }
+         } catch (err) {
+           console.error("2Checkout processing error:", err);
+           showMessage("Error activating listing: " + err.message, "error");
+           setIsProcessingPayment(false);
+         }
+      };
+      
+      process2Checkout();
+    }
+  }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
@@ -1495,8 +1564,8 @@ export default function App() {
   }
 
   /* Capture create flow */
-  async function handleServerCapture(orderID, listingId, formDataOverride = null) {
-    console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId });
+  async function handleServerCapture(orderID, listingId, formDataOverride = null, skipBackendCapture = false) {
+    console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId, skipBackendCapture });
     if (!orderID || !listingId) {
       console.error("[PAYPAL_DEBUG] handleServerCapture missing params", { orderID, listingId });
       return;
@@ -1555,6 +1624,18 @@ export default function App() {
         imagePreview: null,
       });
     };
+
+    if (skipBackendCapture) {
+      try {
+        await finalizeSuccess();
+      } catch (err) {
+        console.error("Error in finalizeSuccess (skipBackendCapture):", err);
+        showMessage(t("error") + " " + err.message, "error");
+      } finally {
+        setIsProcessingPayment(false);
+      }
+      return;
+    }
 
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
@@ -1636,8 +1717,8 @@ export default function App() {
     setPaymentModalOpen(true);
   }, [user, t, showMessage]);
 
-  async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI) {
-    console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend called", { orderID, listingId, planKeyFromUI });
+  async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI, skipBackendCapture = false) {
+    console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend called", { orderID, listingId, planKeyFromUI, skipBackendCapture });
     if (!orderID || !listingId) {
       console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend missing params");
       return;
@@ -1670,6 +1751,18 @@ export default function App() {
       setPaymentModalOpen(false);
       setPaymentIntent(null);
     };
+
+    if (skipBackendCapture) {
+      try {
+        await finalizeSuccessExtend();
+      } catch (err) {
+        console.error("Error in finalizeSuccessExtend (skipBackendCapture):", err);
+        showMessage(t("error") + " " + err.message, "error");
+      } finally {
+        setIsProcessingPayment(false);
+      }
+      return;
+    }
 
     try {
       const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
@@ -4182,14 +4275,24 @@ export default function App() {
                         {paymentMethod === 'card' ? (
                           <TwoCheckoutPayment 
                             amount={paymentIntent.amount}
+                            listingId={paymentIntent.listingId}
+                            plan={paymentIntent.type === 'extend' ? extendPlan : plan}
+                            paymentType={paymentIntent.type}
+                            onWillRedirect={() => {
+                              // Save form data to localStorage for retrieval after return
+                              if (paymentIntent.type === "create") {
+                                 console.log("Saving pending listing data before 2Checkout redirect...");
+                                 localStorage.setItem("pending_listing_data", JSON.stringify({ ...form, plan }));
+                              }
+                            }}
                             onSuccess={async () => {
-                              // Simulate successful payment capture
-                              const mockOrderId = "2CO_DEMO_" + Date.now(); 
+                              // This might not be reached if redirect happens, but kept for fallback/inline logic
+                              const mockOrderId = "2CO_INLINE_" + Date.now(); 
                               try {
                                 if (paymentIntent.type === "extend") {
-                                  await handleServerCaptureForExtend(mockOrderId, paymentIntent.listingId, extendPlan);
+                                  await handleServerCaptureForExtend(mockOrderId, paymentIntent.listingId, extendPlan, true);
                                 } else {
-                                  await handleServerCapture(mockOrderId, paymentIntent.listingId);
+                                  await handleServerCapture(mockOrderId, paymentIntent.listingId, null, true);
                                 }
                               } catch (err) {
                                 console.error("Payment capture error:", err);
