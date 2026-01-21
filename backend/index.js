@@ -272,6 +272,46 @@ app.post("/api/paypal/capture", async (req, res) => {
   }
 });
 
+/* ----------------------- 2CHECKOUT (VERIFONE) ----------------------- */
+
+app.post("/api/2checkout/payment-url", (req, res) => {
+  const { amount, currency, billingDetails } = req.body;
+  // Use environment variable for Merchant Code (Backend) or fallback to what was known
+  const merchantCode = process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
+  const secretKey = process.env.TWOCHECKOUT_PRIVATE_KEY;
+
+  if (!secretKey) {
+    console.warn("Missing TWOCHECKOUT_PRIVATE_KEY. Payment link might fail if signature is required.");
+  }
+
+  // Construct a "Standard Checkout" URL (Legacy 2Checkout)
+  // This often works for 2Sell and 2Monetize for ad-hoc payments.
+  // If "Parameter Authorization" is enabled in 2Checkout Dashboard, this will require a signature.
+  // URL: https://secure.2checkout.com/checkout/purchase
+  
+  const baseUrl = "https://secure.2checkout.com/checkout/purchase";
+  const params = new URLSearchParams();
+  params.append("sid", merchantCode);
+  params.append("mode", "2CO");
+  params.append("li_0_type", "product");
+  params.append("li_0_name", "Payment for Services");
+  params.append("li_0_price", amount);
+  params.append("li_0_quantity", "1");
+  params.append("li_0_tangible", "N"); // Digital good
+  params.append("card_holder_name", billingDetails?.name || "");
+  params.append("email", billingDetails?.email || "");
+  params.append("country", "MK"); // Required for 2Monetize to calculate tax (18%)
+  params.append("currency_code", currency || "EUR");
+  
+  // For 2Monetize, we also need to ensure we don't trigger "Precondition Required"
+  // by providing enough info (Country, etc.) which we are doing.
+  
+  const paymentUrl = `${baseUrl}?${params.toString()}`;
+  console.log(`[2Checkout] Generated Payment URL for amount ${amount} ${currency}`);
+  
+  res.json({ url: paymentUrl });
+});
+
 /* ----------------------- VERIFY ORDER (OPTIONAL) ----------------------- */
 
 app.get("/api/paypal/verify-order/:orderId/:listingId", async (req, res) => {
