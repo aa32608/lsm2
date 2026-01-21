@@ -320,7 +320,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     merchant: merchantCode,
     dynamic: "1",
     currency: currency || "EUR",
-    prod: `Listing #${listingId} - Plan ${plan || "Standard"}`, // UNIQUE PRODUCT NAME to prevent "Already Purchased" error
+    prod: `Listing #${listingId} - Plan ${plan || "Standard"} - Ref:${Date.now()}`, // UNIQUE PRODUCT NAME to prevent "Already Purchased" error
     price: amount,
     qty: "1",
     type: "digital",
