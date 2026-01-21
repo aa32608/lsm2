@@ -274,42 +274,94 @@ app.post("/api/paypal/capture", async (req, res) => {
 
 /* ----------------------- 2CHECKOUT (VERIFONE) ----------------------- */
 
+// Helper to generate 2Checkout Signature (HMAC-SHA256)
+function generateSignature(params, secretWord) {
+  // 1. Filter out empty parameters and sort keys alphabetically
+  const keys = Object.keys(params).filter(key => params[key] !== "" && params[key] !== null && params[key] !== undefined).sort();
+
+  // 2. Serialize values: length + value
+  let serialized = "";
+  keys.forEach(key => {
+    const value = String(params[key]);
+    serialized += value.length + value;
+  });
+
+  // 3. Encrypt using HMAC-SHA256
+  const signature = crypto.createHmac('sha256', secretWord)
+    .update(serialized)
+    .digest('hex');
+    
+  return signature;
+}
+
 app.post("/api/2checkout/payment-url", (req, res) => {
   const { amount, currency, billingDetails } = req.body;
-  // Use environment variable for Merchant Code (Backend) or fallback to what was known
-  const merchantCode = process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
-  const secretKey = process.env.TWOCHECKOUT_PRIVATE_KEY;
+  
+  // Configuration
+  const merchantCode = process.env.TWOCHECKOUT_MERCHANT_CODE || process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
+  const secretKey = process.env.TWOCHECKOUT_PRIVATE_KEY; // This is the "Buy Link Secret Word"
 
   if (!secretKey) {
-    console.warn("Missing TWOCHECKOUT_PRIVATE_KEY. Payment link might fail if signature is required.");
+    console.warn("Missing TWOCHECKOUT_PRIVATE_KEY. Payment link might fail.");
+    return res.status(500).json({ error: "Server misconfiguration: Missing Secret Key" });
   }
 
-  // Construct a "Standard Checkout" URL (Legacy 2Checkout)
-  // This often works for 2Sell and 2Monetize for ad-hoc payments.
-  // If "Parameter Authorization" is enabled in 2Checkout Dashboard, this will require a signature.
-  // URL: https://secure.2checkout.com/checkout/purchase
+  // ConvertPlus Parameters for Dynamic Product
+  // Docs: https://knowledgecenter.2checkout.com/Documentation/07Commerce/2Checkout-ConvertPlus/ConvertPlus_Buy-Links_Signature
+  const params = {
+    merchant: merchantCode,
+    dynamic: "1", // Enable dynamic pricing
+    currency: currency || "EUR",
+    prod: "Payment for Services", // Product Name
+    price: amount,
+    qty: "1",
+    type: "digital", // or 'product'
+    "return-type": "redirect",
+    "return-url": "https://bizcall.mk", // Default return URL
+    expiration: Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
+    name: billingDetails?.name || "", // Prefill Name
+    email: billingDetails?.email || "", // Prefill Email
+    country: "MK", // Prefill Country
+  };
+
+  // Parameters that REQUIRE signature for Dynamic Products:
+  // currency, prod, price, qty, type, expiration, return-url, return-type, etc.
+  // Note: 'merchant' and 'dynamic' are NOT signed usually, but let's follow the strict list.
+  // The documentation says: currency, prod, price, qty, type, opt, description, recurrence, duration, renewal-price, item-ext-ref, return-url, return-type, expiration.
   
-  const baseUrl = "https://secure.2checkout.com/checkout/purchase";
-  const params = new URLSearchParams();
-  params.append("sid", merchantCode);
-  params.append("mode", "2CO");
-  params.append("li_0_type", "product");
-  params.append("li_0_name", "Payment for Services");
-  params.append("li_0_price", amount);
-  params.append("li_0_quantity", "1");
-  params.append("li_0_tangible", "N"); // Digital good
-  params.append("card_holder_name", billingDetails?.name || "");
-  params.append("email", billingDetails?.email || "");
-  params.append("country", "MK"); // Required for 2Monetize to calculate tax (18%)
-  params.append("currency_code", currency || "EUR");
-  
-  // For 2Monetize, we also need to ensure we don't trigger "Precondition Required"
-  // by providing enough info (Country, etc.) which we are doing.
-  
-  const paymentUrl = `${baseUrl}?${params.toString()}`;
-  console.log(`[2Checkout] Generated Payment URL for amount ${amount} ${currency}`);
-  
-  res.json({ url: paymentUrl });
+  // We need to create a subset object for signature generation
+  const signatureParams = {
+    currency: params.currency,
+    prod: params.prod,
+    price: params.price,
+    qty: params.qty,
+    type: params.type,
+    expiration: params.expiration,
+    "return-url": params["return-url"],
+    "return-type": params["return-type"]
+  };
+
+  try {
+    const signature = generateSignature(signatureParams, secretKey);
+    
+    // Construct final URL
+    const baseUrl = "https://secure.2checkout.com/checkout/buy";
+    const urlParams = new URLSearchParams();
+    
+    // Add all params to URL
+    Object.keys(params).forEach(key => urlParams.append(key, params[key]));
+    
+    // Add signature
+    urlParams.append("signature", signature);
+
+    const paymentUrl = `${baseUrl}?${urlParams.toString()}`;
+    console.log(`[2Checkout] Generated Signed URL for ${amount} ${currency}`);
+    
+    res.json({ url: paymentUrl });
+  } catch (err) {
+    console.error("Signature Generation Error:", err);
+    res.status(500).json({ error: "Failed to generate payment signature" });
+  }
 });
 
 /* ----------------------- VERIFY ORDER (OPTIONAL) ----------------------- */
