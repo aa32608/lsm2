@@ -99,9 +99,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       // Using the structure from documentation: { billing: { name: ... } }
       const billingDetails = {
         billing: {
-          name: billingName,
-          email: "guest@bizcall.mk", // Add email as it might be required
-          holderNameTime: 0 // Optional fraud prevention field
+          name: billingName
         },
         scope: 'ordering'
       };
