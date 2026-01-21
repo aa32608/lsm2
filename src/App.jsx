@@ -396,6 +396,13 @@ export default function App() {
   const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
+  
+  /* Helpers */
+  const showMessage = useCallback((text, type = "info") => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: "", type: "info" }), 5000);
+  }, []);
+
   const [selectedListing, setSelectedListing] = useState(null);
   const [initialListingId, setInitialListingId] = useState(null);
 
@@ -764,107 +771,113 @@ export default function App() {
     }
   }, []);
 
-  // Handle 2Checkout Return
+  // Verify 2Checkout Order (Shared by URL return and Popup Message)
+  async function verify2CheckoutOrder(refNo, listingId, planParam, type) {
+    console.log("[2CHECKOUT] Verifying order...", { refNo, listingId, type, planParam });
+    setIsProcessingPayment(true);
+    try {
+      if (!refNo) {
+         console.warn("No refno found. Payment might have failed.");
+         showMessage("Payment processing incomplete. Please contact support if you were charged.", "info");
+         setIsProcessingPayment(false);
+         return;
+      }
+
+      const verifyResp = await fetch(`${API_BASE}/api/2checkout/verify-order/${refNo}`);
+      const verifyData = await verifyResp.json();
+
+      if (!verifyData.ok) {
+        throw new Error("Order verification failed: " + (verifyData.error || "Unknown error"));
+      }
+      
+      console.log("Order verified successfully.");
+
+      if (type === "extend") {
+        await handleServerCaptureForExtend(refNo, listingId, planParam, true);
+      } else {
+        const listingRef = dbRef(db, `listings/${listingId}`);
+        const snapshot = await get(listingRef);
+        
+        if (snapshot.exists()) {
+          await update(listingRef, { 
+            status: "verified",
+            orderId: refNo,
+            expiresAt: Date.now() + parseInt(snapshot.val().plan || planParam) * 30 * 24 * 60 * 60 * 1000
+          });
+          showMessage(t("paymentComplete"), "success");
+          setPendingOrder(null);
+          setPaymentModalOpen(false);
+          setPaymentIntent(null);
+          setIsProcessingPayment(false);
+          localStorage.removeItem("pending_listing_data");
+        } else {
+          const savedData = localStorage.getItem("pending_listing_data");
+          if (savedData) {
+            const parsedData = JSON.parse(savedData);
+            setForm(parsedData);
+            if (parsedData.plan) setPlan(parsedData.plan);
+            await handleServerCapture(refNo, listingId, parsedData, true); 
+          } else {
+            console.error("[2CHECKOUT] No saved form data found");
+            showMessage(t("error") + " Session expired, please try again.", "error");
+            setIsProcessingPayment(false);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("2Checkout processing error:", err);
+      showMessage("Error activating listing: " + err.message, "error");
+      setIsProcessingPayment(false);
+    }
+  }
+
+  // Handle 2Checkout Return (URL & Popup)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const is2CheckoutReturn = params.get("2checkout_return");
     const listingId = params.get("listingId");
     const planParam = params.get("plan");
     const type = params.get("paymentType");
-    
-    // 2Checkout adds 'refno' (Reference Number) on success
     const refNo = params.get("refno"); 
 
     if (is2CheckoutReturn && listingId) {
-      console.log("[2CHECKOUT] Payment return detected", { listingId, refNo, type, planParam });
+      console.log("[2CHECKOUT] Payment return detected via URL", { listingId, refNo });
       
       // Clean URL immediately
       const newUrl = window.location.pathname;
       window.history.replaceState({}, "", newUrl);
 
-      setIsProcessingPayment(true);
-      
-      const process2Checkout = async () => {
-         try {
-           // Wait a bit to ensure Firebase auth is ready if needed, though usually it persists.
-           // Check if we have a refNo. If not, maybe it was a cancel or error?
-           // 2Checkout sends 'refno' on success.
-           if (!refNo) {
-              console.warn("No refno found in 2Checkout return. Payment might have failed or been cancelled.");
-              showMessage("Payment processing incomplete. Please contact support if you were charged.", "info");
-              setIsProcessingPayment(false);
-              return;
-           }
+      // If inside a popup/new tab opened by the main app
+      if (window.opener && window.opener !== window) {
+        console.log("[2CHECKOUT] Sending message to opener and closing...");
+        window.opener.postMessage({
+          type: "2CHECKOUT_RETURN",
+          payload: { refNo, listingId, planParam, type }
+        }, window.location.origin);
+        
+        // Show a brief message before closing
+        document.body.innerHTML = "<div style='display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;'><h3>Payment Successful! Closing window...</h3></div>";
+        setTimeout(() => window.close(), 1500);
+        return;
+      }
 
-           // Verify Order with Backend
-           console.log("Verifying 2Checkout order with backend:", refNo);
-           const verifyResp = await fetch(`${API_BASE}/api/2checkout/verify-order/${refNo}`);
-           const verifyData = await verifyResp.json();
-
-           if (!verifyData.ok) {
-             throw new Error("Order verification failed: " + (verifyData.error || "Unknown error"));
-           }
-           
-           console.log("Order verified successfully.");
-
-           if (type === "extend") {
-             await handleServerCaptureForExtend(refNo, listingId, planParam, true); // true = skipBackendCapture (since we just verified)
-           } else {
-             // Listing should already be in DB as 'pending_payment' if persisted correctly
-             // But we might need to restore form data if we want to show success message details
-             // Or just update the status to 'verified'
-             
-             // Check if it exists in DB first
-             const listingRef = dbRef(db, `listings/${listingId}`);
-             const snapshot = await get(listingRef);
-             
-             if (snapshot.exists()) {
-               console.log("Found pending listing in DB, activating...");
-               await update(listingRef, { 
-                 status: "verified",
-                 orderId: refNo, // Save the 2Checkout Order ID
-                 expiresAt: Date.now() + parseInt(snapshot.val().plan || planParam) * 30 * 24 * 60 * 60 * 1000
-               });
-               showMessage(t("paymentComplete"), "success");
-               setPendingOrder(null);
-               setPaymentModalOpen(false);
-               setPaymentIntent(null);
-               setIsProcessingPayment(false);
-               localStorage.removeItem("pending_listing_data");
-             } else {
-               // Fallback: Restore form data from localStorage (legacy/backup)
-               try {
-                 const savedData = localStorage.getItem("pending_listing_data");
-                 if (savedData) {
-                   const parsedData = JSON.parse(savedData);
-                   setForm(parsedData);
-                   if (parsedData.plan) setPlan(parsedData.plan);
-                   
-                   // Proceed with capture using restored data
-                   // We pass refNo as orderID, but skip backend capture
-                   await handleServerCapture(refNo, listingId, parsedData, true); 
-                 } else {
-                   console.error("[2CHECKOUT] No saved form data found for create listing return");
-                   // Attempt to just activate if it exists?
-                   // For now, show error.
-                   showMessage(t("error") + " Session expired, please try again.", "error");
-                   setIsProcessingPayment(false);
-                 }
-               } catch (e) {
-                 console.error("[2CHECKOUT] Error restoring form data", e);
-                 setIsProcessingPayment(false);
-               }
-             }
-           }
-         } catch (err) {
-           console.error("2Checkout processing error:", err);
-           showMessage("Error activating listing: " + err.message, "error");
-           setIsProcessingPayment(false);
-         }
-      };
-      
-      process2Checkout();
+      // Fallback: Process in this window if not a popup
+      verify2CheckoutOrder(refNo, listingId, planParam, type);
     }
+  }, []);
+
+  // Listen for 2Checkout completion messages from popup
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data && event.data.type === "2CHECKOUT_RETURN") {
+        const { refNo, listingId, planParam, type } = event.data.payload;
+        console.log("[2CHECKOUT] Received completion message", event.data.payload);
+        verify2CheckoutOrder(refNo, listingId, planParam, type);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1402,10 +1415,6 @@ export default function App() {
 
   
   /* Helpers */
-  const showMessage = useCallback((text, type = "info") => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: "", type: "info" }), 5000);
-  }, []);
   const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const validatePhone = (s) => !!s && s.replace(/\D/g, "").length >= 8 && s.replace(/\D/g, "").length <= 16;
 
@@ -1667,6 +1676,7 @@ export default function App() {
         tags: "",
         socialLink: "",
         imagePreview: null,
+        images: [],
       });
     };
 
