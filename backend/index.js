@@ -293,8 +293,8 @@ function generateSignature(params, secretWord) {
     serialized += value.length + value;
   });
 
-  // 3. Encrypt using HMAC-SHA256
-  const signature = crypto.createHmac('sha256', secretWord)
+  // 3. Encrypt using HMAC-MD5 (Standard for 2Checkout Buy Links)
+  const signature = crypto.createHmac('md5', secretWord)
     .update(serialized)
     .digest('hex');
     
@@ -314,28 +314,29 @@ app.post("/api/2checkout/payment-url", (req, res) => {
   }
 
   // ConvertPlus Parameters for Dynamic Product
-  // Docs: https://knowledgecenter.2checkout.com/Documentation/07Commerce/2Checkout-ConvertPlus/ConvertPlus_Buy-Links_Signature
-  const params = {
+  const rawParams = {
     merchant: merchantCode,
-    dynamic: "1", // Enable dynamic pricing
+    dynamic: "1",
     currency: currency || "EUR",
-    prod: "Payment for Services", // Product Name
+    prod: "Payment for Services",
     price: amount,
     qty: "1",
-    type: "digital", // or 'product'
+    type: "digital",
     "return-type": "redirect",
-    "return-url": returnUrl || "https://bizcall.mk", // Use provided return URL or default
-    expiration: Math.floor(Date.now() / 1000) + 3600, // Valid for 1 hour
-    name: billingDetails?.name || "", // Prefill Name
-    email: billingDetails?.email || "", // Prefill Email
-    country: "MK", // Prefill Country
+    "return-url": returnUrl || "https://bizcall.mk",
+    expiration: Math.floor(Date.now() / 1000) + 3600,
+    name: billingDetails?.name || undefined,
+    email: billingDetails?.email || undefined,
+    country: "MK",
   };
 
+  // Remove undefined/empty keys from params to ensure consistency
+  const params = Object.fromEntries(
+    Object.entries(rawParams).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
+  );
+
   // Parameters that REQUIRE signature for Dynamic Products:
-  // Docs state that ALL optional parameters included in the buy-link must be signed.
-  // We exclude ONLY 'merchant' and 'dynamic' (and potentially 'refno', etc. if used).
-  
-  // Create a copy of params to determine what to sign
+  // Exclude 'merchant' and 'dynamic'
   const signatureParams = { ...params };
   delete signatureParams.merchant;
   delete signatureParams.dynamic;
@@ -347,7 +348,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     const baseUrl = "https://secure.2checkout.com/checkout/buy";
     const urlParams = new URLSearchParams();
     
-    // Add all params to URL
+    // Add all valid params to URL
     Object.keys(params).forEach(key => urlParams.append(key, params[key]));
     
     // Add signature
