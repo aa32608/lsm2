@@ -114,9 +114,17 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
       // Determine API URL based on environment
       const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === "localhost" ? "http://localhost:5000" : "https://lsm-wozo.onrender.com");
       
-      // Construct Return URL with query params so we can handle post-payment logic
+      // Save context to LocalStorage to keep the Return URL clean (avoids "Suspicious Link" warnings)
+      localStorage.setItem("payment_processing_context", JSON.stringify({
+        listingId,
+        plan,
+        paymentType,
+        timestamp: Date.now()
+      }));
+
+      // Construct Minimal Return URL
       const baseUrl = window.location.origin + window.location.pathname;
-      const returnUrl = `${baseUrl}?2checkout_return=true&listingId=${listingId}&plan=${plan}&paymentType=${paymentType}`;
+      const returnUrl = `${baseUrl}?gateway_return=2co`; 
       
       // Prepare full billing details with defaults
       const fullBillingDetails = {

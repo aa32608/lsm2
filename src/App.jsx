@@ -800,10 +800,19 @@ export default function App() {
         const snapshot = await get(listingRef);
         
         if (snapshot.exists()) {
+          // SECURITY: Always use the Plan stored in the database, not the one from the URL/LocalStorage.
+          // This prevents users from manipulating the local storage to get a different plan duration.
+          const securedPlan = snapshot.val().plan; 
+          
+          if (!securedPlan) {
+             console.error("Security Warning: No plan found in DB for verification. Using param fallback.");
+          }
+
           await update(listingRef, { 
             status: "verified",
             orderId: refNo,
-            expiresAt: Date.now() + parseInt(snapshot.val().plan || planParam) * 30 * 24 * 60 * 60 * 1000
+            // Use securedPlan if available, otherwise fall back to param (only for legacy/edge cases)
+            expiresAt: Date.now() + parseInt(securedPlan || planParam) * 30 * 24 * 60 * 60 * 1000
           });
           showMessage(t("paymentComplete"), "success");
           setPendingOrder(null);
@@ -835,63 +844,95 @@ export default function App() {
   // Handle 2Checkout Return (URL & Popup)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const is2CheckoutReturn = params.get("2checkout_return");
-    const listingId = params.get("listingId");
-    const planParam = params.get("plan");
-    const type = params.get("paymentType");
+    
+    // Check for both old (URL-heavy) and new (Clean URL) flags
+    const is2CheckoutReturn = params.get("2checkout_return") || params.get("gateway_return") === "2co";
+    
     // 2Checkout standard parameter is 'refno' (lowercase), but we check variations
     const refNo = params.get("refno") || params.get("refNo") || params.get("order_number") || params.get("orderRef"); 
 
-    if (is2CheckoutReturn && listingId) {
-      console.log("[2CHECKOUT] Payment return detected via URL", { listingId, refNo });
-      
-      // Show Processing Overlay immediately
-      setPaymentReturnStatus("processing");
+    if (is2CheckoutReturn && refNo) {
+      // Try to get context from URL first, then LocalStorage
+      let listingId = params.get("listingId");
+      let planParam = params.get("plan");
+      let type = params.get("paymentType");
 
-      // Clean URL immediately
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
-
-      const processReturn = async () => {
+      if (!listingId) {
         try {
-          // 1. Notify opener (Best Effort for UI Sync)
-          if (window.opener && window.opener !== window) {
-            console.log("[2CHECKOUT] Sending message to opener...");
-            try {
-                window.opener.postMessage({
-                  type: "2CHECKOUT_RETURN",
-                  payload: { refNo, listingId, planParam, type }
-                }, window.location.origin);
-            } catch (e) {
-                console.warn("[2CHECKOUT] Failed to message opener:", e);
-            }
+          const savedContext = JSON.parse(localStorage.getItem("payment_processing_context") || "{}");
+          // Check if context is fresh (e.g. within 1 hour)
+          if (savedContext.timestamp && (Date.now() - savedContext.timestamp < 3600000)) {
+             listingId = savedContext.listingId;
+             planParam = savedContext.plan;
+             type = savedContext.paymentType;
+             console.log("[2CHECKOUT] Restored context from LocalStorage:", savedContext);
           }
-
-          // 2. Verify Order (CRITICAL: Always run in current window to ensure DB update)
-          console.log("[2CHECKOUT] Verifying order in current window...");
-          await verify2CheckoutOrder(refNo, listingId, planParam, type);
-          
-          // 3. Show Success
-          setPaymentReturnStatus("success");
-          
-          // 4. Close window if it's a popup
-          setTimeout(() => {
-             if (window.opener && window.opener !== window) {
-                window.close();
-             } else {
-                // If main window, just hide overlay
-                setPaymentReturnStatus("none");
-             }
-          }, 2500);
-
-        } catch (err) {
-          console.error("[2CHECKOUT] Return processing error:", err);
-          setPaymentReturnStatus("error");
-          // Keep error overlay visible so user can see what happened
+        } catch (e) {
+          console.error("Failed to parse payment context", e);
         }
-      };
+      }
 
-      processReturn();
+      if (!listingId) {
+        console.error("[2CHECKOUT] Missing listingId in return. Cannot verify.");
+        // If we really can't find it, we might check pending_listing_data
+        const pendingData = JSON.parse(localStorage.getItem("pending_listing_data") || "{}");
+        if (pendingData.id) listingId = pendingData.id;
+        if (pendingData.plan) planParam = pendingData.plan;
+        // Default type
+        if (!type) type = "create";
+      }
+
+      if (listingId) {
+        console.log("[2CHECKOUT] Payment return detected", { listingId, refNo, type });
+        
+        // Show Processing Overlay immediately
+        setPaymentReturnStatus("processing");
+
+        // Clean URL immediately
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, "", newUrl);
+
+        const processReturn = async () => {
+          try {
+            // 1. Notify opener (Best Effort for UI Sync)
+            if (window.opener && window.opener !== window) {
+              console.log("[2CHECKOUT] Sending message to opener...");
+              try {
+                  window.opener.postMessage({
+                    type: "2CHECKOUT_RETURN",
+                    payload: { refNo, listingId, planParam, type }
+                  }, window.location.origin);
+              } catch (e) {
+                  console.warn("[2CHECKOUT] Failed to message opener:", e);
+              }
+            }
+
+            // 2. Verify Order (CRITICAL: Always run in current window to ensure DB update)
+            console.log("[2CHECKOUT] Verifying order in current window...");
+            await verify2CheckoutOrder(refNo, listingId, planParam, type);
+            
+            // 3. Show Success
+            setPaymentReturnStatus("success");
+            
+            // 4. Close window if it's a popup
+            setTimeout(() => {
+              if (window.opener && window.opener !== window) {
+                  window.close();
+              } else {
+                  // If main window, just hide overlay
+                  setPaymentReturnStatus("none");
+              }
+            }, 2500);
+
+          } catch (err) {
+            console.error("[2CHECKOUT] Return processing error:", err);
+            setPaymentReturnStatus("error");
+            // Keep error overlay visible so user can see what happened
+          }
+        };
+
+        processReturn();
+      }
     }
   }, []);
 
@@ -1791,6 +1832,11 @@ export default function App() {
     const planKey = String(listing.plan || "1");
     const amount = priceMap[planKey] ?? listing.price ?? 0;
 
+    // Save pending extension plan to DB for security (so we don't rely on localStorage)
+    update(dbRef(db, `listings/${listing.id}`), {
+      pending_extension_plan: planKey
+    }).catch(console.error);
+
     setExtendTarget(listing);
     setExtendPlan(planKey);
     setPaymentIntent({
@@ -1827,6 +1873,7 @@ export default function App() {
       await update(dbRef(db, `listings/${listingId}`), {
         expiresAt: newExpiry,
         lastExtendPlan: effectivePlanKey,
+        pending_extension_plan: null // Clear security flag
       });
 
       console.log("[PAYPAL_DEBUG] Firebase updated successfully (extend).");
