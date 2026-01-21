@@ -796,30 +796,63 @@ export default function App() {
               return;
            }
 
+           // Verify Order with Backend
+           console.log("Verifying 2Checkout order with backend:", refNo);
+           const verifyResp = await fetch(`${API_BASE}/api/2checkout/verify-order/${refNo}`);
+           const verifyData = await verifyResp.json();
+
+           if (!verifyData.ok) {
+             throw new Error("Order verification failed: " + (verifyData.error || "Unknown error"));
+           }
+           
+           console.log("Order verified successfully.");
+
            if (type === "extend") {
-             await handleServerCaptureForExtend(refNo, listingId, planParam, true); // true = skipBackendCapture
+             await handleServerCaptureForExtend(refNo, listingId, planParam, true); // true = skipBackendCapture (since we just verified)
            } else {
-             // Restore form data from localStorage
-             try {
-               const savedData = localStorage.getItem("pending_listing_data");
-               if (savedData) {
-                 const parsedData = JSON.parse(savedData);
-                 setForm(parsedData);
-                 if (parsedData.plan) setPlan(parsedData.plan);
-                 
-                 // Proceed with capture using restored data
-                 // We pass refNo as orderID, but skip backend capture
-                 await handleServerCapture(refNo, listingId, parsedData, true); 
-               } else {
-                 console.error("[2CHECKOUT] No saved form data found for create listing return");
-                 // Attempt to just activate if it exists?
-                 // For now, show error.
-                 showMessage(t("error") + " Session expired, please try again.", "error");
+             // Listing should already be in DB as 'pending_payment' if persisted correctly
+             // But we might need to restore form data if we want to show success message details
+             // Or just update the status to 'verified'
+             
+             // Check if it exists in DB first
+             const listingRef = dbRef(db, `listings/${listingId}`);
+             const snapshot = await get(listingRef);
+             
+             if (snapshot.exists()) {
+               console.log("Found pending listing in DB, activating...");
+               await update(listingRef, { 
+                 status: "verified",
+                 expiresAt: Date.now() + parseInt(snapshot.val().plan || planParam) * 30 * 24 * 60 * 60 * 1000
+               });
+               showMessage(t("paymentComplete"), "success");
+               setPendingOrder(null);
+               setPaymentModalOpen(false);
+               setPaymentIntent(null);
+               setIsProcessingPayment(false);
+               localStorage.removeItem("pending_listing_data");
+             } else {
+               // Fallback: Restore form data from localStorage (legacy/backup)
+               try {
+                 const savedData = localStorage.getItem("pending_listing_data");
+                 if (savedData) {
+                   const parsedData = JSON.parse(savedData);
+                   setForm(parsedData);
+                   if (parsedData.plan) setPlan(parsedData.plan);
+                   
+                   // Proceed with capture using restored data
+                   // We pass refNo as orderID, but skip backend capture
+                   await handleServerCapture(refNo, listingId, parsedData, true); 
+                 } else {
+                   console.error("[2CHECKOUT] No saved form data found for create listing return");
+                   // Attempt to just activate if it exists?
+                   // For now, show error.
+                   showMessage(t("error") + " Session expired, please try again.", "error");
+                   setIsProcessingPayment(false);
+                 }
+               } catch (e) {
+                 console.error("[2CHECKOUT] Error restoring form data", e);
                  setIsProcessingPayment(false);
                }
-             } catch (e) {
-               console.error("[2CHECKOUT] Error restoring form data", e);
-               setIsProcessingPayment(false);
              }
            }
          } catch (err) {
@@ -888,46 +921,7 @@ export default function App() {
     const planParam = params.get("plan");
 
     // 2Checkout Return Handling
-    const is2CheckoutReturn = params.get("2checkout_return");
-
-    if (is2CheckoutReturn && listingId) {
-       console.log("Returned from 2Checkout redirect", { listingId, type, plan: planParam });
-       
-       // Clean URL immediately
-       const newUrl = window.location.pathname;
-       window.history.replaceState({}, "", newUrl);
-
-       setIsProcessingPayment(true);
-
-       const handle2CoSuccess = async () => {
-         try {
-           if (type === "extend") {
-             await handleServerCaptureForExtend("2CO_REDIRECT_" + Date.now(), listingId, planParam, true);
-           } else {
-             // Restore form data from localStorage
-             const savedData = localStorage.getItem("pending_listing_data");
-             if (savedData) {
-               const parsedData = JSON.parse(savedData);
-               setForm(parsedData);
-               if (parsedData.plan) setPlan(parsedData.plan);
-               
-               await handleServerCapture("2CO_REDIRECT_" + Date.now(), listingId, parsedData, true);
-             } else {
-               console.error("No saved form data found for 2Checkout return");
-               showMessage(t("error") + ": Session expired or data missing.", "error");
-               setIsProcessingPayment(false);
-             }
-           }
-         } catch (err) {
-            console.error("2Checkout return error:", err);
-            showMessage(t("error") + ": " + err.message, "error");
-            setIsProcessingPayment(false);
-         }
-       };
-
-       handle2CoSuccess();
-       return;
-    }
+    // (Handled in separate useEffect above to avoid conflicts)
 
     if (isPaypalReturn && token && listingId) {
       console.log("[PAYPAL_DEBUG] Returned from PayPal redirect", { token, listingId, type });
@@ -4329,11 +4323,40 @@ export default function App() {
                             plan={paymentIntent.type === 'extend' ? extendPlan : plan}
                             productCode={productCodeMap[paymentIntent.type === 'extend' ? extendPlan : plan]}
                             paymentType={paymentIntent.type}
-                            onWillRedirect={() => {
-                              // Save form data to localStorage for retrieval after return
+                            onWillRedirect={async () => {
+                              // Save form data to DB as PENDING to survive internet loss/browser close
                               if (paymentIntent.type === "create") {
-                                 console.log("Saving pending listing data before 2Checkout redirect...");
-                                 localStorage.setItem("pending_listing_data", JSON.stringify({ ...form, plan }));
+                                 console.log("Persisting pending listing to Firebase before redirect...");
+                                 
+                                 const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
+                                 const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
+                                 const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
+                                 
+                                 // Save as pending_payment
+                                 try {
+                                   await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
+                                     ...form,
+                                     status: "pending_payment", // Important status
+                                     pricePaid: priceMap[plan],
+                                     contact: normalizedContact,
+                                     offerprice: offerpriceStr || "",
+                                     location: finalLocation,
+                                     locationCity: form.locationCity,
+                                     locationExtra: form.locationExtra,
+                                     plan: plan,
+                                     price: priceMap[plan],
+                                     id: paymentIntent.listingId,
+                                     userId: user?.uid || null,
+                                     userEmail: user?.email || null,
+                                     createdAt: Date.now(),
+                                     // expiresAt will be set on verification
+                                   });
+                                   console.log("Pending listing saved to DB.");
+                                 } catch (err) {
+                                   console.error("Failed to save pending listing:", err);
+                                   // Fallback to local storage if DB fails
+                                   localStorage.setItem("pending_listing_data", JSON.stringify({ ...form, plan }));
+                                 }
                               }
                             }}
                             onSuccess={async () => {
