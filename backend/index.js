@@ -335,11 +335,9 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     Object.entries(rawParams).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
   );
 
-  // Parameters that REQUIRE signature for Dynamic Products:
-  // Exclude 'merchant' and 'dynamic'
+  // For ConvertPlus/2Checkout Buy Links with signature:
+  // ALL parameters sent in the URL must be included in the signature calculation (except the signature itself).
   const signatureParams = { ...params };
-  delete signatureParams.merchant;
-  delete signatureParams.dynamic;
 
   try {
     const signature = generateSignature(signatureParams, secretKey);

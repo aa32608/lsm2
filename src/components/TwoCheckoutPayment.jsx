@@ -55,7 +55,7 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: amount,
+          amount: Number(amount).toFixed(2),
           currency: "EUR",
           billingDetails: billingData,
           listingId,
