@@ -96,10 +96,15 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.log("Generating token...");
       
       // Generate token using the mounted component
+      // Using the structure from documentation: { billing: { name: ... } }
       const billingDetails = {
-        name: billingName
+        billing: {
+          name: billingName
+        },
+        scope: 'ordering'
       };
       
+      console.log("Generating token with details:", billingDetails);
       const result = await clientRef.current.tokens.generate(componentRef.current, billingDetails);
       
       console.log("Token generation result:", result);
