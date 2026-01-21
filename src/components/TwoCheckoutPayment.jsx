@@ -120,21 +120,12 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.log("Preparing to generate token...");
       
       // Construct the billing details payload
-      // Note: 'email' is often required for fraud checks
-      // We provide default values for fields the user wanted removed to satisfy API requirements
+      // For 2Pay.js token generation, we only pass the cardholder name.
+      // Passing extra fields (like email or dummy address data) can sometimes trigger 
+      // strict validation errors (e.g. 428 Precondition Required) if the account isn't fully configured.
       const billingDetails = {
-        name: billingData.name,
-        email: billingData.email,
-        // Provide dummy/default values for address fields to satisfy 2Pay.js requirements
-        // without forcing the user to fill them out (as requested).
-         // Note: AVS checks might fail if these don't match the card, but this solves the "Precondition Required"
-         phone: 'N/A', 
-         address: 'N/A',
-         city: 'N/A',
-         state: 'N/A',
-         zip: 'N/A',
-         country: 'MK' // Default to North Macedonia
-       };
+        name: billingData.name
+      };
       
       console.log("Generating token with payload:", JSON.stringify(billingDetails));
       
@@ -180,7 +171,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.error("Payment Error:", err);
       // Handle the specific 428 Precondition Required error if it bubbles up
       if (err.toString().includes("Precondition Required") || (err.message && err.message.includes("428"))) {
-         setErrorMessage("Payment initialization failed (428). Please try refreshing the page.");
+         setErrorMessage("Payment initialization failed (428). This often means your 2Checkout Merchant Account has pending actions (e.g. Terms of Service, Password Update). Please check your 2Checkout Dashboard.");
       } else {
          setErrorMessage(err.message || "An error occurred during payment processing.");
       }
