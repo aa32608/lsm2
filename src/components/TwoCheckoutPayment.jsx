@@ -6,10 +6,22 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [billingName, setBillingName] = useState("");
-  const componentRef = useRef(null);
-  const clientRef = useRef(null);
-  
+  const [billingData, setBillingData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    country: "MK" // Default to Macedonia
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBillingData(prev => ({ ...prev, [name]: value }));
+  };
+
   // REAL KEYS provided by user
   const MERCHANT_CODE = "255881426731"; 
   
@@ -85,8 +97,8 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       return;
     }
 
-    if (!billingName.trim()) {
-      alert("Please enter the cardholder name.");
+    if (!billingData.name.trim() || !billingData.email.trim()) {
+      alert("Please fill in all required fields.");
       return;
     }
 
@@ -99,14 +111,14 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       // Using the structure from documentation: { billing: { name: ... } }
       const billingDetails = {
         billing: {
-          name: billingName,
-          email: "guest@bizcall.mk",
-          address: "N/A",
-          city: "N/A",
-          state: "N/A",
-          zip: "N/A",
-          country: "MK", // Macedonia (based on bizcall.mk email)
-          phone: "N/A"
+          name: billingData.name,
+          email: billingData.email,
+          phone: billingData.phone,
+          address: billingData.address || "N/A",
+          city: billingData.city || "N/A",
+          state: billingData.state || "N/A",
+          zip: billingData.zip || "N/A",
+          country: billingData.country
         },
         scope: 'ordering'
       };
@@ -132,10 +144,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
           amount,
           currency: 'EUR',
           merchantCode: MERCHANT_CODE,
-          billingDetails: {
-            name: billingName,
-            email: "guest@bizcall.mk" // We could add email input too
-          }
+          billingDetails: billingDetails.billing
         })
       });
 
@@ -159,27 +168,112 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
 
   return (
     <div className="twocheckout-payment-container p-4 border rounded bg-white shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-gray-800">Pay with Card</h3>
-        <div className="flex gap-2">
-           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Visa</span>
-           <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">MasterCard</span>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold text-gray-800">Secure Checkout</h3>
+        <div className="flex gap-2 opacity-80">
+           <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-6" />
+           <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="MasterCard" className="h-6" />
         </div>
       </div>
       
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
-        <input 
-          type="text" 
-          className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow shadow-sm"
-          placeholder="John Doe"
-          value={billingName}
-          onChange={e => setBillingName(e.target.value)}
-        />
+      {/* Billing Information */}
+      <div className="space-y-4 mb-6">
+        <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider border-b pb-1">Billing Details</h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <input 
+              type="text" 
+              name="name"
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              placeholder="John Doe"
+              value={billingData.name}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+            <input 
+              type="email" 
+              name="email"
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              placeholder="john@example.com"
+              value={billingData.email}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+          <input 
+            type="tel" 
+            name="phone"
+            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+            placeholder="+389 70 123 456"
+            value={billingData.phone}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+          <input 
+            type="text" 
+            name="address"
+            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+            placeholder="123 Main St"
+            value={billingData.address}
+            onChange={handleInputChange}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+            <input 
+              type="text" 
+              name="city"
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              placeholder="Skopje"
+              value={billingData.city}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
+            <input 
+              type="text" 
+              name="zip"
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+              placeholder="1000"
+              value={billingData.zip}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+        
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+            <select 
+              name="country"
+              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+              value={billingData.country}
+              onChange={handleInputChange}
+            >
+              <option value="MK">Macedonia</option>
+              <option value="US">United States</option>
+              <option value="DE">Germany</option>
+              <option value="FR">France</option>
+              {/* Add more as needed */}
+            </select>
+        </div>
       </div>
 
       <div className="mb-6 relative">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Card Details</label>
+        <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider border-b pb-1 mb-4">Payment Details</h4>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Card Information</label>
         {/* 2Checkout will inject the iframe here */}
         <div 
           id="card-element" 
