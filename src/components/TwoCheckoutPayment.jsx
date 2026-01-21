@@ -6,137 +6,141 @@ import React, { useState, useEffect, useRef } from 'react';
 export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const componentRef = useRef(null);
-  const clientRef = useRef(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  
+  // Form State
   const [billingData, setBillingData] = useState({
     name: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    country: "MK" // Default to Macedonia
+    email: ""
   });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBillingData(prev => ({ ...prev, [name]: value }));
-  };
-
+  // References to keep track of the 2Pay.js instances
+  const componentRef = useRef(null);
+  const clientRef = useRef(null);
+  
   // REAL KEYS provided by user
+  // Ensure this is your "Merchant Code" from the 2Checkout Dashboard -> API section
   const MERCHANT_CODE = "255881426731"; 
   
   // Load 2Pay.js script
   useEffect(() => {
+    // Check if script is already loaded
     if (document.getElementById('2pay-js-script')) {
       if (window.TwoPayClient) {
         setIsScriptLoaded(true);
       }
       return;
     }
+
     const script = document.createElement('script');
     script.id = '2pay-js-script';
     script.src = "https://2pay-js.2checkout.com/v1/2pay.js";
     script.async = true;
     script.onload = () => {
+      console.log("2Pay.js script loaded successfully");
       setIsScriptLoaded(true);
-      console.log("2Pay.js loaded");
     };
     script.onerror = () => {
-      console.error("Failed to load 2Pay.js");
+      console.error("Failed to load 2Pay.js script");
+      setErrorMessage("Failed to load payment system. Please check your connection.");
       if (onError) onError(new Error("Failed to load payment system"));
     };
     document.body.appendChild(script);
-  }, []); // Removed onError to prevent infinite loops
+  }, []);
 
   // Initialize 2Pay.js Component
   useEffect(() => {
     if (!isScriptLoaded || !window.TwoPayClient || componentRef.current) return;
 
     try {
-      console.log("Initializing 2Checkout Component...");
-      // Fix: Use window.TwoPayClient directly as constructor
+      console.log("Initializing 2Checkout Component with Merchant Code:", MERCHANT_CODE);
+      
+      // Initialize the client
       const jsPaymentClient = new window.TwoPayClient(MERCHANT_CODE);
       clientRef.current = jsPaymentClient;
       
-      // Create the card component with styling
+      // Customize the card input style
       const component = jsPaymentClient.components.create('card', {
         style: {
           base: {
-             fontFamily: '"Inter", sans-serif',
+             fontFamily: '"Inter", "Segoe UI", sans-serif',
              fontSize: '16px',
-             color: '#374151',
+             color: '#1f2937', // gray-800
              lineHeight: '24px',
              fontWeight: '400',
              '::placeholder': {
-               color: '#9CA3AF'
+               color: '#9ca3af' // gray-400
              }
           },
           invalid: {
-             color: '#EF4444'
+             color: '#ef4444', // red-500
+             fontWeight: '500'
           }
         }
       });
       
-      // Mount it to the #card-element div
+      // Mount the component to the DOM element
       component.mount('#card-element');
       
-      // Save reference
+      // Store the component reference
       componentRef.current = component;
+      console.log("2Checkout Component mounted successfully");
       
     } catch (err) {
       console.error("Failed to initialize 2Pay.js component:", err);
+      setErrorMessage("Payment system initialization failed.");
       if (onError) onError(new Error("Payment system initialization failed"));
     }
-  }, [isScriptLoaded, MERCHANT_CODE]); // Removed onError
+  }, [isScriptLoaded, MERCHANT_CODE]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBillingData(prev => ({ ...prev, [name]: value }));
+    if (errorMessage) setErrorMessage(null);
+  };
 
   const handlePay = async (e) => {
     e.preventDefault();
+    setErrorMessage(null);
     
-    if (!componentRef.current || !clientRef.current) {
-      alert("Payment system not ready. Please refresh.");
+    // validation
+    if (!billingData.name.trim() || !billingData.email.trim()) {
+      setErrorMessage("Please fill in all required fields (Name and Email).");
       return;
     }
 
-    if (!billingData.name.trim() || !billingData.email.trim()) {
-      alert("Please fill in all required fields.");
+    if (!componentRef.current || !clientRef.current) {
+      setErrorMessage("Payment system is not ready. Please refresh the page.");
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      console.log("Generating token...");
+      console.log("Preparing to generate token...");
       
-      // Generate token using the mounted component
-      // Using the structure from documentation: { billing: { name: ... } }
+      // Construct the billing details payload
+      // Note: 'email' is often required for fraud checks
       const billingDetails = {
-        billing: {
-          name: billingData.name,
-          email: billingData.email,
-          phone: billingData.phone,
-          address: billingData.address || "N/A",
-          city: billingData.city || "N/A",
-          state: billingData.state || "N/A",
-          zip: billingData.zip || "N/A",
-          country: billingData.country
-        },
-        scope: 'ordering'
+        name: billingData.name,
+        email: billingData.email
       };
       
-      console.log("Generating token with details:", billingDetails);
+      console.log("Generating token with payload:", JSON.stringify(billingDetails));
+      
+      // Call 2Pay.js to tokenize the card
+      // We pass the component instance and the billing details
       const result = await clientRef.current.tokens.generate(componentRef.current, billingDetails);
       
       console.log("Token generation result:", result);
       
       if (!result || !result.token) {
-        throw new Error("Failed to generate payment token");
+        throw new Error("Failed to generate payment token. No token received.");
       }
       
       const token = result.token;
       
-      // Send token to backend
+      // Send the token to your backend
       console.log("Sending token to backend...");
       const res = await fetch('http://localhost:5000/api/2checkout/create-order', {
         method: 'POST',
@@ -146,162 +150,140 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
           amount,
           currency: 'EUR',
           merchantCode: MERCHANT_CODE,
-          billingDetails: billingDetails.billing
+          billingDetails: {
+            name: billingData.name,
+            email: billingData.email
+          }
         })
       });
 
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || "Payment failed");
+        throw new Error(data.error || "Payment failed at backend processing");
       }
 
       console.log("Payment successful:", data);
       if (onSuccess) onSuccess(data);
 
     } catch (err) {
-      console.error("Payment failed", err);
+      console.error("Payment Error:", err);
+      // Handle the specific 428 Precondition Required error if it bubbles up
+      if (err.toString().includes("Precondition Required") || (err.message && err.message.includes("428"))) {
+         setErrorMessage("Security Check Failed: Please ensure your browser time is correct and try again.");
+      } else {
+         setErrorMessage(err.message || "An error occurred during payment processing.");
+      }
       if (onError) onError(err);
-      // alert("Payment Error: " + (err.message || "Unknown error"));
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="twocheckout-payment-container p-4 border rounded bg-white shadow-sm">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-gray-800">Secure Checkout</h3>
+    <div className="w-full max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+      {/* Header */}
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+        <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          Secure Payment
+        </h3>
         <div className="flex gap-2 opacity-80">
-           <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-6" />
-           <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="MasterCard" className="h-6" />
+           <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-5" />
+           <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="MasterCard" className="h-5" />
         </div>
       </div>
-      
-      {/* Billing Information */}
-      <div className="space-y-4 mb-6">
-        <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider border-b pb-1">Billing Details</h4>
+
+      {/* Body */}
+      <div className="p-6 space-y-5">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{errorMessage}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cardholder Details */}
+        <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cardholder Name</label>
             <input 
               type="text" 
               name="name"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-              placeholder="John Doe"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder-gray-400"
+              placeholder="e.g. John Doe"
               value={billingData.name}
               onChange={handleInputChange}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
             <input 
               type="email" 
               name="email"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-              placeholder="john@example.com"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-gray-900 placeholder-gray-400"
+              placeholder="e.g. john@example.com"
               value={billingData.email}
               onChange={handleInputChange}
             />
           </div>
         </div>
 
+        {/* Card Input (Iframe) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input 
-            type="tel" 
-            name="phone"
-            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-            placeholder="+389 70 123 456"
-            value={billingData.phone}
-            onChange={handleInputChange}
-          />
+           <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Card Details</label>
+           <div 
+             id="card-element" 
+             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-white min-h-[50px] focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all shadow-sm"
+           >
+             {/* 2Checkout injects here */}
+           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
-          <input 
-            type="text" 
-            name="address"
-            className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-            placeholder="123 Main St"
-            value={billingData.address}
-            onChange={handleInputChange}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input 
-              type="text" 
-              name="city"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-              placeholder="Skopje"
-              value={billingData.city}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Zip Code</label>
-            <input 
-              type="text" 
-              name="zip"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
-              placeholder="1000"
-              value={billingData.zip}
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
-        
-        <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-            <select 
-              name="country"
-              className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white"
-              value={billingData.country}
-              onChange={handleInputChange}
-            >
-              <option value="MK">Macedonia</option>
-              <option value="US">United States</option>
-              <option value="DE">Germany</option>
-              <option value="FR">France</option>
-              {/* Add more as needed */}
-            </select>
-        </div>
-      </div>
-
-      <div className="mb-6 relative">
-        <h4 className="text-sm font-semibold text-gray-600 uppercase tracking-wider border-b pb-1 mb-4">Payment Details</h4>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Card Information</label>
-        {/* 2Checkout will inject the iframe here */}
-        <div 
-          id="card-element" 
-          className="p-3 border border-gray-300 rounded-md bg-white shadow-sm min-h-[50px] transition-colors focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
-          style={{ minHeight: '60px' }} 
+        {/* Pay Button */}
+        <button 
+          onClick={handlePay}
+          disabled={isProcessing || !isScriptLoaded}
+          className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-md transition-all transform active:scale-[0.98] flex justify-center items-center
+            ${isProcessing || !isScriptLoaded 
+              ? 'bg-gray-400 cursor-not-allowed opacity-70' 
+              : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+            }`}
         >
-           {/* Visual placeholder that gets covered/removed by the iframe */}
-           {!componentRef.current && (
-             <div className="flex items-center justify-center h-full text-gray-400 text-sm py-2">
-                <span className="animate-pulse">Loading secure payment form...</span>
-             </div>
-           )}
+          {isProcessing ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </>
+          ) : (
+            `Pay €${amount}`
+          )}
+        </button>
+        
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-xs text-gray-400 flex justify-center items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            Encrypted & Secure Payment
+          </p>
         </div>
-      </div>
-
-      <button 
-        onClick={handlePay}
-        disabled={isProcessing || !isScriptLoaded}
-        className="w-full bg-green-600 text-white py-3 rounded font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 shadow-md"
-      >
-        {isProcessing ? "Processing..." : `Pay €${amount}`}
-      </button>
-
-      <div className="text-xs text-gray-500 mt-4 text-center">
-        <p>Secure payments powered by 2Checkout (Verifone)</p>
-        <p className="mt-1">Supported in North Macedonia 🇲🇰</p>
       </div>
     </div>
   );
