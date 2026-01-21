@@ -99,7 +99,14 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       // Using the structure from documentation: { billing: { name: ... } }
       const billingDetails = {
         billing: {
-          name: billingName
+          name: billingName,
+          email: "guest@bizcall.mk",
+          address: "N/A",
+          city: "N/A",
+          state: "N/A",
+          zip: "N/A",
+          country: "MK", // Macedonia (based on bizcall.mk email)
+          phone: "N/A"
         },
         scope: 'ordering'
       };
