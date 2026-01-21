@@ -82,8 +82,9 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
           type: "digital", // or "tangible" depending on product settings
           "return-type": "redirect",
           "return-url": returnUrl,
-          name: billingData.name,
-          email: billingData.email,
+          // Removed name/email to force user to enter it, which avoids "Already Owned" blocking by 2Checkout's pre-check
+          // name: billingData.name,
+          // email: billingData.email,
           country: "MK",
           currency: "EUR", // Force currency to EUR
           "external-ref": listingId // Track listing ID in 2Checkout as External Reference

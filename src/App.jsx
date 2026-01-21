@@ -4332,7 +4332,7 @@ export default function App() {
                             amount={paymentIntent.amount}
                             listingId={paymentIntent.listingId}
                             plan={paymentIntent.type === 'extend' ? extendPlan : plan}
-                            // productCode={productCodeMap[paymentIntent.type === 'extend' ? extendPlan : plan]} // DISABLED: Using Dynamic Method for better Redirect control
+                            productCode={productCodeMap[paymentIntent.type === 'extend' ? extendPlan : plan]}
                             paymentType={paymentIntent.type}
                             onWillRedirect={async () => {
                               // Save form data to DB as PENDING to survive internet loss/browser close
