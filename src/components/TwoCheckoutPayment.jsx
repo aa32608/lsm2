@@ -33,7 +33,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       if (onError) onError(new Error("Failed to load payment system"));
     };
     document.body.appendChild(script);
-  }, [onError]);
+  }, []); // Removed onError to prevent infinite loops
 
   // Initialize 2Pay.js Component
   useEffect(() => {
@@ -41,7 +41,8 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
 
     try {
       console.log("Initializing 2Checkout Component...");
-      const jsPaymentClient = new window.TwoPayClient.TwoPayClient(MERCHANT_CODE);
+      // Fix: Use window.TwoPayClient directly as constructor
+      const jsPaymentClient = new window.TwoPayClient(MERCHANT_CODE);
       
       // Create the card component with styling
       const component = jsPaymentClient.components.create('card', {
@@ -72,7 +73,7 @@ export default function TwoCheckoutPayment({ amount, onSuccess, onError }) {
       console.error("Failed to initialize 2Pay.js component:", err);
       if (onError) onError(new Error("Payment system initialization failed"));
     }
-  }, [isScriptLoaded, MERCHANT_CODE, onError]);
+  }, [isScriptLoaded, MERCHANT_CODE]); // Removed onError
 
   const handlePay = async (e) => {
     e.preventDefault();
