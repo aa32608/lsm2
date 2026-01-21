@@ -328,6 +328,11 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     "return-url": returnUrl || "https://bizcall.mk",
     name: billingDetails?.name || undefined,
     email: billingDetails?.email || undefined,
+    address: billingDetails?.address || "Street 1",
+    city: billingDetails?.city || "Tetovo",
+    state: billingDetails?.state || "Tetovo",
+    zip: billingDetails?.zip || "1200",
+    phone: billingDetails?.phone || "070123456",
     country: "MK",
     ref: listingId // Track listing ID in 2Checkout
   };

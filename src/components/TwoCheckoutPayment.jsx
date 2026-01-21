@@ -89,13 +89,23 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
       const baseUrl = window.location.origin + window.location.pathname;
       const returnUrl = `${baseUrl}?2checkout_return=true&listingId=${listingId}&plan=${plan}&paymentType=${paymentType}`;
       
+      // Prepare full billing details with defaults
+      const fullBillingDetails = {
+        ...billingData,
+        address: "Street 1",
+        city: "Tetovo",
+        state: "Tetovo",
+        zip: "1200",
+        phone: "070123456"
+      };
+
       const response = await fetch(`${API_BASE}/api/2checkout/payment-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: Number(amount).toFixed(2),
           currency: "EUR",
-          billingDetails: billingData,
+          billingDetails: fullBillingDetails,
           listingId,
           plan,
           paymentType,
