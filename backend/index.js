@@ -12,6 +12,13 @@ import cron from "node-cron";
 
 dotenv.config();
 
+console.log("Environment Variables Loaded:");
+console.log("TWOCHECKOUT_MERCHANT_CODE:", !!process.env.TWOCHECKOUT_MERCHANT_CODE);
+console.log("TWOCHECKOUT_PRIVATE_KEY:", !!process.env.TWOCHECKOUT_PRIVATE_KEY);
+if (process.env.TWOCHECKOUT_PRIVATE_KEY) {
+    console.log("TWOCHECKOUT_PRIVATE_KEY length:", process.env.TWOCHECKOUT_PRIVATE_KEY.length);
+}
+
 // Initialize Resend lazily to prevent crash if API key is missing during startup
 let resend;
 if (process.env.RESEND_API_KEY) {

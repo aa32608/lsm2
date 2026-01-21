@@ -879,6 +879,48 @@ export default function App() {
     const type = params.get("paymentType");
     const planParam = params.get("plan");
 
+    // 2Checkout Return Handling
+    const is2CheckoutReturn = params.get("2checkout_return");
+
+    if (is2CheckoutReturn && listingId) {
+       console.log("Returned from 2Checkout redirect", { listingId, type, plan: planParam });
+       
+       // Clean URL immediately
+       const newUrl = window.location.pathname;
+       window.history.replaceState({}, "", newUrl);
+
+       setIsProcessingPayment(true);
+
+       const handle2CoSuccess = async () => {
+         try {
+           if (type === "extend") {
+             await handleServerCaptureForExtend("2CO_REDIRECT_" + Date.now(), listingId, planParam, true);
+           } else {
+             // Restore form data from localStorage
+             const savedData = localStorage.getItem("pending_listing_data");
+             if (savedData) {
+               const parsedData = JSON.parse(savedData);
+               setForm(parsedData);
+               if (parsedData.plan) setPlan(parsedData.plan);
+               
+               await handleServerCapture("2CO_REDIRECT_" + Date.now(), listingId, parsedData, true);
+             } else {
+               console.error("No saved form data found for 2Checkout return");
+               showMessage(t("error") + ": Session expired or data missing.", "error");
+               setIsProcessingPayment(false);
+             }
+           }
+         } catch (err) {
+            console.error("2Checkout return error:", err);
+            showMessage(t("error") + ": " + err.message, "error");
+            setIsProcessingPayment(false);
+         }
+       };
+
+       handle2CoSuccess();
+       return;
+    }
+
     if (isPaypalReturn && token && listingId) {
       console.log("[PAYPAL_DEBUG] Returned from PayPal redirect", { token, listingId, type });
       
