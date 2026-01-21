@@ -304,7 +304,7 @@ function generateSignature(params, secretWord) {
 }
 
 app.post("/api/2checkout/payment-url", (req, res) => {
-  const { amount, currency, billingDetails, returnUrl, listingId } = req.body;
+  const { amount, currency, billingDetails, returnUrl, listingId, plan } = req.body;
   
   // Configuration
   const merchantCode = process.env.TWOCHECKOUT_MERCHANT_CODE || process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
@@ -320,7 +320,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     merchant: merchantCode,
     dynamic: "1",
     currency: currency || "EUR",
-    prod: "Payment for Services",
+    prod: `Listing #${listingId} - Plan ${plan || "Standard"}`, // UNIQUE PRODUCT NAME to prevent "Already Purchased" error
     price: amount,
     qty: "1",
     type: "digital",
