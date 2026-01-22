@@ -75,6 +75,7 @@ app.use(
       "https://lsm-wozo.onrender.com",
       "https://lsmtetovo.vercel.app",
       "https://bizcall.mk",
+      "https://www.bizcall.mk"
     ],
     credentials: true,
   })
