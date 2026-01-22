@@ -207,8 +207,8 @@ app.post("/api/paypal/create-order", async (req, res) => {
         landing_page: "BILLING",
         user_action: "PAY_NOW",
         shipping_preference: "NO_SHIPPING",
-        return_url: returnUrl || "https://bizcall.mk",
-        cancel_url: cancelUrl || "https://bizcall.mk"
+        return_url: returnUrl || "https://bizcall.vercel.app",
+        cancel_url: cancelUrl || "https://bizcall.vercel.app"
       }
     };
 
@@ -342,7 +342,7 @@ app.post("/api/2checkout/payment-url", (req, res) => {
   
   // Construct Proxy Return URL
   // We send 2Checkout to THIS backend endpoint first, which sanitizes the params and redirects to the frontend.
-  const targetUrl = returnUrl || "https://bizcall.mk";
+  const targetUrl = returnUrl || "https://bizcall.vercel.app";
   const proxyReturnUrl = `${backendBase}/api/2checkout/return?target=${encodeURIComponent(targetUrl)}`;
 
   // ConvertPlus Parameters for Dynamic Product
@@ -544,7 +544,7 @@ async function sendMarketingEmails() {
     const verifiedDomain = process.env.RESEND_DOMAIN;
     const isTestingMode = !verifiedDomain;
 
-    const websiteUrl = "https://bizcall.mk"; // Or your production URL
+    const websiteUrl = "https://bizcall.vercel.app"; // Or your production URL
 
     const templates = [
       {
