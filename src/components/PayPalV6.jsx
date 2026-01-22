@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
@@ -7,199 +8,141 @@ export default function PayPalV6({
   listingId, 
   type = "create", 
   plan, 
-  formData, // passed to save in localStorage
+  formData, 
   onSuccess, 
   onError, 
   onCancel 
 }) {
+  const [clientId, setClientId] = useState(null);
   const [error, setError] = useState(null);
-  const [proxyError, setProxyError] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-  const buttonRef = useRef(null);
-  const sessionRef = useRef(null);
-  const sdkInstanceRef = useRef(null);
 
-  // Load SDK Script
+  // Fetch PayPal Client ID from backend
   useEffect(() => {
-    if (document.getElementById("paypal-sdk-v6")) {
-      // If script exists, check if global paypal is ready
-      if (window.paypal) setIsReady(true);
-      return;
-    }
-    
-    const script = document.createElement("script");
-    script.id = "paypal-sdk-v6";
-    script.src = "https://www.paypal.com/web-sdk/v6/core";
-    script.async = true;
-    script.onload = () => setIsReady(true);
-    script.onerror = () => setError("Failed to load PayPal SDK");
-    document.body.appendChild(script);
+    fetch(`${API_BASE}/api/paypal/config`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.clientId) {
+          setClientId(data.clientId);
+        } else {
+          console.error("PayPal Client ID missing from backend config");
+          setError("Payment system configuration missing. Please contact support.");
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch PayPal config:", err);
+        setError("Failed to load payment system. Please try again later.");
+      });
   }, []);
 
-  const createOrderFn = async () => {
-    console.log("[PayPal V6] Creating Order...");
-    
-    // Save state for redirects
-    if (type === "create" || type === "create_listing") {
-      if (formData) {
-         localStorage.setItem("pending_listing_data", JSON.stringify({
-           ...formData,
-           plan: plan
-         }));
+  const handleCreateOrder = async (data, actions) => {
+    try {
+      // Save state just in case (though we expect popup flow)
+      if ((type === "create" || type === "create_listing") && formData) {
+        localStorage.setItem("pending_listing_data", JSON.stringify({
+          ...formData,
+          plan: plan
+        }));
       }
+
+      const body = { 
+        listingId, 
+        amount, 
+        action: type === "extend" ? "extend" : "create_listing",
+        returnUrl: window.location.href, // Required by backend but unused in popup flow
+        cancelUrl: window.location.href
+      };
+
+      const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const orderData = await res.json();
+      if (!res.ok) throw new Error(orderData.error || orderData.message || "Order creation failed");
+      
+      return orderData.orderID; // Expects just the ID string
+    } catch (err) {
+      console.error("Create Order Error:", err);
+      setError("Could not initiate payment. " + err.message);
+      throw err;
     }
-
-    const returnUrlObj = new URL(window.location.origin + window.location.pathname);
-    returnUrlObj.searchParams.set("paypal_return", "true");
-    returnUrlObj.searchParams.set("listingId", listingId);
-    returnUrlObj.searchParams.set("paymentType", type);
-    if (type === "extend" && plan) {
-      returnUrlObj.searchParams.set("plan", plan);
-    }
-
-    const body = { 
-      listingId, 
-      amount, 
-      action: type === "extend" ? "extend" : "create_listing",
-      returnUrl: returnUrlObj.toString(),
-      cancelUrl: window.location.href
-    };
-
-    const res = await fetch(`${API_BASE}/api/paypal/create-order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Order creation failed");
-    
-    console.log("[PayPal V6] Order Created:", data.orderID);
-    // SDK v6 expects a Promise that resolves to { orderId: "..." }
-    return { orderId: data.orderID };
   };
 
-  // Initialize SDK and Session
-  useEffect(() => {
-    if (!isReady) return;
+  const handleApprove = async (data, actions) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/paypal/capture`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderID: data.orderID }),
+      });
 
-    let cleanupListener = null;
-
-    const init = async () => {
-      try {
-        if (!sdkInstanceRef.current) {
-          // 1. Get Token
-          const tokenRes = await fetch(`${API_BASE}/api/paypal/token`);
-          if (!tokenRes.ok) throw new Error("Failed to fetch PayPal token");
-          const { accessToken } = await tokenRes.json();
-          
-          if (!accessToken) throw new Error("No access token returned");
-
-          // 2. Create Instance
-          sdkInstanceRef.current = await window.paypal.createInstance({
-            clientToken: accessToken,
-            components: ["paypal-payments"],
-            pageType: "checkout",
-          });
-        }
-
-        // 3. Check Eligibility
-        const methods = await sdkInstanceRef.current.findEligibleMethods({ 
-          currencyCode: "EUR" 
-        });
-        
-        if (methods.isEligible("paypal")) {
-          // 4. Create Session
-          sessionRef.current = sdkInstanceRef.current.createPayPalOneTimePaymentSession({
-            onApprove: (data) => {
-              console.log("[PayPal V6] Approved:", data);
-              if (onSuccess) onSuccess(data);
-            },
-            onCancel: (data) => {
-              console.log("[PayPal V6] Cancelled:", data);
-              if (onCancel) onCancel(data);
-            },
-            onError: (err) => {
-              console.error("[PayPal V6] Error:", err);
-              if (onError) onError(err);
-            },
-          });
-
-          // 5. Show Button and Attach Listener
-          if (buttonRef.current) {
-            buttonRef.current.hidden = false;
-            
-            const handleClick = async () => {
-              if (!sessionRef.current) return;
-              try {
-                console.log("[PayPal V6] Starting session...");
-                // Pass the function reference, or the promise?
-                // V6 SDK usually expects a function that returns a promise for order creation, 
-                // OR a promise directly if the order is already created.
-                // We will try passing the function reference first, as "Received 'string'" suggests
-                // it might have evaluated a promise to a string and disliked it, or we passed a string.
-                // If we pass createOrderFn (function), the SDK calls it.
-                await sessionRef.current.start(
-                  { presentationMode: "popup" },
-                  createOrderFn
-                );
-              } catch (err) {
-                console.error("[PayPal V6] Start Error:", err);
-                // Check for IDE proxy error
-                if (err.toString().includes("property 'replace' is a read-only")) {
-                  setProxyError(true);
-                  return;
-                }
-                if (onError) onError(err);
-              }
-            };
-
-            buttonRef.current.addEventListener("click", handleClick);
-            cleanupListener = () => buttonRef.current.removeEventListener("click", handleClick);
-          }
-        } else {
-          setError("PayPal is not eligible for this transaction.");
-        }
-      } catch (err) {
-        console.error("[PayPal V6] Init Exception:", err);
-        setError(err.message);
+      const captureData = await res.json();
+      
+      if (!res.ok || !captureData.ok) {
+        throw new Error(captureData.error || "Payment capture failed");
       }
-    };
 
-    init();
+      if (onSuccess) onSuccess(captureData);
+    } catch (err) {
+      console.error("Capture Error:", err);
+      setError("Payment failed: " + err.message);
+      if (onError) onError(err);
+    }
+  };
 
-    return () => {
-      if (cleanupListener) cleanupListener();
-    };
-  }, [isReady]);
-
-
-
-  if (error) return <div className="text-red-500 text-sm p-2 bg-red-50 rounded">Error: {error}</div>;
-
-  if (proxyError) {
+  if (error) {
     return (
-      <div className="text-amber-600 text-sm p-4 bg-amber-50 rounded border border-amber-200">
-        <p className="font-bold mb-2">Development Environment Limitation</p>
-        <p>The PayPal payment popup cannot be opened inside this preview window due to security restrictions (Proxy Error).</p>
-        <p className="mt-2">Please open <a href={window.location.href} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">this page in a new browser tab</a> to complete the payment.</p>
+      <div className="p-4 bg-red-50 text-red-700 rounded border border-red-200">
+        <p className="font-bold">Error</p>
+        <p>{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-2 text-sm underline hover:text-red-800"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  }
+
+  if (!clientId) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Loading secure payment...</span>
       </div>
     );
   }
 
   return (
-    <div className="w-full flex justify-center py-2">
-      {/* Custom element for PayPal V6 */}
-      <paypal-button 
-        ref={buttonRef} 
-        type="pay" 
-        hidden 
-        style={{
-            display: 'block',
-            width: '100%',
-            height: '45px'
-        }}
-      ></paypal-button>
+    <div className="w-full max-w-md mx-auto p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        Pay Securely with PayPal or Card
+      </h3>
+      
+      <PayPalScriptProvider options={{ 
+        "client-id": clientId, 
+        currency: "EUR",
+        intent: "capture"
+      }}>
+        <PayPalButtons 
+          style={{ layout: "vertical", shape: "rect", color: "gold", label: "pay" }}
+          createOrder={handleCreateOrder}
+          onApprove={handleApprove}
+          onCancel={() => {
+            if (onCancel) onCancel();
+          }}
+          onError={(err) => {
+            console.error("PayPal Button Error:", err);
+            setError("An error occurred with the payment system.");
+          }}
+        />
+      </PayPalScriptProvider>
+      
+      <p className="text-xs text-center text-gray-400 mt-4">
+        Powered by PayPal. Secure encryption.
+      </p>
     </div>
   );
 }

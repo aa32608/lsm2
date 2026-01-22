@@ -26,7 +26,7 @@ import {
 
 import { AnimatePresence, motion } from "framer-motion";
 import PayPalV6 from "./components/PayPalV6";
-import TwoCheckoutPayment from "./components/TwoCheckoutPayment";
+import BankTransferPayment from "./components/BankTransferPayment";
 import "./App.css";
 
 // Lazy loaded components
@@ -102,13 +102,7 @@ const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
 
 const priceMap = { "1": 1, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
 
-// TODO: Replace these with your actual 2Checkout Product Codes from the Dashboard
-const productCodeMap = {
-  "1": "1MONTH",  // Replace with actual code for 1 Month Plan
-  "3": "3MONTH", // Replace with actual code for 3 Month Plan
-  "6": "6MONTH", // Replace with actual code for 6 Month Plan
-  "12": "12MONTH" // Replace with actual code for 12 Month Plan
-};
+
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -672,9 +666,9 @@ export default function App() {
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
-  const [paymentMethod, setPaymentMethod] = useState("card"); // "paypal" | "card" - default to card as requested
+  const [paymentMethod, setPaymentMethod] = useState("bank_transfer"); // "paypal" | "bank_transfer"
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentReturnStatus, setPaymentReturnStatus] = useState("none"); // "none" | "processing" | "success" | "error"
+
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
   const isCreatingOrder = React.useRef(false);
 
@@ -772,183 +766,7 @@ export default function App() {
     }
   }, []);
 
-  // Verify 2Checkout Order (Shared by URL return and Popup Message)
-  async function verify2CheckoutOrder(refNo, listingId, planParam, type) {
-    console.log("[2CHECKOUT] Verifying order...", { refNo, listingId, type, planParam });
-    setIsProcessingPayment(true);
-    try {
-      if (!refNo) {
-         console.warn("No refno found. Payment might have failed.");
-         showMessage("Payment processing incomplete. Please contact support if you were charged.", "info");
-         setIsProcessingPayment(false);
-         return;
-      }
 
-      const verifyResp = await fetch(`${API_BASE}/api/2checkout/verify-order/${refNo}`);
-      const verifyData = await verifyResp.json();
-
-      if (!verifyData.ok) {
-        throw new Error("Order verification failed: " + (verifyData.error || "Unknown error"));
-      }
-      
-      console.log("Order verified successfully.");
-
-      if (type === "extend") {
-        await handleServerCaptureForExtend(refNo, listingId, planParam, true);
-      } else {
-        const listingRef = dbRef(db, `listings/${listingId}`);
-        const snapshot = await get(listingRef);
-        
-        if (snapshot.exists()) {
-          // SECURITY: Always use the Plan stored in the database, not the one from the URL/LocalStorage.
-          // This prevents users from manipulating the local storage to get a different plan duration.
-          const securedPlan = snapshot.val().plan; 
-          
-          if (!securedPlan) {
-             console.error("Security Warning: No plan found in DB for verification. Using param fallback.");
-          }
-
-          await update(listingRef, { 
-            status: "verified",
-            orderId: refNo,
-            // Use securedPlan if available, otherwise fall back to param (only for legacy/edge cases)
-            expiresAt: Date.now() + parseInt(securedPlan || planParam) * 30 * 24 * 60 * 60 * 1000
-          });
-          showMessage(t("paymentComplete"), "success");
-          setPendingOrder(null);
-          setPaymentModalOpen(false);
-          setPaymentIntent(null);
-          setIsProcessingPayment(false);
-          localStorage.removeItem("pending_listing_data");
-        } else {
-          const savedData = localStorage.getItem("pending_listing_data");
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            setForm(parsedData);
-            if (parsedData.plan) setPlan(parsedData.plan);
-            await handleServerCapture(refNo, listingId, parsedData, true); 
-          } else {
-            console.error("[2CHECKOUT] No saved form data found");
-            showMessage(t("error") + " Session expired, please try again.", "error");
-            setIsProcessingPayment(false);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("2Checkout processing error:", err);
-      showMessage("Error activating listing: " + err.message, "error");
-      setIsProcessingPayment(false);
-    }
-  }
-
-  // Handle 2Checkout Return (URL & Popup)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    
-    // Check for both old (URL-heavy) and new (Clean URL) flags
-    const is2CheckoutReturn = params.get("2checkout_return") || params.get("gateway_return") === "2co";
-    
-    // 2Checkout standard parameter is 'refno' (lowercase), but we check variations
-    const refNo = params.get("refno") || params.get("refNo") || params.get("order_number") || params.get("orderRef"); 
-
-    if (is2CheckoutReturn && refNo) {
-      // Try to get context from URL first, then LocalStorage
-      let listingId = params.get("listingId");
-      let planParam = params.get("plan");
-      let type = params.get("paymentType");
-
-      if (!listingId) {
-        try {
-          const savedContext = JSON.parse(localStorage.getItem("payment_processing_context") || "{}");
-          // Check if context is fresh (e.g. within 1 hour)
-          if (savedContext.timestamp && (Date.now() - savedContext.timestamp < 3600000)) {
-             listingId = savedContext.listingId;
-             planParam = savedContext.plan;
-             type = savedContext.paymentType;
-             console.log("[2CHECKOUT] Restored context from LocalStorage:", savedContext);
-          }
-        } catch (e) {
-          console.error("Failed to parse payment context", e);
-        }
-      }
-
-      if (!listingId) {
-        console.error("[2CHECKOUT] Missing listingId in return. Cannot verify.");
-        // If we really can't find it, we might check pending_listing_data
-        const pendingData = JSON.parse(localStorage.getItem("pending_listing_data") || "{}");
-        if (pendingData.id) listingId = pendingData.id;
-        if (pendingData.plan) planParam = pendingData.plan;
-        // Default type
-        if (!type) type = "create";
-      }
-
-      if (listingId) {
-        console.log("[2CHECKOUT] Payment return detected", { listingId, refNo, type });
-        
-        // Show Processing Overlay immediately
-        setPaymentReturnStatus("processing");
-
-        // Clean URL immediately
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, "", newUrl);
-
-        const processReturn = async () => {
-          try {
-            // 1. Notify opener (Best Effort for UI Sync)
-            if (window.opener && window.opener !== window) {
-              console.log("[2CHECKOUT] Sending message to opener...");
-              try {
-                  window.opener.postMessage({
-                    type: "2CHECKOUT_RETURN",
-                    payload: { refNo, listingId, planParam, type }
-                  }, window.location.origin);
-              } catch (e) {
-                  console.warn("[2CHECKOUT] Failed to message opener:", e);
-              }
-            }
-
-            // 2. Verify Order (CRITICAL: Always run in current window to ensure DB update)
-            console.log("[2CHECKOUT] Verifying order in current window...");
-            await verify2CheckoutOrder(refNo, listingId, planParam, type);
-            
-            // 3. Show Success
-            setPaymentReturnStatus("success");
-            
-            // 4. Close window if it's a popup
-            setTimeout(() => {
-              if (window.opener && window.opener !== window) {
-                  window.close();
-              } else {
-                  // If main window, just hide overlay
-                  setPaymentReturnStatus("none");
-              }
-            }, 2500);
-
-          } catch (err) {
-            console.error("[2CHECKOUT] Return processing error:", err);
-            setPaymentReturnStatus("error");
-            // Keep error overlay visible so user can see what happened
-          }
-        };
-
-        processReturn();
-      }
-    }
-  }, []);
-
-  // Listen for 2Checkout completion messages from popup
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data && event.data.type === "2CHECKOUT_RETURN") {
-        const { refNo, listingId, planParam, type } = event.data.payload;
-        console.log("[2CHECKOUT] Received completion message", event.data.payload);
-        verify2CheckoutOrder(refNo, listingId, planParam, type);
-      }
-    };
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
@@ -1004,8 +822,6 @@ export default function App() {
     const type = params.get("paymentType");
     const planParam = params.get("plan");
 
-    // 2Checkout Return Handling
-    // (Handled in separate useEffect above to avoid conflicts)
 
     if (isPaypalReturn && token && listingId) {
       console.log("[PAYPAL_DEBUG] Returned from PayPal redirect", { token, listingId, type });
@@ -2462,60 +2278,7 @@ export default function App() {
 
   return (
     <>
-      {/* 2Checkout Return Overlay */}
-      {paymentReturnStatus !== "none" && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 99999,
-          background: "#f8fafc", display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", fontFamily: "sans-serif"
-        }}>
-          {paymentReturnStatus === "processing" && (
-            <>
-               <div style={{
-                  border: "4px solid #f3f3f3", borderTop: "4px solid #3b82f6", borderRadius: "50%",
-                  width: "40px", height: "40px", animation: "spin 1s linear infinite", marginBottom: "20px"
-               }}></div>
-               <h3 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Verifying Payment...</h3>
-               <p style={{color: "#64748b"}}>Please wait while we confirm your order.</p>
-            </>
-          )}
-          {paymentReturnStatus === "success" && (
-             <>
-                <div style={{
-                   width:"60px", height:"60px", borderRadius:"50%", background:"#dcfce7", color:"#16a34a",
-                   display:"flex", alignItems:"center", justifyContent:"center", fontSize:"30px", marginBottom:"20px"
-                }}>✓</div>
-                <h2 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Payment Successful!</h2>
-                <p style={{color: "#64748b"}}>Your listing has been verified.</p>
-                {typeof window !== 'undefined' && window.opener ? (
-                   <p style={{color: "#94a3b8", fontSize: "0.9em", marginTop: "10px"}}>Closing window...</p>
-                ) : (
-                   <button onClick={() => setPaymentReturnStatus("none")} style={{
-                      marginTop:"20px", padding:"10px 24px", background:"#2563eb", color:"white",
-                      border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:600
-                   }}>Continue to Dashboard</button>
-                )}
-             </>
-          )}
-          {paymentReturnStatus === "error" && (
-             <>
-                <div style={{
-                   width:"60px", height:"60px", borderRadius:"50%", background:"#fee2e2", color:"#ef4444",
-                   display:"flex", alignItems:"center", justifyContent:"center", fontSize:"30px", marginBottom:"20px"
-                }}>✕</div>
-                <h2 style={{color: "#1e293b", margin: "0 0 10px 0"}}>Verification Failed</h2>
-                <p style={{color: "#64748b", maxWidth: "400px", textAlign: "center"}}>
-                   We couldn't automatically verify your payment. Please contact support if you were charged.
-                </p>
-                <button onClick={() => setPaymentReturnStatus("none")} style={{
-                   marginTop:"20px", padding:"10px 24px", background:"#ef4444", color:"white",
-                   border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:600
-                }}>Close</button>
-             </>
-          )}
-          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        </div>
-      )}
+
 
       <HeadManager
         title={seoTitle}
@@ -4443,11 +4206,11 @@ export default function App() {
                         {/* Payment Method Toggle */}
                         <div className="payment-method-toggle" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                           <button 
-                            className={`btn ${paymentMethod === 'card' ? 'btn-primary' : 'btn-ghost'}`}
+                            className={`btn ${paymentMethod === 'bank_transfer' ? 'btn-primary' : 'btn-ghost'}`}
                             style={{ flex: 1, justifyContent: 'center' }}
-                            onClick={() => setPaymentMethod('card')}
+                            onClick={() => setPaymentMethod('bank_transfer')}
                           >
-                            💳 {t("card") || "Card"}
+                            🏦 {t("bankTransfer") || "Bank Transfer"}
                           </button>
                           <button 
                             className={`btn ${paymentMethod === 'paypal' ? 'btn-primary' : 'btn-ghost'}`}
@@ -4458,62 +4221,51 @@ export default function App() {
                           </button>
                         </div>
 
-                        {paymentMethod === 'card' ? (
-                          <TwoCheckoutPayment 
+                        {paymentMethod === 'bank_transfer' ? (
+                          <BankTransferPayment 
                             amount={paymentIntent.amount}
                             listingId={paymentIntent.listingId}
                             plan={paymentIntent.type === 'extend' ? extendPlan : plan}
-                            productCode={productCodeMap[paymentIntent.type === 'extend' ? extendPlan : plan]}
-                            paymentType={paymentIntent.type}
-                            onWillRedirect={async () => {
-                              // Save form data to DB as PENDING to survive internet loss/browser close
-                              if (paymentIntent.type === "create") {
-                                 console.log("Persisting pending listing to Firebase before redirect...");
-                                 
-                                 const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
-                                 const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
-                                 const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
-                                 
-                                 // Save as pending_payment
-                                 try {
-                                   await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
-                                     ...form,
-                                     status: "pending_payment", // Important status
-                                     pricePaid: priceMap[plan],
-                                     contact: normalizedContact,
-                                     offerprice: offerpriceStr || "",
-                                     location: finalLocation,
-                                     locationCity: form.locationCity,
-                                     locationExtra: form.locationExtra,
-                                     plan: plan,
-                                     price: priceMap[plan],
-                                     id: paymentIntent.listingId,
-                                     userId: user?.uid || null,
-                                     userEmail: user?.email || null,
-                                     createdAt: Date.now(),
-                                     // expiresAt will be set on verification
-                                   });
-                                   console.log("Pending listing saved to DB.");
-                                 } catch (err) {
-                                   console.error("Failed to save pending listing:", err);
-                                 }
-                              }
-                            }}
-                            onSuccess={async () => {
-                              // This might not be reached if redirect happens, but kept for fallback/inline logic
-                              const mockOrderId = "2CO_INLINE_" + Date.now(); 
+                            onConfirm={async () => {
                               try {
-                                if (paymentIntent.type === "extend") {
-                                  await handleServerCaptureForExtend(mockOrderId, paymentIntent.listingId, extendPlan, true);
+                                if (paymentIntent.type === "create") {
+                                  const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
+                                  const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
+                                  const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
+                                  
+                                  await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
+                                    ...form,
+                                    status: "pending_approval",
+                                    paymentMethod: "bank_transfer",
+                                    contact: normalizedContact,
+                                    offerprice: offerpriceStr || "",
+                                    location: finalLocation,
+                                    locationCity: form.locationCity,
+                                    locationExtra: form.locationExtra,
+                                    plan: plan,
+                                    price: priceMap[plan],
+                                    id: paymentIntent.listingId,
+                                    userId: user?.uid || null,
+                                    userEmail: user?.email || null,
+                                    createdAt: Date.now(),
+                                  });
                                 } else {
-                                  await handleServerCapture(mockOrderId, paymentIntent.listingId, null, true);
+                                  // Extend flow
+                                  await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
+                                    paymentMethod: "bank_transfer",
+                                    paymentStatus: "pending_verification",
+                                    requestedPlan: extendPlan
+                                  });
                                 }
+                                
+                                showMessage(t("listingSubmittedForApproval") || "Listing submitted! We will activate it after verifying payment.", "success");
+                                setPaymentModalOpen(false);
+                                setPaymentIntent(null);
                               } catch (err) {
-                                console.error("Payment capture error:", err);
-                                showMessage(t("error") + ": " + err.message, "error");
+                                console.error("Failed to save bank transfer listing:", err);
+                                showMessage("Error: " + err.message, "error");
                               }
                             }}
-                            onError={(err) => showMessage(err.message, "error")}
                           />
                         ) : (
                           <div className="paypal-button-container">
@@ -4523,18 +4275,18 @@ export default function App() {
                             type={paymentIntent.type}
                             plan={extendPlan}
                             formData={form}
-                            onSuccess={async (data) => {
-                              console.log("[PAYPAL_DEBUG] onSuccess triggered, data:", data);
-                              // v6 data object contains orderId
-                              const id = data.orderID || data.orderId;
+                            onSuccess={async (res) => {
+                              console.log("[PAYPAL_DEBUG] onSuccess triggered, res:", res);
+                              // res is { ok: true, data: { id: "...", ... } }
+                              const id = res.data?.id || res.orderID; 
                               
                               try {
                                 if (paymentIntent.type === "extend") {
                                   console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
-                                  await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan);
+                                  await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan, true);
                                 } else {
                                   console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
-                                  await handleServerCapture(id, paymentIntent.listingId);
+                                  await handleServerCapture(id, paymentIntent.listingId, null, true);
                                 }
                               } catch (err) {
                                 console.error("[PAYPAL_DEBUG] onApprove processing error:", err);

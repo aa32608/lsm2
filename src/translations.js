@@ -649,6 +649,8 @@ export const TRANSLATIONS = {
     privacy4Text: "You have the right to access, update, or delete your personal information at any time via your account settings.",
     privacy5Title: "5. Contact",
     privacy5Text: "If you have questions about this policy, please contact us.",
+    bankTransfer: "Bank Transfer",
+    listingSubmittedForApproval: "Listing submitted! We will activate it after verifying payment.",
   },
 
   sq: {
@@ -1269,6 +1271,8 @@ export const TRANSLATIONS = {
     privacy4Text: "Ju keni të drejtë të qaseni, përditësoni ose fshini informacionet tuaja personale në çdo kohë përmes cilësimeve të llogarisë suaj.",
     privacy5Title: "5. Kontakt",
     privacy5Text: "Nëse keni pyetje në lidhje me këtë politikë, ju lutemi na kontaktoni.",
+    bankTransfer: "Transfer Bankar",
+    listingSubmittedForApproval: "Listimi u dërgua! Ne do ta aktivizojmë pas verifikimit të pagesës.",
   },
 
   mk: {
@@ -1897,6 +1901,8 @@ export const TRANSLATIONS = {
     privacy4Text: "Имате право да пристапите, ажурирате или избришете вашите лични информации во секое време преку поставките на вашата сметка.",
     privacy5Title: "5. Контакт",
     privacy5Text: "Ако имате прашања во врска со оваа политика, ве молиме контактирајте не.",
+    bankTransfer: "Банкарски трансфер",
+    listingSubmittedForApproval: "Огласот е поднесен! Ќе го активираме по верификација на плаќањето.",
   },
 };
 

@@ -13,11 +13,7 @@ import cron from "node-cron";
 dotenv.config();
 
 console.log("Environment Variables Loaded:");
-console.log("TWOCHECKOUT_MERCHANT_CODE:", !!process.env.TWOCHECKOUT_MERCHANT_CODE);
-console.log("TWOCHECKOUT_PRIVATE_KEY:", !!process.env.TWOCHECKOUT_PRIVATE_KEY);
-if (process.env.TWOCHECKOUT_PRIVATE_KEY) {
-    console.log("TWOCHECKOUT_PRIVATE_KEY length:", process.env.TWOCHECKOUT_PRIVATE_KEY.length);
-}
+
 
 // Initialize Resend lazily to prevent crash if API key is missing during startup
 let resend;
@@ -163,6 +159,13 @@ async function generateClientToken() {
   }
 }
 
+/* ----------------------- GET PAYPAL CONFIG ---------------- */
+
+app.get("/api/paypal/config", (req, res) => {
+  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
+  res.json({ clientId });
+});
+
 /* ----------------------- GET PAYPAL TOKEN (for v6 SDK) ---------------- */
 
 app.get("/api/paypal/token", async (req, res) => {
@@ -279,156 +282,7 @@ app.post("/api/paypal/capture", async (req, res) => {
   }
 });
 
-/* ----------------------- 2CHECKOUT (VERIFONE) ----------------------- */
 
-// Helper to generate 2Checkout Signature (HMAC-SHA256)
-function generateSignature(params, secretWord) {
-  // 1. Filter out empty parameters and sort keys alphabetically
-  const keys = Object.keys(params).filter(key => params[key] !== "" && params[key] !== null && params[key] !== undefined).sort();
-
-  // 2. Serialize values: length + value
-  let serialized = "";
-  keys.forEach(key => {
-    const value = String(params[key]);
-    serialized += value.length + value;
-  });
-
-  // console.log(`[2Checkout] Serialized String for Signature: "${serialized}"`);
-
-  // 3. Encrypt using HMAC-MD5 (Standard for 2Checkout Buy Links)
-  const signature = crypto.createHmac('md5', secretWord)
-    .update(serialized)
-    .digest('hex');
-    
-  return signature;
-}
-
-// PROXY RETURN ENDPOINT: Sanitizes 2Checkout Return URL to remove PII (Email, Phone, Address)
-// This prevents Chrome/Google from flagging the return URL as "Deceptive" or "Phishing".
-app.get("/api/2checkout/return", (req, res) => {
-  const { target, refno, order_number } = req.query;
-  const finalRef = refno || order_number;
-  
-  if (!target) {
-    return res.status(400).send("Missing target URL");
-  }
-  
-  // console.log(`[2Checkout] Sanitizing return for Ref: ${finalRef}. Target: ${target}`);
-  
-  // Redirect to the frontend (target) with ONLY the refNo.
-  // We explicitly drop all other parameters (email, phone, billing details) to satisfy security checks.
-  const separator = target.includes("?") ? "&" : "?";
-  const cleanUrl = `${target}${separator}refNo=${finalRef}`;
-  
-  res.redirect(cleanUrl);
-});
-
-app.post("/api/2checkout/payment-url", (req, res) => {
-  const { amount, currency, billingDetails, returnUrl, listingId, plan } = req.body;
-  
-  // Configuration
-  const merchantCode = process.env.TWOCHECKOUT_MERCHANT_CODE || process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731"; 
-  const secretKey = process.env.TWOCHECKOUT_PRIVATE_KEY; // This is the "Buy Link Secret Word"
-
-  if (!secretKey) {
-    console.warn("Missing TWOCHECKOUT_PRIVATE_KEY. Payment link might fail.");
-    return res.status(500).json({ error: "Server misconfiguration: Missing Secret Key" });
-  }
-
-  // Determine Backend Base URL for the Proxy Return
-  const host = req.get("host");
-  const protocol = req.secure || req.get("x-forwarded-proto") === "https" ? "https" : "http";
-  const backendBase = `${protocol}://${host}`;
-  
-  // Construct Proxy Return URL
-  // We send 2Checkout to THIS backend endpoint first, which sanitizes the params and redirects to the frontend.
-  const targetUrl = returnUrl || "https://bizcall.vercel.app";
-  const proxyReturnUrl = `${backendBase}/api/2checkout/return?target=${encodeURIComponent(targetUrl)}`;
-
-  // ConvertPlus Parameters for Dynamic Product
-  const rawParams = {
-    merchant: merchantCode,
-    dynamic: "1",
-    currency: currency || "EUR",
-    prod: `Listing #${listingId} - Plan ${plan || "Standard"} - Ref:${Date.now()}`, // UNIQUE PRODUCT NAME to prevent "Already Purchased" error
-    price: amount,
-    qty: "1",
-    type: "digital",
-    "return-type": "redirect",
-    "return-url": proxyReturnUrl,
-    "x_receipt_link_url": proxyReturnUrl, // Legacy 2Checkout support
-    mode: "2CO", // Standard Checkout mode
-    name: billingDetails?.name || undefined,
-    email: billingDetails?.email || undefined,
-    address: billingDetails?.address || "Street 1",
-    city: billingDetails?.city || "Tetovo",
-    state: billingDetails?.state || "Tetovo",
-    zip: billingDetails?.zip || "1200",
-    phone: billingDetails?.phone || "070123456",
-    country: "MK",
-    "external-ref": listingId // Track listing ID in 2Checkout as "External Reference"
-  };
-
-  // Remove undefined/empty keys from params to ensure consistency
-  const params = Object.fromEntries(
-    Object.entries(rawParams).filter(([_, v]) => v !== undefined && v !== "" && v !== null)
-  );
-
-  // For ConvertPlus/2Checkout Buy Links with signature:
-  // ALL parameters sent in the URL must be included in the signature calculation.
-  const signatureParams = { ...params };
-
-  try {
-    const signature = generateSignature(signatureParams, secretKey);
-    
-    // Construct final URL
-    const baseUrl = "https://secure.2checkout.com/checkout/buy";
-    const urlParams = new URLSearchParams();
-    
-    // Add all valid params to URL
-    Object.keys(params).forEach(key => urlParams.append(key, params[key]));
-    
-    // Add signature
-    urlParams.append("signature", signature);
-
-    const paymentUrl = `${baseUrl}?${urlParams.toString()}`;
-    // console.log(`[2Checkout] Generated Signed URL for ${amount} ${currency}`);
-    
-    res.json({ url: paymentUrl });
-  } catch (err) {
-    console.error("Signature Generation Error:", err);
-    res.status(500).json({ error: "Failed to generate payment signature" });
-  }
-});
-
-app.get("/api/2checkout/verify-order/:refNo", async (req, res) => {
-  const { refNo } = req.params;
-  const merchantCode = process.env.TWOCHECKOUT_MERCHANT_CODE || process.env.VITE_TWOCHECKOUT_MERCHANT_CODE || "255881426731";
-  
-  // Note: 2Checkout API requires a different authentication mechanism (username/password or specific API keys)
-  // which might be different from the "Buy Link Secret Word".
-  // However, we can also use the INS (IPN) logic or simple API check if credentials are provided.
-  // For now, since we might not have API credentials set up, we will implement a basic check or 
-  // warn if not configured. 
-  
-  // REAL IMPLEMENTATION REQUIREMENT:
-  // To verify an order via API, you need to call:
-  // GET https://api.2checkout.com/rest/6.0/orders/{refNo}/
-  // Headers: Accept: application/json, X-Avangate-Authentication: code="{merchantCode}" date="{date}" hash="{hash}"
-  
-  // As a fallback for this session (since user asked "will it work no matter what"),
-  // we will trust the client for now BUT we really should implement the API call.
-  // I will add a placeholder that returns TRUE so the frontend logic can be updated to "Call Backend",
-  // and then we can swap this implementation with the real API call once credentials are confirmed.
-  
-  console.log(`[2Checkout] Verifying order: ${refNo}`);
-  
-  // TODO: Add Real 2Checkout API Call here.
-  // For now, we return success to allow the flow to proceed, 
-  // but we logged the verification attempt.
-  
-  res.json({ ok: true, status: "VERIFIED_PLACEHOLDER" });
-});
 
 
 /* ----------------------- VERIFY ORDER (OPTIONAL) ----------------------- */
@@ -674,105 +528,7 @@ cron.schedule(cronExpression, async () => {
   }
 });
 
-/* ----------------------- 2CHECKOUT (VERIFONE) ------------------------ */
 
-app.post("/api/2checkout/create-order", async (req, res) => {
-  const { token, amount, currency, merchantCode, billingDetails } = req.body;
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [2Checkout] Create Order Request: Amount=${amount} ${currency}, Token=${token}`);
-
-  const privateKey = process.env.TWOCHECKOUT_PRIVATE_KEY;
-  
-  if (!privateKey) {
-    console.warn("[2Checkout] Missing Private Key. Simulating success for testing.");
-    return res.json({ 
-      success: true, 
-      orderId: "2CO-SIM-" + Date.now(),
-      message: "Simulation: Payment successful (Private Key needed for real charge)" 
-    });
-  }
-
-  try {
-    // 1. Prepare Authentication Header
-    // Format: code="{MERCHANT_CODE}" date="{YYYY-MM-DD HH:mm:ss}" hash="{HMAC_MD5}"
-    
-    // Get current date in UTC format YYYY-MM-DD HH:mm:ss
-    const now = new Date();
-    const dateStr = now.toISOString().replace(/T/, ' ').replace(/\..+/, ''); 
-    
-    const stringToHash = merchantCode.length + merchantCode + dateStr.length + dateStr;
-    const hash = crypto.createHmac('md5', privateKey).update(stringToHash).digest('hex');
-    
-    const authHeader = `code="${merchantCode}" date="${dateStr}" hash="${hash}"`;
-
-    // 2. Prepare Order Payload
-    // NOTE: For "2Monetize" accounts, accurate Billing Details are MANDATORY for tax calculation.
-    // If you use dummy data ("Tetovo, MK"), 2Checkout will charge MK VAT (18%).
-    // Ensure "Dynamic Products" is ENABLED in your 2Checkout Dashboard -> Integrations -> Webhooks & API.
-    const orderPayload = {
-      Currency: currency || "EUR",
-      Language: "en",
-      Country: "MK", // Customer's Country Code (Required for 2Monetize)
-      CustomerIP: req.headers['x-forwarded-for'] || req.socket.remoteAddress || "127.0.0.1",
-      Source: "BIZCALL_MK",
-      BillingDetails: {
-        FirstName: billingDetails?.name?.split(" ")[0] || "Guest",
-        LastName: billingDetails?.name?.split(" ").slice(1).join(" ") || "User",
-        Email: billingDetails?.email || "guest@bizcall.mk",
-        CountryCode: "MK",
-        City: "Tetovo", // Placeholder if not provided
-        Address1: "Street 1", // Placeholder
-        Zip: "1200" // Placeholder
-      },
-      Items: [
-        {
-          Name: "BizCall Service Payment",
-          Quantity: 1,
-          Code: "SVC-CHARGE",
-          Price: {
-            Amount: amount,
-            Type: "CUSTOM"
-          }
-        }
-      ],
-      PaymentDetails: {
-        Type: "CC", 
-        PaymentMethod: {
-          Ewallet: false,
-          CardNumber: token, // 2Pay.js token passed as CardNumber
-          HolderName: billingDetails?.name || "Guest User"
-        }
-      }
-    };
-
-    console.log("[2Checkout] Sending Order to API...", JSON.stringify(orderPayload, null, 2));
-
-    // 3. Send Request
-    const response = await fetch("https://api.2checkout.com/rest/6.0/orders/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "X-Avangate-Authentication": authHeader
-      },
-      body: JSON.stringify(orderPayload)
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("[2Checkout] API Error:", JSON.stringify(data, null, 2));
-      throw new Error(data.message || "Payment authorization failed");
-    }
-
-    console.log("[2Checkout] Payment Successful:", data);
-    res.json({ success: true, orderId: data.RefNo, data });
-
-  } catch (err) {
-    console.error("[2Checkout] Error:", err);
-    res.status(500).json({ error: err.message || "Payment processing failed" });
-  }
-});
 
 /* -------------------------- START SERVER -------------------------- */
 
