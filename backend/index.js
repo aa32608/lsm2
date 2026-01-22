@@ -68,15 +68,26 @@ const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://lsm-bojr3c63z-artins-projects-8d0a28db.vercel.app",
-      "https://bizcall.vercel.app",
-      "https://lsm-wozo.onrender.com",
-      "https://lsmtetovo.vercel.app",
-      "https://bizcall.mk",
-      "https://www.bizcall.mk"
-    ],
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "https://lsm-bojr3c63z-artins-projects-8d0a28db.vercel.app",
+        "https://bizcall.vercel.app",
+        "https://lsm-wozo.onrender.com",
+        "https://lsmtetovo.vercel.app",
+        "https://bizcall.mk",
+        "https://www.bizcall.mk"
+      ];
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log("[CORS] Blocked origin:", origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
