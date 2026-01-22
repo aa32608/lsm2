@@ -666,7 +666,7 @@ export default function App() {
   /* Payment modal */
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer"); // "paypal" | "bank_transfer"
+  const [paymentMethod, setPaymentMethod] = useState("paypal"); // "paypal" | "bank_transfer"
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
@@ -4206,18 +4206,18 @@ export default function App() {
                         {/* Payment Method Toggle */}
                         <div className="payment-method-toggle" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                           <button 
-                            className={`btn ${paymentMethod === 'bank_transfer' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ flex: 1, justifyContent: 'center' }}
-                            onClick={() => setPaymentMethod('bank_transfer')}
-                          >
-                            🏦 {t("bankTransfer") || "Bank Transfer"}
-                          </button>
-                          <button 
                             className={`btn ${paymentMethod === 'paypal' ? 'btn-primary' : 'btn-ghost'}`}
                             style={{ flex: 1, justifyContent: 'center' }}
                             onClick={() => setPaymentMethod('paypal')}
                           >
                             <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>Pay</span><span style={{ fontWeight: 'bold' }}>Pal</span>
+                          </button>
+                          <button 
+                            className={`btn ${paymentMethod === 'bank_transfer' ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ flex: 1, justifyContent: 'center' }}
+                            onClick={() => setPaymentMethod('bank_transfer')}
+                          >
+                            🏦 {t("bankTransfer") || "Bank Transfer"}
                           </button>
                         </div>
 
