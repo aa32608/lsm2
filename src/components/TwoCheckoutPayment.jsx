@@ -37,33 +37,8 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
 
     setIsProcessing(true);
 
-    // Open new window immediately to avoid popup blocker
-    const paymentWindow = window.open("", "_blank");
-    if (paymentWindow) {
-      paymentWindow.document.write(`
-        <html>
-          <head>
-            <title>Processing Payment...</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f8fafc; color: #1e293b; margin: 0; }
-              .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3b82f6; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 20px; }
-              @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-              h3 { margin: 0 0 10px 0; font-size: 1.25rem; }
-              p { color: #64748b; margin: 0; }
-            </style>
-          </head>
-          <body>
-            <div class="loader"></div>
-            <h3>Redirecting to 2Checkout...</h3>
-            <p>Please do not close this window.</p>
-          </body>
-        </html>
-      `);
-    } else {
-      setErrorMessage("Popup blocked. Please allow popups for this site to proceed with payment.");
-      setIsProcessing(false);
-      return;
-    }
+    // Removed Popup Logic - Redirecting Main Window instead
+    // const paymentWindow = window.open("", "_blank"); ...
 
     try {
       // Option 1: Use Product Code (Static Product Method) - MOST RELIABLE
@@ -98,14 +73,16 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
           onWillRedirect();
         }
 
-        if (paymentWindow) paymentWindow.location.href = directUrl;
+        // Redirect Main Window
+        window.location.href = directUrl;
         return;
       }
 
       // Option 2: Use Static Buy Link (if provided in env)
       if (BUY_LINK) {
         console.log("Redirecting to Static Buy Link...");
-        if (paymentWindow) paymentWindow.location.href = BUY_LINK;
+        // Redirect Main Window
+        window.location.href = BUY_LINK;
         return;
       }
 
@@ -163,10 +140,12 @@ export default function TwoCheckoutPayment({ amount, listingId, plan, paymentTyp
       }
 
       if (paymentWindow) paymentWindow.location.href = data.url;
+      // Redirect Main Window
+      window.location.href = data.url;
 
     } catch (err) {
       console.error("Payment Error:", err);
-      if (paymentWindow) paymentWindow.close();
+      // if (paymentWindow) paymentWindow.close();
       setErrorMessage(err.message || "An error occurred. Please try again.");
       setIsProcessing(false);
       if (onError) onError(err);

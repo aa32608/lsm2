@@ -303,6 +303,26 @@ function generateSignature(params, secretWord) {
   return signature;
 }
 
+// PROXY RETURN ENDPOINT: Sanitizes 2Checkout Return URL to remove PII (Email, Phone, Address)
+// This prevents Chrome/Google from flagging the return URL as "Deceptive" or "Phishing".
+app.get("/api/2checkout/return", (req, res) => {
+  const { target, refno, order_number } = req.query;
+  const finalRef = refno || order_number;
+  
+  if (!target) {
+    return res.status(400).send("Missing target URL");
+  }
+  
+  // console.log(`[2Checkout] Sanitizing return for Ref: ${finalRef}. Target: ${target}`);
+  
+  // Redirect to the frontend (target) with ONLY the refNo.
+  // We explicitly drop all other parameters (email, phone, billing details) to satisfy security checks.
+  const separator = target.includes("?") ? "&" : "?";
+  const cleanUrl = `${target}${separator}refNo=${finalRef}`;
+  
+  res.redirect(cleanUrl);
+});
+
 app.post("/api/2checkout/payment-url", (req, res) => {
   const { amount, currency, billingDetails, returnUrl, listingId, plan } = req.body;
   
@@ -315,6 +335,16 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     return res.status(500).json({ error: "Server misconfiguration: Missing Secret Key" });
   }
 
+  // Determine Backend Base URL for the Proxy Return
+  const host = req.get("host");
+  const protocol = req.secure || req.get("x-forwarded-proto") === "https" ? "https" : "http";
+  const backendBase = `${protocol}://${host}`;
+  
+  // Construct Proxy Return URL
+  // We send 2Checkout to THIS backend endpoint first, which sanitizes the params and redirects to the frontend.
+  const targetUrl = returnUrl || "https://bizcall.mk";
+  const proxyReturnUrl = `${backendBase}/api/2checkout/return?target=${encodeURIComponent(targetUrl)}`;
+
   // ConvertPlus Parameters for Dynamic Product
   const rawParams = {
     merchant: merchantCode,
@@ -325,8 +355,8 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     qty: "1",
     type: "digital",
     "return-type": "redirect",
-    "return-url": returnUrl || "https://bizcall.vercel.app",
-    "x_receipt_link_url": returnUrl || "https://bizcall.vercel.app", // Legacy 2Checkout support
+    "return-url": proxyReturnUrl,
+    "x_receipt_link_url": proxyReturnUrl, // Legacy 2Checkout support
     mode: "2CO", // Standard Checkout mode
     name: billingDetails?.name || undefined,
     email: billingDetails?.email || undefined,
