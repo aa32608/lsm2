@@ -326,6 +326,8 @@ app.post("/api/2checkout/payment-url", (req, res) => {
     type: "digital",
     "return-type": "redirect",
     "return-url": returnUrl || "https://bizcall.mk",
+    "x_receipt_link_url": returnUrl || "https://bizcall.mk", // Legacy 2Checkout support
+    mode: "2CO", // Standard Checkout mode
     name: billingDetails?.name || undefined,
     email: billingDetails?.email || undefined,
     address: billingDetails?.address || "Street 1",
