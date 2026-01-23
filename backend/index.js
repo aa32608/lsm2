@@ -368,7 +368,7 @@ if (!isProduction) {
 }
 
 // SSR Handler
-app.use('*', async (req, res, next) => {
+app.use(async (req, res, next) => {
   // Skip API routes
   if (req.originalUrl.startsWith('/api')) {
     return next();
