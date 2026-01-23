@@ -31,6 +31,18 @@ async function generateSitemap() {
 
   xml += `</urlset>\n`;
   writeFileSync('./public/sitemap.xml', xml);
+  
+  // Also write to dist/sitemap.xml if dist exists (for build consistency)
+  try {
+    const { existsSync } = await import('fs');
+    if (existsSync('./dist')) {
+      writeFileSync('./dist/sitemap.xml', xml);
+      console.log('✅ Sitemap copied to dist/sitemap.xml');
+    }
+  } catch (e) {
+    // ignore
+  }
+  
   console.log('✅ Sitemap generated!');
 }
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const toAbsolute = (p) => path.resolve(__dirname, p);
 
-const template = fs.readFileSync(toAbsolute('../dist/client/index.html'), 'utf-8');
+const template = fs.readFileSync(toAbsolute('../dist/index.html'), 'utf-8');
 
 (async () => {
   try {
@@ -27,7 +27,7 @@ const template = fs.readFileSync(toAbsolute('../dist/client/index.html'), 'utf-8
     console.log(`Fetched ${validListings.length} listings.`);
 
     // 2. Load server entry
-    const { render } = await import('../dist/server/entry-server.js');
+    const { render } = await import('../dist-server/entry-server.js');
 
     // 3. Render
     const url = '/'; // Prerender home page
@@ -49,7 +49,7 @@ const template = fs.readFileSync(toAbsolute('../dist/client/index.html'), 'utf-8
     htmlWithHelmet = htmlWithHelmet.replace(`<!--app-html-->`, html);
 
     // 5. Save
-    const filePath = toAbsolute('../dist/client/index.html');
+    const filePath = toAbsolute('../dist/index.html');
     fs.writeFileSync(filePath, htmlWithHelmet);
     console.log('Prerendered index.html saved.');
 
