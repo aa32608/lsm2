@@ -29,6 +29,16 @@ self.addEventListener('fetch', (event) => {
   // Ignore non-HTTP/HTTPS requests (like chrome-extension://)
   if (!url.protocol.startsWith('http')) return;
 
+  // Ignore Google Ads/Analytics/GTM to avoid issues with ad blockers or caching opaque responses
+  if (
+    url.hostname.includes('google') || 
+    url.hostname.includes('doubleclick') || 
+    url.hostname.includes('googlesyndication') ||
+    url.hostname.includes('googletagmanager')
+  ) {
+    return;
+  }
+
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() => caches.match(OFFLINE_URL))

@@ -1,8 +1,8 @@
 import { writeFileSync } from 'fs';
 
 const env = (globalThis.process && globalThis.process.env) || {};
-const BASE_URL = env.BASE_URL || 'https://yourdomain.com';
-const DB_URL = env.FIREBASE_DATABASE_URL || '';
+const BASE_URL = env.BASE_URL || 'https://bizcall.mk';
+const DB_URL = env.FIREBASE_DATABASE_URL || 'https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app';
 
 async function fetchListings() {
   if (!DB_URL) return null;

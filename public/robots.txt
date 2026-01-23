@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /dashboard
 
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://bizcall.mk/sitemap.xml
