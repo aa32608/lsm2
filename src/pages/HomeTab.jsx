@@ -7,15 +7,29 @@ export default function HomeTab({
   categoryIcons,
   mkSpotlightCities,
   activeListingCount,
-  verifiedListingCount
+  verifiedListingCount,
+  // Added for Featured Listings
+  verifiedListings = [],
+  favorites = [],
+  toggleFav,
+  handleSelectListing,
+  handleShareListing,
+  showMessage,
+  getDescriptionPreview,
+  getListingStats,
+  ListingCard, // Pass component or import it? Better to import in HomeTab if possible, or pass it.
+  setCatFilter,
+  setLocFilter
 }) {
+  const featuredListings = verifiedListings.filter(l => l.isFeatured);
+
   return (
     <div className="app-main-content">
-      {/* HERO SECTION */}
-      <section className="home-hero-simple">
-        <h1 className="hero-simple-title">{t("homeSimpleTitle")}</h1>
-        <p className="hero-simple-subtitle">{t("homeSimpleSubtitle")}</p>
-        <div className="hero-simple-ctas">
+      {/* HERO SECTION - COMPACT */}
+      <section className="home-hero-compact">
+        <h1>{t("homeSimpleTitle")}</h1>
+        <p>{t("homeSimpleSubtitle")}</p>
+        <div className="hero-simple-ctas" style={{ justifyContent: 'center' }}>
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -32,22 +46,51 @@ export default function HomeTab({
             🔍 {t("homeSimpleCtaBrowse")}
           </button>
         </div>
-        <p style={{ marginTop: "12px", fontSize: "0.85rem", opacity: 0.9 }}>
+        <p style={{ marginTop: "1rem", fontSize: "0.8rem", opacity: 0.8 }}>
           💡 {t("homeSimpleTrustLine")}
         </p>
       </section>
 
-      {/* THREE CARDS */}
-      <div className="home-main-grid">
-        {/* CARD 1: POPULAR CATEGORIES */}
-        <div className="simple-card">
+      {/* FEATURED LISTINGS - HORIZONTAL SCROLL (COMPACT) */}
+      {featuredListings.length > 0 && (
+        <section className="compact-section" style={{ marginBottom: '1.5rem' }}>
+          <div className="section-header-compact" style={{ padding: '0 4px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+             <span style={{ fontSize: '1.2rem' }}>🔥</span>
+             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t("featured") || "Featured"}</h3>
+          </div>
+          <div className="horizontal-scroll-row" style={{ paddingBottom: '12px' }}>
+            {featuredListings.map(l => (
+              <div key={l.id} style={{ flex: '0 0 280px' }}>
+                <ListingCard
+                  listing={l}
+                  t={t}
+                  categoryIcons={categoryIcons}
+                  getDescriptionPreview={getDescriptionPreview}
+                  getListingStats={getListingStats}
+                  onSelect={handleSelectListing}
+                  onShare={handleShareListing}
+                  showMessage={showMessage}
+                  toggleFav={toggleFav}
+                  isFavorite={favorites.includes(l.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* COMPACT GRID */}
+      <div className="compact-grid">
+        {/* CARD 1: POPULAR CATEGORIES (Horizontal Scroll) */}
+        <div className="compact-card full-width">
           <h3>🎯 {t("homePopularCategoriesTitle")}</h3>
-          <div className="simple-chip-row">
-            {featuredCategories.slice(0, 6).map((cat) => (
+          <div className="horizontal-scroll-row">
+            {featuredCategories.map((cat) => (
               <button
                 key={cat}
-                className="simple-chip"
+                className="compact-chip"
                 onClick={() => {
+                  setCatFilter(t(cat));
                   setSelectedTab("allListings");
                 }}
               >
@@ -57,15 +100,16 @@ export default function HomeTab({
           </div>
         </div>
 
-        {/* CARD 2: POPULAR CITIES */}
-        <div className="simple-card">
+        {/* CARD 2: POPULAR CITIES (Horizontal Scroll) */}
+        <div className="compact-card">
           <h3>📍 {t("homePopularCitiesTitle")}</h3>
-          <div className="simple-chip-row">
-            {mkSpotlightCities.slice(0, 6).map((city) => (
+          <div className="horizontal-scroll-row">
+            {mkSpotlightCities.slice(0, 8).map((city) => (
               <button
                 key={city}
-                className="simple-chip"
+                className="compact-chip"
                 onClick={() => {
+                  setLocFilter(city);
                   setSelectedTab("allListings");
                 }}
               >
@@ -75,21 +119,14 @@ export default function HomeTab({
           </div>
         </div>
 
-        {/* CARD 3: HOW IT WORKS */}
-        <div className="simple-card">
+        {/* CARD 3: HOW IT WORKS (Compact Steps) */}
+        <div className="compact-card">
           <h3>✨ {t("homeHowItWorksTitle")}</h3>
-          <div className="how-it-works-steps">
+          <div className="compact-steps">
             {[1, 2, 3].map((step) => (
-              <div key={step} style={{ textAlign: "center" }}>
-                <div className="step-number">{step}</div>
-                <p
-                  style={{
-                    fontSize: "0.85rem",
-                    margin: "8px 0",
-                    color: "#475569",
-                    lineHeight: "1.4",
-                  }}
-                >
+              <div key={step} className="compact-step">
+                <div className="step-circle">{step}</div>
+                <p className="step-text">
                   {step === 1
                     ? t("homeHowItWorksStep1")
                     : step === 2
@@ -103,16 +140,16 @@ export default function HomeTab({
       </div>
 
       {/* QUICK STATS */}
-      <section className="stats-section">
-        <h3>📊 {t("homeDigest")}</h3>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <p className="stat-value blue">{activeListingCount}</p>
-            <p className="stat-label">{t("listingsLabel")}</p>
+      <section className="stats-section" style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '1rem', opacity: 0.8, marginBottom: '0.5rem' }}>📊 {t("homeDigest")}</h3>
+        <div className="stats-grid" style={{ gap: '0.5rem' }}>
+          <div className="stat-item" style={{ padding: '0.75rem' }}>
+            <p className="stat-value blue" style={{ fontSize: '1.25rem' }}>{activeListingCount}</p>
+            <p className="stat-label" style={{ fontSize: '0.8rem' }}>{t("listingsLabel")}</p>
           </div>
-          <div className="stat-item">
-            <p className="stat-value green">{verifiedListingCount}</p>
-            <p className="stat-label">{t("verified")}</p>
+          <div className="stat-item" style={{ padding: '0.75rem' }}>
+            <p className="stat-value green" style={{ fontSize: '1.25rem' }}>{verifiedListingCount}</p>
+            <p className="stat-label" style={{ fontSize: '0.8rem' }}>{t("verified")}</p>
           </div>
         </div>
       </section>

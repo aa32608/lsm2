@@ -35,6 +35,7 @@ const EditListingModal = lazy(() => import("./components/EditListingModal"));
 
 import ListingCard from "./components/ListingCard";
 import MyListingCard from "./components/MyListingCard";
+import HomeTab from "./pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
@@ -2070,123 +2071,28 @@ export default function App() {
         />
 
         {selectedTab === "main" && (
-          <div className="app-main-content">
-            {/* HERO SECTION */}
-            <section className="home-hero-simple">
-              <h1 className="hero-simple-title">{t("homeSimpleTitle")}</h1>
-              <p className="hero-simple-subtitle">{t("homeSimpleSubtitle")}</p>
-              <div className="hero-simple-ctas">
-                <button className="btn btn-primary" onClick={() => { setShowPostForm(true); setForm((f) => ({ ...f, step: 1 })); }}>
-                  📝 {t("homeSimpleCtaPost")}
-                </button>
-                <button className="btn btn-outline" onClick={() => setSelectedTab("allListings")}>
-                  🔍 {t("homeSimpleCtaBrowse")}
-                </button>
-              </div>
-              <p style={{ marginTop: "12px", fontSize: "0.85rem", opacity: 0.9 }}>
-                💡 {t("homeSimpleTrustLine")}
-              </p>
-            </section>
-
-            {/* FEATURED LISTINGS (Main Page) */}
-            {verifiedListings.some(l => l.isFeatured) && (
-              <section className="featured-section-container" style={{ margin: "24px 0" }}>
-                <div className="featured-header">
-                  <span className="featured-icon">🔥</span>
-                  <h2 className="featured-title">{t("featured") || "Featured Listings"}</h2>
-                </div>
-                <div className="listing-grid-grid">
-                  {verifiedListings
-                    .filter(l => l.isFeatured)
-                    .slice(0, 6) // Show max 6 on home
-                    .map(l => (
-                      <ListingCard
-                        key={l.id}
-                        listing={l}
-                        t={t}
-                        categoryIcons={categoryIcons}
-                        getDescriptionPreview={getDescriptionPreview}
-                        getListingStats={getListingStats}
-                        onSelect={handleSelectListing}
-                        onShare={handleShareListing}
-                        showMessage={showMessage}
-                        toggleFav={toggleFav}
-                        isFavorite={favorites.includes(l.id)}
-                      />
-                    ))}
-                </div>
-              </section>
-            )}
-        
-            {/* THREE CARDS */}
-            <div className="home-main-grid">
-              {/* CARD 1: POPULAR CATEGORIES */}
-              <div className="simple-card">
-                <h3>🎯 {t("homePopularCategoriesTitle")}</h3>
-                <div className="simple-chip-row">
-                  {featuredCategories.slice(0, 6).map((cat) => (
-                    <button 
-                      key={cat} 
-                      className="simple-chip" 
-                      onClick={() => { setCatFilter(t(cat)); setSelectedTab("allListings"); }}
-                    >
-                      {categoryIcons[cat]} {t(cat)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-        
-              {/* CARD 2: POPULAR CITIES */}
-              <div className="simple-card">
-                <h3>📍 {t("homePopularCitiesTitle")}</h3>
-                <div className="simple-chip-row">
-                  {mkSpotlightCities.slice(0, 6).map((city) => (
-                    <button 
-                      key={city} 
-                      className="simple-chip" 
-                      onClick={() => { setLocFilter(city); setSelectedTab("allListings"); }}
-                    >
-                      📍 {city}
-                    </button>
-                  ))}
-                </div>
-              </div>
-        
-              {/* CARD 3: HOW IT WORKS */}
-              <div className="simple-card">
-                <h3>✨ {t("homeHowItWorksTitle")}</h3>
-                <div className="how-it-works-steps">
-                  {[1, 2, 3].map((step) => (
-                    <div key={step} style={{ textAlign: "center" }}>
-                      <div className="step-number">{step}</div>
-                      <p style={{ fontSize: "0.85rem", margin: "8px 0", color: "#475569", lineHeight: "1.4" }}>
-                        {step === 1 ? t("homeHowItWorksStep1") : step === 2 ? t("homeHowItWorksStep2") : t("homeHowItWorksStep3")}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-        
-            {/* QUICK STATS */}
-            <section className="stats-section">
-              <h3>📊 {t("homeDigest")}</h3>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <p className="stat-value blue">{activeListingCount}</p>
-                  <p className="stat-label">{t("active")}</p>
-                </div>
-                <div className="stat-item">
-                  <p className="stat-value green">{verifiedListingCount}</p>
-                  <p className="stat-label">{t("verified")}</p>
-                </div>
-                <div className="stat-item">
-                  <p className="stat-value purple">{mkSpotlightCities.length}</p>
-                  <p className="stat-label">{t("cities")}</p>
-                </div>
-              </div>
-            </section>
-          </div>
+          <HomeTab
+            t={t}
+            setShowPostForm={setShowPostForm}
+            setForm={setForm}
+            setSelectedTab={setSelectedTab}
+            featuredCategories={featuredCategories}
+            categoryIcons={categoryIcons}
+            mkSpotlightCities={mkSpotlightCities}
+            activeListingCount={activeListingCount}
+            verifiedListingCount={verifiedListingCount}
+            verifiedListings={verifiedListings}
+            favorites={favorites}
+            toggleFav={toggleFav}
+            handleSelectListing={handleSelectListing}
+            handleShareListing={handleShareListing}
+            showMessage={showMessage}
+            getDescriptionPreview={getDescriptionPreview}
+            getListingStats={getListingStats}
+            ListingCard={ListingCard}
+            setCatFilter={setCatFilter}
+            setLocFilter={setLocFilter}
+          />
         )}
 
         {/* SIDEBAR (overlay closes on click; ESC handled globally) */}
