@@ -386,13 +386,36 @@ app.use(async (req, res, next) => {
       render = (await vite.ssrLoadModule('/src/entry-server.jsx')).render;
     } else {
       // Prod: Read from built dist
+      const distPath = path.resolve(__dirname, '../dist');
+      const indexPath = path.join(distPath, 'index.html');
+      const templatePath = path.join(distPath, 'template.html');
+
+      if (!fs.existsSync(indexPath) && !fs.existsSync(templatePath)) {
+        console.warn('Frontend build not found at:', distPath);
+        return res.status(503).send(`
+          <html>
+            <head><title>Maintenance</title></head>
+            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+              <h1>Site is Building</h1>
+              <p>The frontend assets are currently being built. Please wait a moment and refresh.</p>
+              <p style="color: #666; font-size: 0.9em;">(Error: Frontend build artifacts not found)</p>
+            </body>
+          </html>
+        `);
+      }
+
       try {
-        template = fs.readFileSync(path.resolve(__dirname, '../dist/template.html'), 'utf-8');
+        template = fs.readFileSync(templatePath, 'utf-8');
       } catch (e) {
-        template = fs.readFileSync(path.resolve(__dirname, '../dist/index.html'), 'utf-8');
+        template = fs.readFileSync(indexPath, 'utf-8');
       }
       // Import the built server entry
-      render = (await import('../dist-server/entry-server.js')).render;
+      const serverEntryPath = path.resolve(__dirname, '../dist-server/entry-server.js');
+      if (!fs.existsSync(serverEntryPath)) {
+         console.warn('Server entry not found at:', serverEntryPath);
+         return res.status(503).send('Server entry missing. Please build the project.');
+      }
+      render = (await import(serverEntryPath)).render;
     }
 
     const context = {};
