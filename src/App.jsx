@@ -1375,12 +1375,6 @@ export default function App() {
     }
   }
 
-
-  const handleRequestFeatured = (listing) => {
-    setFeaturedCandidate(listing);
-    setShowFeaturedModal(true);
-  };
-
   const submitFeaturedRequest = async () => {
     if (!featuredCandidate) return;
     try {
@@ -1872,6 +1866,58 @@ export default function App() {
       showMessage(t("shareNotSupported"), "error");
     }
   }, [t, showMessage]);
+
+  /* Featured flow */
+  const handleRequestFeatured = useCallback(async (listing) => {
+    if (!listing || !listing.id) return;
+
+    // Use a browser confirm or custom modal
+    const confirmed = window.confirm(
+      `Upgrade "${listing.name}" to Featured for 1000 MKD?\n\n` +
+      `• Appears at top of home page\n` +
+      `• Highlighted design\n` +
+      `• Valid for 1 month\n\n` +
+      `Click OK to request activation.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setLoading(true);
+
+      // Call backend endpoint to send email + save request in DB
+      const res = await fetch("https://lsm-wozo.onrender.com/api/request-featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: listing.id,
+          listingName: listing.name,
+          ownerEmail: user?.email || "unknown",
+          ownerUid: user?.uid,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to request featured status");
+      }
+
+      showMessage(t("featuredRequestSent") || "Request sent! Check your email for payment instructions.", "success");
+    } catch (err) {
+      console.error(err);
+      showMessage(err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [user, t, showMessage]);
+
+  /* Extend flow (stub for now, or implement logic) */
+  const handleStartExtendFlow = useCallback((listing) => {
+    // For now, just open edit modal or show a message
+    // Implementation depends on requirements; usually opens a payment modal to extend expiry
+    console.log("Extend listing:", listing.id);
+    showMessage("Extend feature coming soon!", "info");
+  }, [showMessage]);
   
   const onLogout = useCallback(async () => {
     await signOut(auth);
