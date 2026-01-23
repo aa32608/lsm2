@@ -160,7 +160,7 @@ app.post("/api/request-featured", async (req, res) => {
     // Email to Admin
     await resend.emails.send({
       from: "BizCall <notifications@bizcall.mk>",
-      to: ["artin.avziu1@gmail.com"], // Admin email
+      to: ["artinalimi69@gmail.com"], // Admin email
       subject: `🔥 Featured Listing Request: ${listingName}`,
       text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
     });
@@ -195,7 +195,7 @@ app.post("/api/request-featured", async (req, res) => {
     // Email to Admin
     await resend.emails.send({
       from: "BizCall <notifications@bizcall.mk>",
-      to: ["artin.avziu1@gmail.com"], // Admin email
+      to: ["artinalimi69@gmail.com"], // Admin email
       subject: `🔥 Featured Listing Request: ${listingName}`,
       text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
     });
