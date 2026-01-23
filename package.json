@@ -5,14 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:ssr": "node server.js",
+    "dev:ssr": "node backend/index.js",
     "build": "npm run build:client && npm run build:server && npm run prerender && node scripts/generate-sitemap.js",
     "build:client": "vite build --outDir dist",
     "build:server": "vite build --ssr src/entry-server.jsx --outDir dist-server",
     "prerender": "node scripts/prerender.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "NODE_ENV=production node server.js",
+    "start": "NODE_ENV=production node backend/index.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "deploy": "firebase deploy",
     "firebase": "firebase"

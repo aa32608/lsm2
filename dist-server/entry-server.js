@@ -1300,7 +1300,7 @@ function HomeTab({
           /* @__PURE__ */ jsx("button", { className: "scroll-arrow-btn", onClick: () => scroll("right"), "aria-label": "Scroll right", children: "›" })
         ] })
       ] }),
-      /* @__PURE__ */ jsx("div", { className: "horizontal-scroll-row", ref: scrollRef, style: { paddingBottom: "12px" }, children: featuredListings.map((l) => /* @__PURE__ */ jsx("div", { style: { flex: "0 0 340px" }, children: /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx("div", { className: "horizontal-scroll-row", ref: scrollRef, style: { paddingBottom: "12px" }, children: featuredListings.map((l) => /* @__PURE__ */ jsx("div", { style: { flex: "0 0 320px", width: "320px", maxWidth: "85vw" }, children: /* @__PURE__ */ jsx(
         ListingCard2,
         {
           listing: l,
@@ -4944,6 +4944,7 @@ Click OK to request activation.`
           activeListingCount,
           verifiedListingCount,
           verifiedListings,
+          featuredListings: verifiedListings.filter((l) => l.isFeatured),
           favorites,
           toggleFav,
           handleSelectListing,
@@ -7321,6 +7322,13 @@ Click OK to request activation.`
                       ] })
                     ] })
                   ] }),
+                  selectedListing.isFeatured && /* @__PURE__ */ jsxs("div", { className: "featured-modal-banner", children: [
+                    /* @__PURE__ */ jsxs("div", { className: "featured-modal-badge", children: [
+                      "✨ ",
+                      t("featured") || "Featured"
+                    ] }),
+                    /* @__PURE__ */ jsx("p", { className: "featured-modal-text", children: t("featuredListingDesc") || "This is a premium featured listing, highlighted for top visibility." })
+                  ] }),
                   (() => {
                     const images = selectedListing.images && selectedListing.images.length > 0 ? selectedListing.images : selectedListing.imagePreview ? [selectedListing.imagePreview] : [];
                     if (images.length === 0) return null;
@@ -7467,6 +7475,14 @@ Click OK to request activation.`
                       ] })
                     ] }),
                     /* @__PURE__ */ jsx("p", { className: "listing-description-full", children: selectedListing.description }),
+                    selectedListing.isFeatured && /* @__PURE__ */ jsxs("div", { className: "featured-benefits-box", children: [
+                      /* @__PURE__ */ jsx("h5", { children: t("whyFeatured") || "Why is this listing featured?" }),
+                      /* @__PURE__ */ jsxs("ul", { children: [
+                        /* @__PURE__ */ jsx("li", { children: t("featBenefit1") || "Top visibility in search results" }),
+                        /* @__PURE__ */ jsx("li", { children: t("featBenefit2") || "Verified by BizCall team" }),
+                        /* @__PURE__ */ jsx("li", { children: t("featBenefit3") || "Premium support & direct contact" })
+                      ] })
+                    ] }),
                     /* @__PURE__ */ jsxs("div", { className: "soft-grid", children: [
                       /* @__PURE__ */ jsxs("div", { children: [
                         /* @__PURE__ */ jsx("p", { className: "highlight-label", children: t("pricing") }),

@@ -1,4 +1,5 @@
 import ListingCard from "../components/ListingCard";
+import { useRef } from "react";
 
 export default function ListingsTab({
   t,
@@ -29,8 +30,23 @@ export default function ListingsTab({
   handleShareListing,
   showMessage,
   toggleFav,
-  favorites
+  favorites,
+  featuredListings = []
 }) {
+  const scrollRef = useRef(null);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const { current } = scrollRef;
+      const scrollAmount = 300;
+      if (direction === 'left') {
+        current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
     <div className="section all-listings-section">
       <div className="section-header-row stacked-mobile">
@@ -42,6 +58,43 @@ export default function ListingsTab({
         </div>
       </div>
 
+      {/* COMPACT FEATURED SECTION */}
+      {featuredListings && featuredListings.length > 0 && (
+        <div className="explore-featured-compact">
+          <div className="explore-featured-header">
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <span className="text-yellow-500">✨</span> {t("featured") || "Featured"}
+            </h3>
+            <div className="scroll-controls">
+              <button onClick={() => scroll('left')} className="scroll-btn">←</button>
+              <button onClick={() => scroll('right')} className="scroll-btn">→</button>
+            </div>
+          </div>
+          <div className="explore-featured-scroll" ref={scrollRef}>
+            {featuredListings.map((l) => (
+              <div key={l.id} className="explore-featured-card-wrapper">
+                <ListingCard
+                  listing={l}
+                  t={t}
+                  categoryIcons={categoryIcons}
+                  getDescriptionPreview={getDescriptionPreview}
+                  getListingStats={getListingStats}
+                  onSelect={() => {
+                    setSelectedListing(l);
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("listing", l.id);
+                    window.history.replaceState({}, "", url.toString());
+                  }}
+                  onShare={() => handleShareListing(l)}
+                  showMessage={showMessage}
+                  toggleFav={toggleFav}
+                  isFavorite={favorites.includes(l.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* FILTER BAR */}
       <div className="filters-bar">

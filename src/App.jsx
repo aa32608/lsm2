@@ -2062,6 +2062,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             activeListingCount={activeListingCount}
             verifiedListingCount={verifiedListingCount}
             verifiedListings={verifiedListings}
+            featuredListings={verifiedListings.filter(l => l.isFeatured)}
             favorites={favorites}
             toggleFav={toggleFav}
             handleSelectListing={handleSelectListing}
@@ -4467,6 +4468,18 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         </div>
                       </div>
 
+                      {/* FEATURED BANNER */}
+                      {selectedListing.isFeatured && (
+                        <div className="featured-modal-banner">
+                          <div className="featured-modal-badge">
+                            ✨ {t("featured") || "Featured"}
+                          </div>
+                          <p className="featured-modal-text">
+                            {t("featuredListingDesc") || "This is a premium featured listing, highlighted for top visibility."}
+                          </p>
+                        </div>
+                      )}
+
                       {/* CAROUSEL SECTION */}
                       {(() => {
                         const images = selectedListing.images && selectedListing.images.length > 0 
@@ -4620,6 +4633,18 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           <span className="pill muted">{t("category")}: {t(selectedListing.category) || selectedListing.category}</span>
                         </div>
                         <p className="listing-description-full">{selectedListing.description}</p>
+                        
+                        {selectedListing.isFeatured && (
+                          <div className="featured-benefits-box">
+                             <h5>{t("whyFeatured") || "Why is this listing featured?"}</h5>
+                             <ul>
+                               <li>{t("featBenefit1") || "Top visibility in search results"}</li>
+                               <li>{t("featBenefit2") || "Verified by BizCall team"}</li>
+                               <li>{t("featBenefit3") || "Premium support & direct contact"}</li>
+                             </ul>
+                          </div>
+                        )}
+
                         <div className="soft-grid">
                           <div>
                             <p className="highlight-label">{t("pricing")}</p>

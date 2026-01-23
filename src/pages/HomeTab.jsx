@@ -80,7 +80,7 @@ export default function HomeTab({
           </div>
           <div className="horizontal-scroll-row" ref={scrollRef} style={{ paddingBottom: '12px' }}>
             {featuredListings.map(l => (
-              <div key={l.id} style={{ flex: '0 0 340px' }}>
+              <div key={l.id} style={{ flex: '0 0 320px', width: '320px', maxWidth: '85vw' }}>
                 <ListingCard
                   listing={l}
                   t={t}

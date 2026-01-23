@@ -1,6 +1,3 @@
-import { createServer } from '../server.js'
+import app from '../backend/index.js';
 
-export default async function handler(req, res) {
-  const app = await createServer()
-  app(req, res)
-}
+export default app;
