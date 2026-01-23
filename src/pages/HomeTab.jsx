@@ -1,3 +1,5 @@
+import React, { useRef } from 'react';
+
 export default function HomeTab({
   t,
   setShowPostForm,
@@ -8,7 +10,6 @@ export default function HomeTab({
   mkSpotlightCities,
   activeListingCount,
   verifiedListingCount,
-  // Added for Featured Listings
   verifiedListings = [],
   favorites = [],
   toggleFav,
@@ -17,11 +18,24 @@ export default function HomeTab({
   showMessage,
   getDescriptionPreview,
   getListingStats,
-  ListingCard, // Pass component or import it? Better to import in HomeTab if possible, or pass it.
+  ListingCard,
   setCatFilter,
   setLocFilter
 }) {
   const featuredListings = verifiedListings.filter(l => l.isFeatured);
+  const scrollRef = useRef(null);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const { current } = scrollRef;
+      const scrollAmount = 300; // Approx card width + gap
+      if (direction === 'left') {
+        current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <div className="app-main-content">
@@ -53,12 +67,18 @@ export default function HomeTab({
 
       {/* FEATURED LISTINGS - HORIZONTAL SCROLL (COMPACT) */}
       {featuredListings.length > 0 && (
-        <section className="compact-section" style={{ marginBottom: '1.5rem' }}>
-          <div className="section-header-compact" style={{ padding: '0 4px', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-             <span style={{ fontSize: '1.2rem' }}>🔥</span>
-             <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t("featured") || "Featured"}</h3>
+        <section className="compact-section" style={{ marginBottom: '1.5rem', background: 'linear-gradient(to right, #f8fafc, #ffffff)', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+          <div className="section-header-compact" style={{ padding: '0 4px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <span style={{ fontSize: '1.2rem' }}>🔥</span>
+               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t("featured") || "Featured"}</h3>
+             </div>
+             <div className="scroll-controls">
+               <button className="scroll-arrow-btn" onClick={() => scroll('left')} aria-label="Scroll left">‹</button>
+               <button className="scroll-arrow-btn" onClick={() => scroll('right')} aria-label="Scroll right">›</button>
+             </div>
           </div>
-          <div className="horizontal-scroll-row" style={{ paddingBottom: '12px' }}>
+          <div className="horizontal-scroll-row" ref={scrollRef} style={{ paddingBottom: '12px' }}>
             {featuredListings.map(l => (
               <div key={l.id} style={{ flex: '0 0 280px' }}>
                 <ListingCard
