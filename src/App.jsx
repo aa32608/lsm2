@@ -1,5 +1,6 @@
 // src/App.jsx
 
+import { Helmet } from "react-helmet-async";
 import logo from "./assets/logo.png";
 import React, { useCallback, useEffect, useMemo, useState, useDeferredValue, lazy, Suspense } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
@@ -328,9 +329,14 @@ const Header = React.memo(({
   </header>
 ));
 
-export default function App() {
+export default function App({ initialListings = [], initialPublicListings = [] }) {
   /* i18n */
-  const [lang, setLang] = useState(() => localStorage.getItem("lang") || "sq");
+  const [lang, setLang] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("lang") || "sq";
+    }
+    return "sq";
+  });
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
 
@@ -369,17 +375,29 @@ export default function App() {
   });
 
   const [listings, setListings] = useState(() => {
-    const cached = localStorage.getItem("cached_listings");
-    return cached ? JSON.parse(cached) : [];
+    if (initialListings && initialListings.length > 0) return initialListings;
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_listings");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
   });
   const [publicListings, setPublicListings] = useState(() => {
-    const cached = localStorage.getItem("cached_listings");
-    return cached ? JSON.parse(cached) : [];
+    if (initialPublicListings && initialPublicListings.length > 0) return initialPublicListings;
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_listings");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
   });
   const [userListings, setUserListings] = useState([]);
   const [listingsLoading, setListingsLoading] = useState(() => {
-    const cached = localStorage.getItem("cached_listings");
-    return !cached; // If we have cache, don't show loading spinner initially
+    if (initialListings && initialListings.length > 0) return false;
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_listings");
+      return !cached; // If we have cache, don't show loading spinner initially
+    }
+    return true;
   });
   const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
