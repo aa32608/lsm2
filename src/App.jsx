@@ -3852,7 +3852,6 @@ export default function App() {
               stripDangerous={stripDangerous}
               editLocationPreview={editLocationPreview}
               setShowEditMapPicker={setShowEditMapPicker}
-              plan={plan}
               setSelectedTab={setSelectedTab}
               handleShareListing={handleShareListing}
               handleImageUpload={handleImageUpload}

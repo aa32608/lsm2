@@ -65,7 +65,7 @@ const EditListingModal = ({
               </p>
             </div>
             <div className="pill-row">
-              <span className="pill pill-soft">⏱️ {editForm.plan || plan} {t("months")}</span>
+              <span className="pill pill-soft">⏱️ {editForm.plan || "1"} {t("months")}</span>
               {editForm.offerprice && <span className="pill pill-price">{editForm.offerprice}</span>}
             </div>
           </div>
