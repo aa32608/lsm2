@@ -1,5 +1,5 @@
 import ListingCard from "../components/ListingCard";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 
 export default function ListingsTab({
   t,
@@ -35,10 +35,29 @@ export default function ListingsTab({
 }) {
   const scrollRef = useRef(null);
 
+  // Auto-slide effect for Premium Spotlight
+  useEffect(() => {
+    if (!featuredListings || featuredListings.length === 0) return;
+    
+    const interval = setInterval(() => {
+      if (scrollRef.current) {
+        const { current } = scrollRef;
+        // Check if we've reached the end
+        if (current.scrollLeft + current.clientWidth >= current.scrollWidth - 10) {
+           current.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+           current.scrollBy({ left: 320, behavior: 'smooth' });
+        }
+      }
+    }, 5500); // 5.5 seconds
+
+    return () => clearInterval(interval);
+  }, [featuredListings]);
+
   const scroll = (direction) => {
     if (scrollRef.current) {
       const { current } = scrollRef;
-      const scrollAmount = 300;
+      const scrollAmount = 320;
       if (direction === 'left') {
         current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
       } else {
@@ -97,6 +116,19 @@ export default function ListingsTab({
           </div>
         </section>
       )}
+
+      {/* PROMOTIONAL BANNER (FILLER CONTENT) */}
+      <div className="promo-banner-section">
+         <div className="promo-banner-content">
+            <div className="promo-text">
+               <h3>{t("cantFindListing") || "Can't find what you're looking for?"}</h3>
+               <p>{t("postYourOwn") || "Post your own request or browse by category to find hidden gems."}</p>
+            </div>
+            <button className="btn btn-primary promo-btn" onClick={() => setCatFilter("")}>
+               {t("browseCategories") || "Browse All Categories"}
+            </button>
+         </div>
+      </div>
 
       {/* FILTER BAR */}
       <div className="filters-bar">
