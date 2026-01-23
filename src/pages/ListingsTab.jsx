@@ -58,21 +58,23 @@ export default function ListingsTab({
         </div>
       </div>
 
-      {/* COMPACT FEATURED SECTION */}
+      {/* PREMIUM SPOTLIGHT SECTION */}
       {featuredListings && featuredListings.length > 0 && (
-        <div className="explore-featured-compact">
-          <div className="explore-featured-header">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="text-yellow-500">✨</span> {t("featured") || "Featured"}
-            </h3>
-            <div className="scroll-controls">
-              <button onClick={() => scroll('left')} className="scroll-btn">←</button>
-              <button onClick={() => scroll('right')} className="scroll-btn">→</button>
+        <section className="premium-spotlight-section">
+          <div className="spotlight-header">
+            <div className="spotlight-title-group">
+              <div className="spotlight-badge">✨ {t("featured") || "Featured"}</div>
+              <h3>{t("premiumSelection") || "Premium Selection"}</h3>
+            </div>
+            <div className="spotlight-controls">
+              <button onClick={() => scroll('left')} className="spotlight-nav-btn">←</button>
+              <button onClick={() => scroll('right')} className="spotlight-nav-btn">→</button>
             </div>
           </div>
-          <div className="explore-featured-scroll" ref={scrollRef}>
+          
+          <div className="spotlight-scroll-container" ref={scrollRef}>
             {featuredListings.map((l) => (
-              <div key={l.id} className="explore-featured-card-wrapper">
+              <div key={l.id} className="spotlight-card-wrapper">
                 <ListingCard
                   listing={l}
                   t={t}
@@ -93,7 +95,7 @@ export default function ListingsTab({
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* FILTER BAR */}

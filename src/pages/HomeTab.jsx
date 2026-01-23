@@ -65,22 +65,25 @@ export default function HomeTab({
         </p>
       </section>
 
-      {/* FEATURED LISTINGS - HORIZONTAL SCROLL (COMPACT) */}
+      {/* FEATURED LISTINGS - HORIZONTAL SCROLL (ENHANCED) */}
       {featuredListings.length > 0 && (
-        <section className="compact-section" style={{ marginBottom: '1.5rem', background: 'linear-gradient(to right, #f8fafc, #ffffff)', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
-          <div className="section-header-compact" style={{ padding: '0 4px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <section className="featured-section-home">
+          <div className="section-header-row">
              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <span style={{ fontSize: '1.2rem' }}>🔥</span>
-               <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{t("featured") || "Featured"}</h3>
+               <span className="section-icon-large">🔥</span>
+               <div>
+                 <h3 className="section-title-large">{t("featured") || "Featured"}</h3>
+                 <p className="section-subtitle">{t("featuredSubtitle") || "Top rated services chosen for you"}</p>
+               </div>
              </div>
              <div className="scroll-controls">
                <button className="scroll-arrow-btn" onClick={() => scroll('left')} aria-label="Scroll left">‹</button>
                <button className="scroll-arrow-btn" onClick={() => scroll('right')} aria-label="Scroll right">›</button>
              </div>
           </div>
-          <div className="horizontal-scroll-row" ref={scrollRef} style={{ paddingBottom: '12px' }}>
+          <div className="horizontal-scroll-row expanded-scroll" ref={scrollRef}>
             {featuredListings.map(l => (
-              <div key={l.id} style={{ flex: '0 0 320px', width: '320px', maxWidth: '85vw' }}>
+              <div key={l.id} className="featured-card-wrapper-home">
                 <ListingCard
                   listing={l}
                   t={t}
@@ -99,54 +102,61 @@ export default function HomeTab({
         </section>
       )}
 
-      {/* COMPACT GRID */}
-      <div className="compact-grid">
-        {/* CARD 1: POPULAR CATEGORIES (Horizontal Scroll) */}
-        <div className="compact-card full-width">
-          <h3>🎯 {t("homePopularCategoriesTitle")}</h3>
-          <div className="horizontal-scroll-row">
+      {/* CATEGORIES & CITIES GRID */}
+      <div className="discovery-grid">
+        {/* POPULAR CATEGORIES */}
+        <div className="discovery-card">
+          <div className="discovery-header">
+            <h3>🎯 {t("homePopularCategoriesTitle")}</h3>
+          </div>
+          <div className="discovery-chips-grid">
             {featuredCategories.map((cat) => (
               <button
                 key={cat}
-                className="compact-chip"
+                className="discovery-chip"
                 onClick={() => {
                   setCatFilter(t(cat));
                   setSelectedTab("allListings");
                 }}
               >
-                {categoryIcons[cat]} {t(cat)}
+                <span className="chip-icon">{categoryIcons[cat]}</span>
+                <span className="chip-label">{t(cat)}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* CARD 2: POPULAR CITIES (Horizontal Scroll) */}
-        <div className="compact-card">
-          <h3>📍 {t("homePopularCitiesTitle")}</h3>
-          <div className="horizontal-scroll-row">
-            {mkSpotlightCities.slice(0, 8).map((city) => (
+        {/* POPULAR CITIES (Redesigned) */}
+        <div className="discovery-card">
+          <div className="discovery-header">
+            <h3>📍 {t("homePopularCitiesTitle")}</h3>
+          </div>
+          <div className="cities-grid">
+            {mkSpotlightCities.slice(0, 9).map((city) => (
               <button
                 key={city}
-                className="compact-chip"
+                className="city-tile"
                 onClick={() => {
                   setLocFilter(city);
                   setSelectedTab("allListings");
                 }}
               >
-                📍 {city}
+                <span className="city-icon">🏙️</span>
+                <span className="city-name">{city}</span>
               </button>
             ))}
           </div>
         </div>
+      </div>
 
-        {/* CARD 3: HOW IT WORKS (Compact Steps) */}
-        <div className="compact-card">
+      {/* HOW IT WORKS (Full Width) */}
+      <div className="how-it-works-section">
           <h3>✨ {t("homeHowItWorksTitle")}</h3>
-          <div className="compact-steps">
+          <div className="steps-row">
             {[1, 2, 3].map((step) => (
-              <div key={step} className="compact-step">
-                <div className="step-circle">{step}</div>
-                <p className="step-text">
+              <div key={step} className="step-card">
+                <div className="step-number">{step}</div>
+                <p className="step-desc">
                   {step === 1
                     ? t("homeHowItWorksStep1")
                     : step === 2
@@ -156,7 +166,6 @@ export default function HomeTab({
               </div>
             ))}
           </div>
-        </div>
       </div>
 
       {/* QUICK STATS */}
