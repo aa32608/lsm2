@@ -32,6 +32,8 @@ const template = fs.readFileSync(toAbsolute('../dist/index.html'), 'utf-8');
     // 3. Render
     const url = '/'; // Prerender home page
     const { html, helmet } = render(url, {}, initialData);
+    
+    console.log(`Rendered HTML length: ${html.length}`);
 
     // 4. Inject into template
     const helmetTitle = helmet.title ? helmet.title.toString() : '';
@@ -41,16 +43,26 @@ const template = fs.readFileSync(toAbsolute('../dist/index.html'), 'utf-8');
 
     let htmlWithHelmet = template;
     
+    // Robust title replacement
     if (helmetTitle) {
-      htmlWithHelmet = htmlWithHelmet.replace(/<title>.*?<\/title>/, helmetTitle);
+      htmlWithHelmet = htmlWithHelmet.replace(/<title.*?>.*?<\/title>/s, helmetTitle);
     }
     
     htmlWithHelmet = htmlWithHelmet.replace(`</head>`, `${helmetMeta}${helmetLink}${helmetScript}</head>`);
-    htmlWithHelmet = htmlWithHelmet.replace(`<!--app-html-->`, html);
+    
+    if (htmlWithHelmet.includes('<!--app-html-->')) {
+        htmlWithHelmet = htmlWithHelmet.replace(`<!--app-html-->`, html);
+        console.log('✅ App content injected');
+    } else {
+        console.warn('⚠️ <!--app-html--> placeholder not found in template!');
+    }
     
     // Inject initial state for hydration
     const stateScript = `<script>window.__INITIAL_DATA__ = ${JSON.stringify(initialData).replace(/</g, '\\u003c')};</script>`;
     htmlWithHelmet = htmlWithHelmet.replace('</body>', `${stateScript}</body>`);
+    
+    // Remove dev scripts if present
+    htmlWithHelmet = htmlWithHelmet.replace(/<script type="module" src="\/src\/main.jsx"><\/script>/g, '');
 
     // 5. Save
     const filePath = toAbsolute('../dist/index.html');
