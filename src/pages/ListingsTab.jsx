@@ -42,8 +42,18 @@ export default function ListingsTab({
         </div>
       </div>
 
+
       {/* FILTER BAR */}
       <div className="filters-bar">
+        <button 
+          className="icon-btn" 
+          onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
+          title={viewMode === "list" ? t("switchToGrid") || "Grid View" : t("switchToList") || "List View"}
+          style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}
+        >
+          {viewMode === "list" ? "📱" : "📝"}
+        </button>
+
         <input
           type="search"
           className="input"

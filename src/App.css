@@ -3096,7 +3096,116 @@ body {
   letter-spacing: 0.01em;
 }
 
-/* Search Input */
+
+/* ================= LIST VIEW & COMPACT STYLES ================= */
+
+/* List View Container */
+.listing-grid-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* List View Card (and Horizontal Scroll Card) */
+.listing-grid-list .listing-card,
+.horizontal-scroll-row .listing-card {
+  display: grid;
+  grid-template-columns: 140px 1fr; /* Image | Content */
+  grid-template-rows: auto;
+  gap: 0;
+  min-height: 160px;
+  max-width: 100%;
+  align-items: stretch;
+  text-align: left;
+}
+
+/* Adjust for horizontal scroll context specifically */
+.horizontal-scroll-row .listing-card {
+  width: 340px;
+  grid-template-columns: 120px 1fr; /* Slightly smaller image for compact scroll */
+}
+
+/* Image Container in List View */
+.listing-grid-list .listing-card-image-container,
+.horizontal-scroll-row .listing-card-image-container {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border-radius: 0;
+  position: relative;
+  grid-row: 1 / -1;
+  grid-column: 1;
+}
+
+.listing-grid-list .listing-card-image,
+.horizontal-scroll-row .listing-card-image {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Content in List View */
+.listing-grid-list .listing-card-content,
+.horizontal-scroll-row .listing-card-content {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  grid-column: 2;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Footer/Actions in List View */
+.listing-grid-list .listing-footer-row,
+.horizontal-scroll-row .listing-footer-row {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Hide/Show adjustments */
+.horizontal-scroll-row .listing-description-preview {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+/* Ensure Grid View still works */
+.listing-grid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+/* Mobile adjustments for List View */
+@media (max-width: 640px) {
+  .listing-grid-list .listing-card {
+    grid-template-columns: 110px 1fr;
+    min-height: 140px;
+  }
+  
+  .horizontal-scroll-row .listing-card {
+    width: 300px; /* Slightly narrower on mobile if needed */
+    grid-template-columns: 100px 1fr;
+  }
+}
+
+/* Text placement fixes */
+.listing-title {
+  text-align: left;
+}
+.listing-description {
+  text-align: left;
+}
+
 .search-wrapper {
   position: relative;
   display: flex;
@@ -9079,36 +9188,63 @@ input:checked + .toggle-slider:before {
   border-radius: 10px;
 }
 
-/* Compact Featured Listing Card Override */
+/* Compact Featured Listing Card Override - List View Style */
 .horizontal-scroll-row .listing-card {
-  width: 260px; /* Force width */
-  min-width: 260px;
-  padding: 10px;
-  gap: 10px;
+  width: 340px; /* Wider for list view */
+  min-width: 340px;
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  grid-template-rows: 1fr auto;
+  gap: 0;
+  padding: 0;
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  display: flex;
-  flex-direction: column;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
 }
 
 .horizontal-scroll-row .listing-card-image-container {
-  height: 140px; /* Smaller image */
-  margin-bottom: 8px;
+  grid-column: 1;
+  grid-row: 1 / -1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.horizontal-scroll-row .listing-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.horizontal-scroll-row .listing-card-content {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 12px 12px 4px 12px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .horizontal-scroll-row .listing-title {
-  font-size: 1rem;
-  margin-bottom: 4px;
+  font-size: 1rem !important;
+  margin-bottom: 4px !important;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .horizontal-scroll-row .listing-description-preview {
-  font-size: 0.85rem;
-  -webkit-line-clamp: 2; /* Limit lines further */
-  margin-bottom: 8px;
+  display: none; /* Hide description in compact list view to save space */
 }
 
 .horizontal-scroll-row .listing-stats {
-  gap: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .horizontal-scroll-row .stat-chip {
@@ -9117,8 +9253,16 @@ input:checked + .toggle-slider:before {
 }
 
 .horizontal-scroll-row .listing-footer-row {
-  margin-top: auto;
-  padding-top: 8px;
+  grid-column: 2;
+  grid-row: 2;
+  padding: 4px 12px 12px 12px !important;
+  margin-top: 0;
+  border-top: none;
+  justify-content: flex-end; /* Align actions to right */
+}
+
+.horizontal-scroll-row .listing-footer-left {
+  display: none; /* Hide contact pill in compact view */
 }
 
 /* Compact Grid & Cards */
@@ -9132,9 +9276,11 @@ input:checked + .toggle-slider:before {
 .compact-card {
   background: white;
   border-radius: 16px;
-  padding: 16px;
+  padding: 20px; /* Increased padding */
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
 }
 
 .compact-card.full-width {
@@ -9142,37 +9288,44 @@ input:checked + .toggle-slider:before {
 }
 
 .compact-card h3 {
-  font-size: 1rem;
+  font-size: 1.1rem; /* Slightly larger */
   font-weight: 700;
-  margin: 0 0 12px 0;
-  color: #334155;
+  margin: 0 0 16px 0;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .compact-chip {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 8px 14px; /* Larger touch target */
   border-radius: 20px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #475569;
   white-space: nowrap;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .compact-chip:hover {
   background: #eff6ff;
   border-color: #bfdbfe;
   color: #2563eb;
+  transform: translateY(-1px);
 }
 
 .compact-steps {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto; /* Push to bottom if needed */
 }
 
 .compact-step {
@@ -9181,11 +9334,14 @@ input:checked + .toggle-slider:before {
   align-items: center;
   text-align: center;
   flex: 1;
+  padding: 8px;
+  background: #f8fafc; /* Subtle background */
+  border-radius: 12px;
 }
 
 .step-circle {
-  width: 28px;
-  height: 28px;
+  width: 32px; /* Larger */
+  height: 32px;
   border-radius: 50%;
   background: #eff6ff;
   color: #3b82f6;
@@ -9193,37 +9349,82 @@ input:checked + .toggle-slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
-  margin-bottom: 6px;
+  font-size: 1rem;
+  margin-bottom: 8px;
   border: 1px solid #dbeafe;
 }
 
 .step-text {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #64748b;
   line-height: 1.3;
+  font-weight: 500;
 }
 
 .home-hero-compact {
-  padding: 24px 20px;
-  background: linear-gradient(135deg, #2563eb, #1e40af);
-  border-radius: 16px;
+  padding: 32px 24px; /* More padding */
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-radius: 24px; /* More rounded */
   color: white;
   text-align: center;
-  margin-bottom: 24px;
-  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.2);
+  margin-bottom: 32px;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero-compact::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .home-hero-compact h1 {
-  font-size: 1.5rem;
-  margin: 0 0 8px 0;
+  font-size: 1.75rem; /* Larger title */
+  margin: 0 0 12px 0;
   font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .home-hero-compact p {
-  font-size: 0.95rem;
-  opacity: 0.9;
-  margin: 0 0 16px 0;
+  font-size: 1rem;
+  opacity: 0.95;
+  margin: 0 auto 24px auto;
+  max-width: 500px; /* Limit width for readability */
+  line-height: 1.5;
+}
+
+/* Fix Stats Grid Alignment */
+.stats-section .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px !important; /* Override inline style */
+}
+
+.stats-section .stat-item {
+  text-align: center;
+  padding: 16px !important;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.stats-section .stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.stats-section .stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
 }
 
 .section-header-compact {

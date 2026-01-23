@@ -28,7 +28,7 @@ export default function HomeTab({
   const scroll = (direction) => {
     if (scrollRef.current) {
       const { current } = scrollRef;
-      const scrollAmount = 300; // Approx card width + gap
+      const scrollAmount = 360; // Approx card width + gap
       if (direction === 'left') {
         current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
       } else {
@@ -80,7 +80,7 @@ export default function HomeTab({
           </div>
           <div className="horizontal-scroll-row" ref={scrollRef} style={{ paddingBottom: '12px' }}>
             {featuredListings.map(l => (
-              <div key={l.id} style={{ flex: '0 0 280px' }}>
+              <div key={l.id} style={{ flex: '0 0 340px' }}>
                 <ListingCard
                   listing={l}
                   t={t}
