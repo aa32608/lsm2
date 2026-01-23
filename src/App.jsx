@@ -28,11 +28,12 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import "./App.css";
 
-// Lazy loaded components
-const NorthMacedoniaMap = lazy(() => import("./NorthMacedoniaMap"));
-const Sidebar = lazy(() => import("./Sidebar"));
-const Filtersheet = lazy(() => import("./components/Filtersheet"));
-const EditListingModal = lazy(() => import("./components/EditListingModal"));
+// Lazy loaded components - Client side only to avoid SSR Suspense issues
+const isClient = typeof window !== "undefined";
+const NorthMacedoniaMap = isClient ? lazy(() => import("./NorthMacedoniaMap")) : () => null;
+const Sidebar = isClient ? lazy(() => import("./Sidebar")) : () => null;
+const Filtersheet = isClient ? lazy(() => import("./components/Filtersheet")) : () => null;
+const EditListingModal = isClient ? lazy(() => import("./components/EditListingModal")) : () => null;
 
 import ListingCard from "./components/ListingCard";
 import MyListingCard from "./components/MyListingCard";
@@ -134,67 +135,28 @@ const getDescriptionPreview = (text = "", limit = 160) => {
 };
 
 const HeadManager = ({ title, description, keywords, canonical, image, jsonLd }) => {
-  const apply = (fn) => {
-    if (typeof document === "undefined") return;
-    fn();
-  };
-  useEffect(() => {
-    apply(() => {
-      if (title) document.title = title;
-      const ensureMetaByName = (name, content) => {
-        if (!content) return;
-        let el = document.head.querySelector(`meta[name="${name}"]`);
-        if (!el) {
-          el = document.createElement("meta");
-          el.setAttribute("name", name);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("content", content);
-      };
-      const ensureMetaByProp = (property, content) => {
-        if (!content) return;
-        let el = document.head.querySelector(`meta[property="${property}"]`);
-        if (!el) {
-          el = document.createElement("meta");
-          el.setAttribute("property", property);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("content", content);
-      };
-      const ensureLink = (rel, href) => {
-        if (!href) return;
-        let el = document.head.querySelector(`link[rel="${rel}"]`);
-        if (!el) {
-          el = document.createElement("link");
-          el.setAttribute("rel", rel);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("href", href);
-      };
-      const ensureJSONLD = (id, data) => {
-        if (!data) return;
-        let el = document.getElementById(id);
-        if (!el) {
-          el = document.createElement("script");
-          el.type = "application/ld+json";
-          el.id = id;
-          document.head.appendChild(el);
-        }
-        el.textContent = JSON.stringify(data);
-      };
-      ensureMetaByName("description", description);
-      ensureMetaByName("keywords", keywords);
-      ensureMetaByProp("og:title", title);
-      ensureMetaByProp("og:description", description);
-      ensureMetaByProp("og:type", "website");
-      ensureMetaByProp("og:url", canonical);
-      ensureMetaByProp("og:image", image);
-      ensureMetaByName("twitter:card", "summary_large_image");
-      ensureLink("canonical", canonical);
-      ensureJSONLD("jsonld-site", jsonLd);
-    });
-  }, [title, description, keywords, canonical, image, jsonLd]);
-  return null;
+  return (
+    <Helmet>
+      {title && <title>{title}</title>}
+      {description && <meta name="description" content={description} />}
+      {keywords && <meta name="keywords" content={keywords} />}
+      
+      {title && <meta property="og:title" content={title} />}
+      {description && <meta property="og:description" content={description} />}
+      <meta property="og:type" content="website" />
+      {canonical && <meta property="og:url" content={canonical} />}
+      {image && <meta property="og:image" content={image} />}
+      <meta name="twitter:card" content="summary_large_image" />
+      
+      {canonical && <link rel="canonical" href={canonical} />}
+      
+      {jsonLd && (
+        <script type="application/ld+json">
+          {JSON.stringify(jsonLd)}
+        </script>
+      )}
+    </Helmet>
+  );
 };
 
 /* Helper: normalize phone numbers before storing */
@@ -2047,7 +2009,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     setConfirmationResult(null);
   };
 
-  const canonicalUrl = typeof window !== "undefined" ? window.location.href : "";
+  const canonicalUrl = typeof window !== "undefined" ? window.location.href : "https://bizcall.mk";
   const seoTitle = t("seoTitle");
   const seoDescription = t("seoDescription");
   const seoKeywords = t("seoKeywords");

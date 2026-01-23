@@ -12,7 +12,9 @@
     "prerender": "node scripts/prerender.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-sitemap": "node scripts/generate-sitemap.js"
+    "generate-sitemap": "node scripts/generate-sitemap.js",
+    "deploy": "firebase deploy",
+    "firebase": "firebase"
   },
   "dependencies": {
     "firebase": "^12.3.0",
@@ -40,6 +42,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "express": "^5.2.1",
+    "firebase-tools": "^15.4.0",
     "globals": "^16.4.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",

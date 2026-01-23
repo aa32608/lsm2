@@ -1,13 +1,13 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-var _a;
+var _a, _b;
 import { jsxs, jsx, Fragment } from "react/jsx-runtime";
 import React, { Component, useState, useRef, useEffect, lazy, useCallback, useDeferredValue, useMemo, Suspense } from "react";
 import ReactDOMServer from "react-dom/server";
-import "react-fast-compare";
-import "invariant";
-import "shallowequal";
+import fastCompare from "react-fast-compare";
+import invariant from "invariant";
+import shallowEqual from "shallowequal";
 import { initializeApp } from "firebase/app";
 import { getAuth, RecaptchaVerifier, isSignInWithEmailLink, signInWithEmailLink, signOut, sendEmailVerification, signInWithEmailAndPassword, signInWithPhoneNumber, EmailAuthProvider, linkWithCredential, updateProfile, reauthenticateWithCredential, PhoneAuthProvider, updatePhoneNumber, deleteUser, updateEmail, updatePassword } from "firebase/auth";
 import { getDatabase, update, ref, onValue, query, orderByChild, equalTo, limitToLast, get, push, set, remove } from "firebase/database";
@@ -49,7 +49,7 @@ var SEO_PRIORITY_TAGS = {
     ]
   }
 };
-Object.values(TAG_NAMES);
+var VALID_TAG_NAMES = Object.values(TAG_NAMES);
 var REACT_TAG_MAP = {
   accesskey: "accessKey",
   charset: "charSet",
@@ -60,7 +60,7 @@ var REACT_TAG_MAP = {
   itemprop: "itemProp",
   tabindex: "tabIndex"
 };
-Object.entries(REACT_TAG_MAP).reduce(
+var HTML_TAG_MAP = Object.entries(REACT_TAG_MAP).reduce(
   (carry, [key, value]) => {
     carry[value] = key;
     return carry;
@@ -68,6 +68,180 @@ Object.entries(REACT_TAG_MAP).reduce(
   {}
 );
 var HELMET_ATTRIBUTE = "data-rh";
+var HELMET_PROPS = {
+  DEFAULT_TITLE: "defaultTitle",
+  DEFER: "defer",
+  ENCODE_SPECIAL_CHARACTERS: "encodeSpecialCharacters",
+  ON_CHANGE_CLIENT_STATE: "onChangeClientState",
+  TITLE_TEMPLATE: "titleTemplate",
+  PRIORITIZE_SEO_TAGS: "prioritizeSeoTags"
+};
+var getInnermostProperty = (propsList, property) => {
+  for (let i = propsList.length - 1; i >= 0; i -= 1) {
+    const props = propsList[i];
+    if (Object.prototype.hasOwnProperty.call(props, property)) {
+      return props[property];
+    }
+  }
+  return null;
+};
+var getTitleFromPropsList = (propsList) => {
+  let innermostTitle = getInnermostProperty(
+    propsList,
+    "title"
+    /* TITLE */
+  );
+  const innermostTemplate = getInnermostProperty(propsList, HELMET_PROPS.TITLE_TEMPLATE);
+  if (Array.isArray(innermostTitle)) {
+    innermostTitle = innermostTitle.join("");
+  }
+  if (innermostTemplate && innermostTitle) {
+    return innermostTemplate.replace(/%s/g, () => innermostTitle);
+  }
+  const innermostDefaultTitle = getInnermostProperty(propsList, HELMET_PROPS.DEFAULT_TITLE);
+  return innermostTitle || innermostDefaultTitle || void 0;
+};
+var getOnChangeClientState = (propsList) => getInnermostProperty(propsList, HELMET_PROPS.ON_CHANGE_CLIENT_STATE) || (() => {
+});
+var getAttributesFromPropsList = (tagType, propsList) => propsList.filter((props) => typeof props[tagType] !== "undefined").map((props) => props[tagType]).reduce((tagAttrs, current) => ({ ...tagAttrs, ...current }), {});
+var getBaseTagFromPropsList = (primaryAttributes, propsList) => propsList.filter((props) => typeof props[
+  "base"
+  /* BASE */
+] !== "undefined").map((props) => props[
+  "base"
+  /* BASE */
+]).reverse().reduce((innermostBaseTag, tag) => {
+  if (!innermostBaseTag.length) {
+    const keys = Object.keys(tag);
+    for (let i = 0; i < keys.length; i += 1) {
+      const attributeKey = keys[i];
+      const lowerCaseAttributeKey = attributeKey.toLowerCase();
+      if (primaryAttributes.indexOf(lowerCaseAttributeKey) !== -1 && tag[lowerCaseAttributeKey]) {
+        return innermostBaseTag.concat(tag);
+      }
+    }
+  }
+  return innermostBaseTag;
+}, []);
+var warn = (msg) => console && typeof console.warn === "function" && console.warn(msg);
+var getTagsFromPropsList = (tagName, primaryAttributes, propsList) => {
+  const approvedSeenTags = {};
+  return propsList.filter((props) => {
+    if (Array.isArray(props[tagName])) {
+      return true;
+    }
+    if (typeof props[tagName] !== "undefined") {
+      warn(
+        `Helmet: ${tagName} should be of type "Array". Instead found type "${typeof props[tagName]}"`
+      );
+    }
+    return false;
+  }).map((props) => props[tagName]).reverse().reduce((approvedTags, instanceTags) => {
+    const instanceSeenTags = {};
+    instanceTags.filter((tag) => {
+      let primaryAttributeKey;
+      const keys2 = Object.keys(tag);
+      for (let i = 0; i < keys2.length; i += 1) {
+        const attributeKey = keys2[i];
+        const lowerCaseAttributeKey = attributeKey.toLowerCase();
+        if (primaryAttributes.indexOf(lowerCaseAttributeKey) !== -1 && !(primaryAttributeKey === "rel" && tag[primaryAttributeKey].toLowerCase() === "canonical") && !(lowerCaseAttributeKey === "rel" && tag[lowerCaseAttributeKey].toLowerCase() === "stylesheet")) {
+          primaryAttributeKey = lowerCaseAttributeKey;
+        }
+        if (primaryAttributes.indexOf(attributeKey) !== -1 && (attributeKey === "innerHTML" || attributeKey === "cssText" || attributeKey === "itemprop")) {
+          primaryAttributeKey = attributeKey;
+        }
+      }
+      if (!primaryAttributeKey || !tag[primaryAttributeKey]) {
+        return false;
+      }
+      const value = tag[primaryAttributeKey].toLowerCase();
+      if (!approvedSeenTags[primaryAttributeKey]) {
+        approvedSeenTags[primaryAttributeKey] = {};
+      }
+      if (!instanceSeenTags[primaryAttributeKey]) {
+        instanceSeenTags[primaryAttributeKey] = {};
+      }
+      if (!approvedSeenTags[primaryAttributeKey][value]) {
+        instanceSeenTags[primaryAttributeKey][value] = true;
+        return true;
+      }
+      return false;
+    }).reverse().forEach((tag) => approvedTags.push(tag));
+    const keys = Object.keys(instanceSeenTags);
+    for (let i = 0; i < keys.length; i += 1) {
+      const attributeKey = keys[i];
+      const tagUnion = {
+        ...approvedSeenTags[attributeKey],
+        ...instanceSeenTags[attributeKey]
+      };
+      approvedSeenTags[attributeKey] = tagUnion;
+    }
+    return approvedTags;
+  }, []).reverse();
+};
+var getAnyTrueFromPropsList = (propsList, checkedTag) => {
+  if (Array.isArray(propsList) && propsList.length) {
+    for (let index = 0; index < propsList.length; index += 1) {
+      const prop = propsList[index];
+      if (prop[checkedTag]) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+var reducePropsToState = (propsList) => ({
+  baseTag: getBaseTagFromPropsList([
+    "href"
+    /* HREF */
+  ], propsList),
+  bodyAttributes: getAttributesFromPropsList("bodyAttributes", propsList),
+  defer: getInnermostProperty(propsList, HELMET_PROPS.DEFER),
+  encode: getInnermostProperty(propsList, HELMET_PROPS.ENCODE_SPECIAL_CHARACTERS),
+  htmlAttributes: getAttributesFromPropsList("htmlAttributes", propsList),
+  linkTags: getTagsFromPropsList(
+    "link",
+    [
+      "rel",
+      "href"
+      /* HREF */
+    ],
+    propsList
+  ),
+  metaTags: getTagsFromPropsList(
+    "meta",
+    [
+      "name",
+      "charset",
+      "http-equiv",
+      "property",
+      "itemprop"
+      /* ITEM_PROP */
+    ],
+    propsList
+  ),
+  noscriptTags: getTagsFromPropsList("noscript", [
+    "innerHTML"
+    /* INNER_HTML */
+  ], propsList),
+  onChangeClientState: getOnChangeClientState(propsList),
+  scriptTags: getTagsFromPropsList(
+    "script",
+    [
+      "src",
+      "innerHTML"
+      /* INNER_HTML */
+    ],
+    propsList
+  ),
+  styleTags: getTagsFromPropsList("style", [
+    "cssText"
+    /* CSS_TEXT */
+  ], propsList),
+  title: getTitleFromPropsList(propsList),
+  titleAttributes: getAttributesFromPropsList("titleAttributes", propsList),
+  prioritizeSeoTags: getAnyTrueFromPropsList(propsList, HELMET_PROPS.PRIORITIZE_SEO_TAGS)
+});
 var flattenArray = (possibleArray) => Array.isArray(possibleArray) ? possibleArray.join("") : possibleArray;
 var checkIfPropsMatch = (props, toMatch) => {
   const keys = Object.keys(props);
@@ -93,6 +267,12 @@ var prioritizer = (elementsList, propsToMatch) => {
     );
   }
   return { default: elementsList, priority: [] };
+};
+var without = (obj, key) => {
+  return {
+    ...obj,
+    [key]: void 0
+  };
 };
 var SELF_CLOSING_TAGS = [
   "noscript",
@@ -296,6 +476,344 @@ var HelmetProvider = (_a = class extends Component {
     return /* @__PURE__ */ React.createElement(Context.Provider, { value: this.helmetData.value }, this.props.children);
   }
 }, __publicField(_a, "canUseDOM", isDocument), _a);
+var updateTags = (type, tags) => {
+  const headElement = document.head || document.querySelector(
+    "head"
+    /* HEAD */
+  );
+  const tagNodes = headElement.querySelectorAll(`${type}[${HELMET_ATTRIBUTE}]`);
+  const oldTags = [].slice.call(tagNodes);
+  const newTags = [];
+  let indexToDelete;
+  if (tags && tags.length) {
+    tags.forEach((tag) => {
+      const newElement = document.createElement(type);
+      for (const attribute in tag) {
+        if (Object.prototype.hasOwnProperty.call(tag, attribute)) {
+          if (attribute === "innerHTML") {
+            newElement.innerHTML = tag.innerHTML;
+          } else if (attribute === "cssText") {
+            if (newElement.styleSheet) {
+              newElement.styleSheet.cssText = tag.cssText;
+            } else {
+              newElement.appendChild(document.createTextNode(tag.cssText));
+            }
+          } else {
+            const attr = attribute;
+            const value = typeof tag[attr] === "undefined" ? "" : tag[attr];
+            newElement.setAttribute(attribute, value);
+          }
+        }
+      }
+      newElement.setAttribute(HELMET_ATTRIBUTE, "true");
+      if (oldTags.some((existingTag, index) => {
+        indexToDelete = index;
+        return newElement.isEqualNode(existingTag);
+      })) {
+        oldTags.splice(indexToDelete, 1);
+      } else {
+        newTags.push(newElement);
+      }
+    });
+  }
+  oldTags.forEach((tag) => {
+    var _a2;
+    return (_a2 = tag.parentNode) == null ? void 0 : _a2.removeChild(tag);
+  });
+  newTags.forEach((tag) => headElement.appendChild(tag));
+  return {
+    oldTags,
+    newTags
+  };
+};
+var updateAttributes = (tagName, attributes) => {
+  const elementTag = document.getElementsByTagName(tagName)[0];
+  if (!elementTag) {
+    return;
+  }
+  const helmetAttributeString = elementTag.getAttribute(HELMET_ATTRIBUTE);
+  const helmetAttributes = helmetAttributeString ? helmetAttributeString.split(",") : [];
+  const attributesToRemove = [...helmetAttributes];
+  const attributeKeys = Object.keys(attributes);
+  for (const attribute of attributeKeys) {
+    const value = attributes[attribute] || "";
+    if (elementTag.getAttribute(attribute) !== value) {
+      elementTag.setAttribute(attribute, value);
+    }
+    if (helmetAttributes.indexOf(attribute) === -1) {
+      helmetAttributes.push(attribute);
+    }
+    const indexToSave = attributesToRemove.indexOf(attribute);
+    if (indexToSave !== -1) {
+      attributesToRemove.splice(indexToSave, 1);
+    }
+  }
+  for (let i = attributesToRemove.length - 1; i >= 0; i -= 1) {
+    elementTag.removeAttribute(attributesToRemove[i]);
+  }
+  if (helmetAttributes.length === attributesToRemove.length) {
+    elementTag.removeAttribute(HELMET_ATTRIBUTE);
+  } else if (elementTag.getAttribute(HELMET_ATTRIBUTE) !== attributeKeys.join(",")) {
+    elementTag.setAttribute(HELMET_ATTRIBUTE, attributeKeys.join(","));
+  }
+};
+var updateTitle = (title, attributes) => {
+  if (typeof title !== "undefined" && document.title !== title) {
+    document.title = flattenArray(title);
+  }
+  updateAttributes("title", attributes);
+};
+var commitTagChanges = (newState, cb) => {
+  const {
+    baseTag,
+    bodyAttributes,
+    htmlAttributes,
+    linkTags,
+    metaTags,
+    noscriptTags,
+    onChangeClientState,
+    scriptTags,
+    styleTags,
+    title,
+    titleAttributes
+  } = newState;
+  updateAttributes("body", bodyAttributes);
+  updateAttributes("html", htmlAttributes);
+  updateTitle(title, titleAttributes);
+  const tagUpdates = {
+    baseTag: updateTags("base", baseTag),
+    linkTags: updateTags("link", linkTags),
+    metaTags: updateTags("meta", metaTags),
+    noscriptTags: updateTags("noscript", noscriptTags),
+    scriptTags: updateTags("script", scriptTags),
+    styleTags: updateTags("style", styleTags)
+  };
+  const addedTags = {};
+  const removedTags = {};
+  Object.keys(tagUpdates).forEach((tagType) => {
+    const { newTags, oldTags } = tagUpdates[tagType];
+    if (newTags.length) {
+      addedTags[tagType] = newTags;
+    }
+    if (oldTags.length) {
+      removedTags[tagType] = tagUpdates[tagType].oldTags;
+    }
+  });
+  if (cb) {
+    cb();
+  }
+  onChangeClientState(newState, addedTags, removedTags);
+};
+var _helmetCallback = null;
+var handleStateChangeOnClient = (newState) => {
+  if (_helmetCallback) {
+    cancelAnimationFrame(_helmetCallback);
+  }
+  if (newState.defer) {
+    _helmetCallback = requestAnimationFrame(() => {
+      commitTagChanges(newState, () => {
+        _helmetCallback = null;
+      });
+    });
+  } else {
+    commitTagChanges(newState);
+    _helmetCallback = null;
+  }
+};
+var client_default = handleStateChangeOnClient;
+var HelmetDispatcher = class extends Component {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "rendered", false);
+  }
+  shouldComponentUpdate(nextProps) {
+    return !shallowEqual(nextProps, this.props);
+  }
+  componentDidUpdate() {
+    this.emitChange();
+  }
+  componentWillUnmount() {
+    const { helmetInstances } = this.props.context;
+    helmetInstances.remove(this);
+    this.emitChange();
+  }
+  emitChange() {
+    const { helmetInstances, setHelmet } = this.props.context;
+    let serverState = null;
+    const state = reducePropsToState(
+      helmetInstances.get().map((instance) => {
+        const props = { ...instance.props };
+        delete props.context;
+        return props;
+      })
+    );
+    if (HelmetProvider.canUseDOM) {
+      client_default(state);
+    } else if (server_default) {
+      serverState = server_default(state);
+    }
+    setHelmet(serverState);
+  }
+  // componentWillMount will be deprecated
+  // for SSR, initialize on first render
+  // constructor is also unsafe in StrictMode
+  init() {
+    if (this.rendered) {
+      return;
+    }
+    this.rendered = true;
+    const { helmetInstances } = this.props.context;
+    helmetInstances.add(this);
+    this.emitChange();
+  }
+  render() {
+    this.init();
+    return null;
+  }
+};
+var Helmet = (_b = class extends Component {
+  shouldComponentUpdate(nextProps) {
+    return !fastCompare(without(this.props, "helmetData"), without(nextProps, "helmetData"));
+  }
+  mapNestedChildrenToProps(child, nestedChildren) {
+    if (!nestedChildren) {
+      return null;
+    }
+    switch (child.type) {
+      case "script":
+      case "noscript":
+        return {
+          innerHTML: nestedChildren
+        };
+      case "style":
+        return {
+          cssText: nestedChildren
+        };
+      default:
+        throw new Error(
+          `<${child.type} /> elements are self-closing and can not contain children. Refer to our API for more information.`
+        );
+    }
+  }
+  flattenArrayTypeChildren(child, arrayTypeChildren, newChildProps, nestedChildren) {
+    return {
+      ...arrayTypeChildren,
+      [child.type]: [
+        ...arrayTypeChildren[child.type] || [],
+        {
+          ...newChildProps,
+          ...this.mapNestedChildrenToProps(child, nestedChildren)
+        }
+      ]
+    };
+  }
+  mapObjectTypeChildren(child, newProps, newChildProps, nestedChildren) {
+    switch (child.type) {
+      case "title":
+        return {
+          ...newProps,
+          [child.type]: nestedChildren,
+          titleAttributes: { ...newChildProps }
+        };
+      case "body":
+        return {
+          ...newProps,
+          bodyAttributes: { ...newChildProps }
+        };
+      case "html":
+        return {
+          ...newProps,
+          htmlAttributes: { ...newChildProps }
+        };
+      default:
+        return {
+          ...newProps,
+          [child.type]: { ...newChildProps }
+        };
+    }
+  }
+  mapArrayTypeChildrenToProps(arrayTypeChildren, newProps) {
+    let newFlattenedProps = { ...newProps };
+    Object.keys(arrayTypeChildren).forEach((arrayChildName) => {
+      newFlattenedProps = {
+        ...newFlattenedProps,
+        [arrayChildName]: arrayTypeChildren[arrayChildName]
+      };
+    });
+    return newFlattenedProps;
+  }
+  warnOnInvalidChildren(child, nestedChildren) {
+    invariant(
+      VALID_TAG_NAMES.some((name) => child.type === name),
+      typeof child.type === "function" ? `You may be attempting to nest <Helmet> components within each other, which is not allowed. Refer to our API for more information.` : `Only elements types ${VALID_TAG_NAMES.join(
+        ", "
+      )} are allowed. Helmet does not support rendering <${child.type}> elements. Refer to our API for more information.`
+    );
+    invariant(
+      !nestedChildren || typeof nestedChildren === "string" || Array.isArray(nestedChildren) && !nestedChildren.some((nestedChild) => typeof nestedChild !== "string"),
+      `Helmet expects a string as a child of <${child.type}>. Did you forget to wrap your children in braces? ( <${child.type}>{\`\`}</${child.type}> ) Refer to our API for more information.`
+    );
+    return true;
+  }
+  mapChildrenToProps(children, newProps) {
+    let arrayTypeChildren = {};
+    React.Children.forEach(children, (child) => {
+      if (!child || !child.props) {
+        return;
+      }
+      const { children: nestedChildren, ...childProps } = child.props;
+      const newChildProps = Object.keys(childProps).reduce((obj, key) => {
+        obj[HTML_TAG_MAP[key] || key] = childProps[key];
+        return obj;
+      }, {});
+      let { type } = child;
+      if (typeof type === "symbol") {
+        type = type.toString();
+      } else {
+        this.warnOnInvalidChildren(child, nestedChildren);
+      }
+      switch (type) {
+        case "Symbol(react.fragment)":
+          newProps = this.mapChildrenToProps(nestedChildren, newProps);
+          break;
+        case "link":
+        case "meta":
+        case "noscript":
+        case "script":
+        case "style":
+          arrayTypeChildren = this.flattenArrayTypeChildren(
+            child,
+            arrayTypeChildren,
+            newChildProps,
+            nestedChildren
+          );
+          break;
+        default:
+          newProps = this.mapObjectTypeChildren(child, newProps, newChildProps, nestedChildren);
+          break;
+      }
+    });
+    return this.mapArrayTypeChildrenToProps(arrayTypeChildren, newProps);
+  }
+  render() {
+    const { children, ...props } = this.props;
+    let newProps = { ...props };
+    let { helmetData } = props;
+    if (children) {
+      newProps = this.mapChildrenToProps(children, newProps);
+    }
+    if (helmetData && !(helmetData instanceof HelmetData)) {
+      const data = helmetData;
+      helmetData = new HelmetData(data.context, true);
+      delete newProps.helmetData;
+    }
+    return helmetData ? /* @__PURE__ */ React.createElement(HelmetDispatcher, { ...newProps, context: helmetData.value }) : /* @__PURE__ */ React.createElement(Context.Consumer, null, (context) => /* @__PURE__ */ React.createElement(HelmetDispatcher, { ...newProps, context }));
+  }
+}, __publicField(_b, "defaultProps", {
+  defer: true,
+  encodeSpecialCharacters: true,
+  prioritizeSeoTags: false
+}), _b);
 const logo = "/assets/logo-DpWurNp1.png";
 const firebaseConfig = {
   apiKey: void 0,
@@ -2740,10 +3258,11 @@ function CookieConsent({ t }) {
     /* @__PURE__ */ jsx("div", { className: "cookie-actions", children: /* @__PURE__ */ jsx("button", { className: "btn btn-primary btn-sm", onClick: handleAccept, children: t("accept") }) })
   ] });
 }
-const NorthMacedoniaMap = lazy(() => import("./assets/NorthMacedoniaMap-D-RtQ85F.js"));
-const Sidebar = lazy(() => import("./assets/Sidebar-Bk5U_7a8.js"));
-const Filtersheet = lazy(() => import("./assets/Filtersheet-DzWtSYfa.js"));
-const EditListingModal = lazy(() => import("./assets/EditListingModal-CT9XDAci.js"));
+const isClient = typeof window !== "undefined";
+const NorthMacedoniaMap = isClient ? lazy(() => import("./assets/NorthMacedoniaMap-D-RtQ85F.js")) : () => null;
+const Sidebar = isClient ? lazy(() => import("./assets/Sidebar-Bk5U_7a8.js")) : () => null;
+const Filtersheet = isClient ? lazy(() => import("./assets/Filtersheet-DzWtSYfa.js")) : () => null;
+const EditListingModal = isClient ? lazy(() => import("./assets/EditListingModal-CT9XDAci.js")) : () => null;
 const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://localhost:5000" : "https://lsm-wozo.onrender.com";
 const categories = [
   "food",
@@ -2824,67 +3343,19 @@ const getDescriptionPreview = (text = "", limit = 160) => {
   return clean.length > limit ? `${clean.slice(0, limit).trim()}…` : clean;
 };
 const HeadManager = ({ title, description, keywords, canonical, image, jsonLd }) => {
-  const apply = (fn) => {
-    if (typeof document === "undefined") return;
-    fn();
-  };
-  useEffect(() => {
-    apply(() => {
-      if (title) document.title = title;
-      const ensureMetaByName = (name, content) => {
-        if (!content) return;
-        let el = document.head.querySelector(`meta[name="${name}"]`);
-        if (!el) {
-          el = document.createElement("meta");
-          el.setAttribute("name", name);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("content", content);
-      };
-      const ensureMetaByProp = (property, content) => {
-        if (!content) return;
-        let el = document.head.querySelector(`meta[property="${property}"]`);
-        if (!el) {
-          el = document.createElement("meta");
-          el.setAttribute("property", property);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("content", content);
-      };
-      const ensureLink = (rel, href) => {
-        if (!href) return;
-        let el = document.head.querySelector(`link[rel="${rel}"]`);
-        if (!el) {
-          el = document.createElement("link");
-          el.setAttribute("rel", rel);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("href", href);
-      };
-      const ensureJSONLD = (id, data) => {
-        if (!data) return;
-        let el = document.getElementById(id);
-        if (!el) {
-          el = document.createElement("script");
-          el.type = "application/ld+json";
-          el.id = id;
-          document.head.appendChild(el);
-        }
-        el.textContent = JSON.stringify(data);
-      };
-      ensureMetaByName("description", description);
-      ensureMetaByName("keywords", keywords);
-      ensureMetaByProp("og:title", title);
-      ensureMetaByProp("og:description", description);
-      ensureMetaByProp("og:type", "website");
-      ensureMetaByProp("og:url", canonical);
-      ensureMetaByProp("og:image", image);
-      ensureMetaByName("twitter:card", "summary_large_image");
-      ensureLink("canonical", canonical);
-      ensureJSONLD("jsonld-site", jsonLd);
-    });
-  }, [title, description, keywords, canonical, image, jsonLd]);
-  return null;
+  return /* @__PURE__ */ jsxs(Helmet, { children: [
+    title && /* @__PURE__ */ jsx("title", { children: title }),
+    description && /* @__PURE__ */ jsx("meta", { name: "description", content: description }),
+    keywords && /* @__PURE__ */ jsx("meta", { name: "keywords", content: keywords }),
+    title && /* @__PURE__ */ jsx("meta", { property: "og:title", content: title }),
+    description && /* @__PURE__ */ jsx("meta", { property: "og:description", content: description }),
+    /* @__PURE__ */ jsx("meta", { property: "og:type", content: "website" }),
+    canonical && /* @__PURE__ */ jsx("meta", { property: "og:url", content: canonical }),
+    image && /* @__PURE__ */ jsx("meta", { property: "og:image", content: image }),
+    /* @__PURE__ */ jsx("meta", { name: "twitter:card", content: "summary_large_image" }),
+    canonical && /* @__PURE__ */ jsx("link", { rel: "canonical", href: canonical }),
+    jsonLd && /* @__PURE__ */ jsx("script", { type: "application/ld+json", children: JSON.stringify(jsonLd) })
+  ] });
 };
 const normalizePhoneForStorage = (raw) => {
   if (!raw) return raw;
@@ -3012,7 +3483,7 @@ const Header = React.memo(({
   ] })
 ] }) }));
 function App({ initialListings = [], initialPublicListings = [] }) {
-  var _a2, _b, _c, _d, _e;
+  var _a2, _b2, _c, _d, _e;
   const [lang, setLang] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("lang") || "sq";
@@ -3023,8 +3494,8 @@ function App({ initialListings = [], initialPublicListings = [] }) {
   const [userProfile, setUserProfile] = useState(null);
   const t = useCallback(
     (k) => {
-      var _a3, _b2;
-      return ((_a3 = TRANSLATIONS[lang]) == null ? void 0 : _a3[k]) ?? ((_b2 = TRANSLATIONS.sq) == null ? void 0 : _b2[k]) ?? k;
+      var _a3, _b3;
+      return ((_a3 = TRANSLATIONS[lang]) == null ? void 0 : _a3[k]) ?? ((_b3 = TRANSLATIONS.sq) == null ? void 0 : _b3[k]) ?? k;
     },
     [lang]
   );
@@ -3323,11 +3794,11 @@ function App({ initialListings = [], initialPublicListings = [] }) {
   });
   useEffect(() => localStorage.setItem("favorites", JSON.stringify(favorites)), [favorites]);
   const listingLocationLabel = useMemo(() => {
-    var _a3, _b2;
+    var _a3, _b3;
     if (!selectedListing) return "";
     return buildLocationString(
       ((_a3 = selectedListing.locationData) == null ? void 0 : _a3.city) || selectedListing.location,
-      ((_b2 = selectedListing.locationData) == null ? void 0 : _b2.area) || selectedListing.locationExtra
+      ((_b3 = selectedListing.locationData) == null ? void 0 : _b3.area) || selectedListing.locationExtra
     ) || t("unspecified");
   }, [selectedListing, t]);
   const listingPriceLabel = useMemo(() => {
@@ -4201,10 +4672,10 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
     };
   }, [feedbackAverages, selectedListing, feedbackStore]);
   useEffect(() => {
-    var _a3, _b2;
+    var _a3, _b3;
     if (!selectedListing) return;
     const entries = ((_a3 = feedbackStore[selectedListing.id]) == null ? void 0 : _a3.entries) || [];
-    const lastRating = ((_b2 = entries[0]) == null ? void 0 : _b2.rating) || 4;
+    const lastRating = ((_b3 = entries[0]) == null ? void 0 : _b3.rating) || 4;
     setFeedbackDraft({ rating: lastRating, comment: "" });
   }, [feedbackStore, selectedListing]);
   const handleFeedbackSubmit = useCallback(async (listingId) => {
@@ -4419,7 +4890,7 @@ Click OK to request activation.`
     setAuthTab(tab);
     setConfirmationResult(null);
   };
-  const canonicalUrl = typeof window !== "undefined" ? window.location.href : "";
+  const canonicalUrl = typeof window !== "undefined" ? window.location.href : "https://bizcall.mk";
   const seoTitle = t("seoTitle");
   const seoDescription = t("seoDescription");
   const seoKeywords = t("seoKeywords");
@@ -4930,7 +5401,7 @@ Click OK to request activation.`
                       /* @__PURE__ */ jsx("div", { className: "account-info-item-icon", children: "📅" }),
                       /* @__PURE__ */ jsxs("div", { className: "account-info-item-content", children: [
                         /* @__PURE__ */ jsx("p", { className: "account-info-label", children: t("accountSince") }),
-                        /* @__PURE__ */ jsx("p", { className: "account-info-value", children: ((_b = user == null ? void 0 : user.metadata) == null ? void 0 : _b.creationTime) ? new Date(user.metadata.creationTime).toLocaleDateString(lang === "sq" ? "sq-AL" : lang === "mk" ? "mk-MK" : "en-US", {
+                        /* @__PURE__ */ jsx("p", { className: "account-info-value", children: ((_b2 = user == null ? void 0 : user.metadata) == null ? void 0 : _b2.creationTime) ? new Date(user.metadata.creationTime).toLocaleDateString(lang === "sq" ? "sq-AL" : lang === "mk" ? "mk-MK" : "en-US", {
                           year: "numeric",
                           month: "long",
                           day: "numeric"
@@ -6529,7 +7000,7 @@ Click OK to request activation.`
                       className: "btn full-width",
                       disabled: phoneLoading,
                       onClick: async () => {
-                        var _a3, _b2;
+                        var _a3, _b3;
                         if (!validateEmail(email))
                           return showMessage(t("enterValidEmail"), "error");
                         if (!displayName.trim())
@@ -6556,7 +7027,7 @@ Click OK to request activation.`
                           showMessage(t("codeSent"), "success");
                         } catch (err) {
                           console.error(err);
-                          (_b2 = (_a3 = window.signupRecaptchaVerifier) == null ? void 0 : _a3.clear) == null ? void 0 : _b2.call(_a3);
+                          (_b3 = (_a3 = window.signupRecaptchaVerifier) == null ? void 0 : _a3.clear) == null ? void 0 : _b3.call(_a3);
                           window.signupRecaptchaVerifier = null;
                           showMessage(err.message, "error");
                         } finally {
@@ -6753,10 +7224,10 @@ Click OK to request activation.`
                       {
                         className: "btn btn-ghost full-width",
                         onClick: async () => {
-                          var _a3, _b2;
+                          var _a3, _b3;
                           try {
                             await ((_a3 = auth.currentUser) == null ? void 0 : _a3.reload());
-                            if ((_b2 = auth.currentUser) == null ? void 0 : _b2.emailVerified) {
+                            if ((_b3 = auth.currentUser) == null ? void 0 : _b3.emailVerified) {
                               showMessage(t("emailVerified"), "success");
                               setPostSignupVerifyOpen(false);
                             } else {
