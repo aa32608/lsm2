@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 export default function HomeTab({
   t,
@@ -23,18 +23,23 @@ export default function HomeTab({
   setLocFilter
 }) {
   const featuredListings = verifiedListings.filter(l => l.isFeatured);
-  const scrollRef = useRef(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { current } = scrollRef;
-      const scrollAmount = 360; // Approx card width + gap
-      if (direction === 'left') {
-        current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
-      } else {
-        current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-      }
-    }
+  // Auto-slide for Home Carousel
+  useEffect(() => {
+    if (!featuredListings.length) return;
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev === featuredListings.length - 1 ? 0 : prev + 1));
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [featuredListings]);
+
+  const nextSlide = () => {
+    setCurrentSlide(prev => (prev === featuredListings.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide(prev => (prev === 0 ? featuredListings.length - 1 : prev - 1));
   };
 
   return (
@@ -65,7 +70,26 @@ export default function HomeTab({
         </p>
       </section>
 
-      {/* FEATURED LISTINGS - HORIZONTAL SCROLL (ENHANCED) */}
+      {/* HOW IT WORKS (Moved to Top) */}
+      <div className="how-it-works-section" style={{ marginTop: '2rem' }}>
+          <h3>✨ {t("homeHowItWorksTitle")}</h3>
+          <div className="steps-row">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="step-card">
+                <div className="step-number">{step}</div>
+                <p className="step-desc">
+                  {step === 1
+                    ? t("homeHowItWorksStep1")
+                    : step === 2
+                    ? t("homeHowItWorksStep2")
+                    : t("homeHowItWorksStep3")}
+                </p>
+              </div>
+            ))}
+          </div>
+      </div>
+
+      {/* FEATURED LISTINGS - SINGLE SLIDE CAROUSEL */}
       {featuredListings.length > 0 && (
         <section className="featured-section-home">
           <div className="section-header-row">
@@ -76,28 +100,40 @@ export default function HomeTab({
                  <p className="section-subtitle">{t("featuredSubtitle") || "Top rated services chosen for you"}</p>
                </div>
              </div>
-             <div className="scroll-controls">
-               <button className="scroll-arrow-btn" onClick={() => scroll('left')} aria-label="Scroll left">‹</button>
-               <button className="scroll-arrow-btn" onClick={() => scroll('right')} aria-label="Scroll right">›</button>
-             </div>
           </div>
-          <div className="horizontal-scroll-row expanded-scroll" ref={scrollRef}>
-            {featuredListings.map(l => (
-              <div key={l.id} className="featured-card-wrapper-home">
-                <ListingCard
-                  listing={l}
-                  t={t}
-                  categoryIcons={categoryIcons}
-                  getDescriptionPreview={getDescriptionPreview}
-                  getListingStats={getListingStats}
-                  onSelect={handleSelectListing}
-                  onShare={handleShareListing}
-                  showMessage={showMessage}
-                  toggleFav={toggleFav}
-                  isFavorite={favorites.includes(l.id)}
-                />
-              </div>
-            ))}
+          
+          <div className="home-carousel-container">
+            <button className="carousel-nav-btn prev" onClick={prevSlide}>‹</button>
+            <div className="home-carousel-track">
+               {featuredListings.length > 0 && (
+                 <div className="home-carousel-slide">
+                    <ListingCard
+                      listing={featuredListings[currentSlide]}
+                      t={t}
+                      categoryIcons={categoryIcons}
+                      getDescriptionPreview={getDescriptionPreview}
+                      getListingStats={getListingStats}
+                      onSelect={handleSelectListing}
+                      onShare={handleShareListing}
+                      showMessage={showMessage}
+                      toggleFav={toggleFav}
+                      isFavorite={favorites.includes(featuredListings[currentSlide].id)}
+                      className="listing-card-wide" // Custom class for wide/short style
+                    />
+                 </div>
+               )}
+            </div>
+            <button className="carousel-nav-btn next" onClick={nextSlide}>›</button>
+            
+            <div className="carousel-dots-home">
+               {featuredListings.map((_, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`dot ${idx === currentSlide ? 'active' : ''}`}
+                    onClick={() => setCurrentSlide(idx)}
+                  />
+               ))}
+            </div>
           </div>
         </section>
       )}
@@ -149,24 +185,6 @@ export default function HomeTab({
         </div>
       </div>
 
-      {/* HOW IT WORKS (Full Width) */}
-      <div className="how-it-works-section">
-          <h3>✨ {t("homeHowItWorksTitle")}</h3>
-          <div className="steps-row">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="step-card">
-                <div className="step-number">{step}</div>
-                <p className="step-desc">
-                  {step === 1
-                    ? t("homeHowItWorksStep1")
-                    : step === 2
-                    ? t("homeHowItWorksStep2")
-                    : t("homeHowItWorksStep3")}
-                </p>
-              </div>
-            ))}
-          </div>
-      </div>
 
       {/* QUICK STATS */}
       <section className="stats-section" style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>

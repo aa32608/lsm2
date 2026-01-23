@@ -8,6 +8,7 @@ const ListingCard = React.memo(({
   getListingStats,
   onSelect,
   onShare,
+  className = "",
 }) => {
   const stats = getListingStats(l);
   const [imgIndex, setImgIndex] = useState(0);
@@ -29,7 +30,7 @@ const ListingCard = React.memo(({
 
   return (
     <article
-      className="listing-card explore-card-modern"
+      className={`listing-card explore-card-modern ${className}`}
       onClick={() => onSelect(l)}
     >
       <div className="listing-card-image-container">

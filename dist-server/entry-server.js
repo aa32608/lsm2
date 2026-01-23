@@ -3,7 +3,7 @@ var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { en
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var _a, _b;
 import { jsxs, jsx, Fragment } from "react/jsx-runtime";
-import React, { Component, useState, useRef, useEffect, lazy, useCallback, useDeferredValue, useMemo, Suspense } from "react";
+import React, { Component, useState, useEffect, lazy, useCallback, useDeferredValue, useMemo, Suspense } from "react";
 import ReactDOMServer from "react-dom/server";
 import fastCompare from "react-fast-compare";
 import invariant from "invariant";
@@ -874,7 +874,8 @@ const ListingCard = React.memo(({
   getDescriptionPreview: getDescriptionPreview2,
   getListingStats,
   onSelect,
-  onShare
+  onShare,
+  className = ""
 }) => {
   const stats = getListingStats(l);
   const [imgIndex, setImgIndex] = useState(0);
@@ -890,7 +891,7 @@ const ListingCard = React.memo(({
   return /* @__PURE__ */ jsxs(
     "article",
     {
-      className: "listing-card explore-card-modern",
+      className: `listing-card explore-card-modern ${className}`,
       onClick: () => onSelect(l),
       children: [
         /* @__PURE__ */ jsxs("div", { className: "listing-card-image-container", children: [
@@ -1241,17 +1242,19 @@ function HomeTab({
   setLocFilter
 }) {
   const featuredListings = verifiedListings.filter((l) => l.isFeatured);
-  const scrollRef = useRef(null);
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const { current } = scrollRef;
-      const scrollAmount = 360;
-      if (direction === "left") {
-        current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-      } else {
-        current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-      }
-    }
+  const [currentSlide, setCurrentSlide] = useState(0);
+  useEffect(() => {
+    if (!featuredListings.length) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => prev === featuredListings.length - 1 ? 0 : prev + 1);
+    }, 6e3);
+    return () => clearInterval(interval);
+  }, [featuredListings]);
+  const nextSlide = () => {
+    setCurrentSlide((prev) => prev === featuredListings.length - 1 ? 0 : prev + 1);
+  };
+  const prevSlide = () => {
+    setCurrentSlide((prev) => prev === 0 ? featuredListings.length - 1 : prev - 1);
   };
   return /* @__PURE__ */ jsxs("div", { className: "app-main-content", children: [
     /* @__PURE__ */ jsxs("section", { className: "home-hero-compact", children: [
@@ -1289,86 +1292,95 @@ function HomeTab({
         t("homeSimpleTrustLine")
       ] })
     ] }),
-    featuredListings.length > 0 && /* @__PURE__ */ jsxs("section", { className: "compact-section", style: { marginBottom: "1.5rem", background: "linear-gradient(to right, #f8fafc, #ffffff)", padding: "12px", borderRadius: "16px", border: "1px solid #f1f5f9" }, children: [
-      /* @__PURE__ */ jsxs("div", { className: "section-header-compact", style: { padding: "0 4px", marginBottom: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: "8px" }, children: [
-          /* @__PURE__ */ jsx("span", { style: { fontSize: "1.2rem" }, children: "🔥" }),
-          /* @__PURE__ */ jsx("h3", { style: { margin: 0, fontSize: "1.1rem" }, children: t("featured") || "Featured" })
-        ] }),
-        /* @__PURE__ */ jsxs("div", { className: "scroll-controls", children: [
-          /* @__PURE__ */ jsx("button", { className: "scroll-arrow-btn", onClick: () => scroll("left"), "aria-label": "Scroll left", children: "‹" }),
-          /* @__PURE__ */ jsx("button", { className: "scroll-arrow-btn", onClick: () => scroll("right"), "aria-label": "Scroll right", children: "›" })
-        ] })
+    /* @__PURE__ */ jsxs("div", { className: "how-it-works-section", style: { marginTop: "2rem" }, children: [
+      /* @__PURE__ */ jsxs("h3", { children: [
+        "✨ ",
+        t("homeHowItWorksTitle")
       ] }),
-      /* @__PURE__ */ jsx("div", { className: "horizontal-scroll-row", ref: scrollRef, style: { paddingBottom: "12px" }, children: featuredListings.map((l) => /* @__PURE__ */ jsx("div", { style: { flex: "0 0 320px", width: "320px", maxWidth: "85vw" }, children: /* @__PURE__ */ jsx(
-        ListingCard2,
-        {
-          listing: l,
-          t,
-          categoryIcons: categoryIcons2,
-          getDescriptionPreview: getDescriptionPreview2,
-          getListingStats,
-          onSelect: handleSelectListing,
-          onShare: handleShareListing,
-          showMessage,
-          toggleFav,
-          isFavorite: favorites.includes(l.id)
-        }
-      ) }, l.id)) })
+      /* @__PURE__ */ jsx("div", { className: "steps-row", children: [1, 2, 3].map((step) => /* @__PURE__ */ jsxs("div", { className: "step-card", children: [
+        /* @__PURE__ */ jsx("div", { className: "step-number", children: step }),
+        /* @__PURE__ */ jsx("p", { className: "step-desc", children: step === 1 ? t("homeHowItWorksStep1") : step === 2 ? t("homeHowItWorksStep2") : t("homeHowItWorksStep3") })
+      ] }, step)) })
     ] }),
-    /* @__PURE__ */ jsxs("div", { className: "compact-grid", children: [
-      /* @__PURE__ */ jsxs("div", { className: "compact-card full-width", children: [
-        /* @__PURE__ */ jsxs("h3", { children: [
+    featuredListings.length > 0 && /* @__PURE__ */ jsxs("section", { className: "featured-section-home", children: [
+      /* @__PURE__ */ jsx("div", { className: "section-header-row", children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: "8px" }, children: [
+        /* @__PURE__ */ jsx("span", { className: "section-icon-large", children: "🔥" }),
+        /* @__PURE__ */ jsxs("div", { children: [
+          /* @__PURE__ */ jsx("h3", { className: "section-title-large", children: t("featured") || "Featured" }),
+          /* @__PURE__ */ jsx("p", { className: "section-subtitle", children: t("featuredSubtitle") || "Top rated services chosen for you" })
+        ] })
+      ] }) }),
+      /* @__PURE__ */ jsxs("div", { className: "home-carousel-container", children: [
+        /* @__PURE__ */ jsx("button", { className: "carousel-nav-btn prev", onClick: prevSlide, children: "‹" }),
+        /* @__PURE__ */ jsx("div", { className: "home-carousel-track", children: featuredListings.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-carousel-slide", children: /* @__PURE__ */ jsx(
+          ListingCard2,
+          {
+            listing: featuredListings[currentSlide],
+            t,
+            categoryIcons: categoryIcons2,
+            getDescriptionPreview: getDescriptionPreview2,
+            getListingStats,
+            onSelect: handleSelectListing,
+            onShare: handleShareListing,
+            showMessage,
+            toggleFav,
+            isFavorite: favorites.includes(featuredListings[currentSlide].id),
+            className: "listing-card-wide"
+          }
+        ) }) }),
+        /* @__PURE__ */ jsx("button", { className: "carousel-nav-btn next", onClick: nextSlide, children: "›" }),
+        /* @__PURE__ */ jsx("div", { className: "carousel-dots-home", children: featuredListings.map((_, idx) => /* @__PURE__ */ jsx(
+          "div",
+          {
+            className: `dot ${idx === currentSlide ? "active" : ""}`,
+            onClick: () => setCurrentSlide(idx)
+          },
+          idx
+        )) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "discovery-grid", children: [
+      /* @__PURE__ */ jsxs("div", { className: "discovery-card", children: [
+        /* @__PURE__ */ jsx("div", { className: "discovery-header", children: /* @__PURE__ */ jsxs("h3", { children: [
           "🎯 ",
           t("homePopularCategoriesTitle")
-        ] }),
-        /* @__PURE__ */ jsx("div", { className: "horizontal-scroll-row", children: featuredCategories2.map((cat) => /* @__PURE__ */ jsxs(
+        ] }) }),
+        /* @__PURE__ */ jsx("div", { className: "discovery-chips-grid", children: featuredCategories2.map((cat) => /* @__PURE__ */ jsxs(
           "button",
           {
-            className: "compact-chip",
+            className: "discovery-chip",
             onClick: () => {
               setCatFilter(t(cat));
               setSelectedTab("allListings");
             },
             children: [
-              categoryIcons2[cat],
-              " ",
-              t(cat)
+              /* @__PURE__ */ jsx("span", { className: "chip-icon", children: categoryIcons2[cat] }),
+              /* @__PURE__ */ jsx("span", { className: "chip-label", children: t(cat) })
             ]
           },
           cat
         )) })
       ] }),
-      /* @__PURE__ */ jsxs("div", { className: "compact-card", children: [
-        /* @__PURE__ */ jsxs("h3", { children: [
+      /* @__PURE__ */ jsxs("div", { className: "discovery-card", children: [
+        /* @__PURE__ */ jsx("div", { className: "discovery-header", children: /* @__PURE__ */ jsxs("h3", { children: [
           "📍 ",
           t("homePopularCitiesTitle")
-        ] }),
-        /* @__PURE__ */ jsx("div", { className: "horizontal-scroll-row", children: mkSpotlightCities2.slice(0, 8).map((city) => /* @__PURE__ */ jsxs(
+        ] }) }),
+        /* @__PURE__ */ jsx("div", { className: "cities-grid", children: mkSpotlightCities2.slice(0, 9).map((city) => /* @__PURE__ */ jsxs(
           "button",
           {
-            className: "compact-chip",
+            className: "city-tile",
             onClick: () => {
               setLocFilter(city);
               setSelectedTab("allListings");
             },
             children: [
-              "📍 ",
-              city
+              /* @__PURE__ */ jsx("span", { className: "city-icon", children: "🏙️" }),
+              /* @__PURE__ */ jsx("span", { className: "city-name", children: city })
             ]
           },
           city
         )) })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "compact-card", children: [
-        /* @__PURE__ */ jsxs("h3", { children: [
-          "✨ ",
-          t("homeHowItWorksTitle")
-        ] }),
-        /* @__PURE__ */ jsx("div", { className: "compact-steps", children: [1, 2, 3].map((step) => /* @__PURE__ */ jsxs("div", { className: "compact-step", children: [
-          /* @__PURE__ */ jsx("div", { className: "step-circle", children: step }),
-          /* @__PURE__ */ jsx("p", { className: "step-text", children: step === 1 ? t("homeHowItWorksStep1") : step === 2 ? t("homeHowItWorksStep2") : t("homeHowItWorksStep3") })
-        ] }, step)) })
       ] })
     ] }),
     /* @__PURE__ */ jsxs("section", { className: "stats-section", style: { marginTop: "1.5rem", marginBottom: "1rem" }, children: [

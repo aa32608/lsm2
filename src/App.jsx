@@ -36,6 +36,7 @@ const Filtersheet = isClient ? lazy(() => import("./components/Filtersheet")) : 
 const EditListingModal = isClient ? lazy(() => import("./components/EditListingModal")) : () => null;
 
 import ListingCard from "./components/ListingCard";
+import ListingsTab from "./pages/ListingsTab";
 import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
@@ -2816,248 +2817,37 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                     )}
 
                     {selectedTab === "allListings" && (
-                      <div className="section explore-section-new">
-                        {/* Simplified Header */}
-                        <div className="explore-top-bar">
-                          <div className="explore-header-content">
-                            <h2 className="explore-page-title">🔍 {t("explore")}</h2>
-                            <p className="explore-page-subtitle">
-                              {listingsLoading 
-                                ? t("loading")
-                                : filtered.length === 0 
-                                  ? t("noListingsFound")
-                                  : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel")} • ${t("page")} ${page} ${t("of")} ${totalPages}`
-                              }
-                            </p>
-                          </div>
-                          <div className="explore-top-actions">
-                            <button
-                              type="button"
-                              className="btn btn-ghost view-toggle-btn"
-                              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                              title={viewMode === "grid" ? t("switchToListView") : t("switchToGridView")}
-                            >
-                              {viewMode === "grid" ? "☰" : "⊞"}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost filter-toggle-btn-desktop"
-                              onClick={() => setFiltersOpen((v) => !v)}
-                              aria-expanded={filtersOpen}
-                            >
-                              {filtersOpen ? "✕ " : "🔍 "}
-                              {t("filters")}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Active Filters Bar */}
-                        {(q || catFilter || locFilter) && (
-                          <div className="active-filters-bar">
-                            <span className="active-filters-label">{t("activeFilters")}:</span>
-                            <div className="active-filters-chips">
-                              {q && (
-                                <span className="active-filter-chip">
-                                  {t("search")}: "{q}"
-                                  <button
-                                    type="button"
-                                    className="filter-chip-remove"
-                                    onClick={() => setQ("")}
-                                    aria-label={t("removeFilter")}
-                                  >
-                                    ✕
-                                  </button>
-                                </span>
-                              )}
-                              {catFilter && (
-                                <span className="active-filter-chip">
-                                  {t("category")}: {catFilter}
-                                  <button
-                                    type="button"
-                                    className="filter-chip-remove"
-                                    onClick={() => setCatFilter("")}
-                                    aria-label={t("removeFilter")}
-                                  >
-                                    ✕
-                                  </button>
-                                </span>
-                              )}
-                              {locFilter && (
-                                <span className="active-filter-chip">
-                                  {t("location")}: {locFilter}
-                                  <button
-                                    type="button"
-                                    className="filter-chip-remove"
-                                    onClick={() => setLocFilter("")}
-                                    aria-label={t("removeFilter")}
-                                  >
-                                    ✕
-                                  </button>
-                                </span>
-                              )}
-                              <button
-                                type="button"
-                                className="btn-clear-all-filters"
-                                onClick={() => {
-                                  setQ("");
-                                  setCatFilter("");
-                                  setLocFilter("");
-                                  setSortBy("topRated");
-                                }}
-                              >
-                                {t("clearAll")}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Mobile Toolbar */}
-                        <div className="explore-mobile-toolbar">
-                          <button
-                            type="button"
-                            className="btn btn-ghost filter-toggle-btn"
-                            onClick={() => setFiltersOpen((v) => !v)}
-                            aria-expanded={filtersOpen}
-                          >
-                            {filtersOpen ? "✕ " : "🔍 "}
-                            {filtersOpen ? t("hideFilters") : t("showFilters")}
-                          </button>
-                          <select
-                            className="select sort-select-mobile"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                          >
-                            <option value="topRated">{t("sortTopRated")}</option>
-                            <option value="newest">{t("sortNewest")}</option>
-                            <option value="expiring">{t("sortExpiring")}</option>
-                            <option value="az">{t("sortAZ")}</option>
-                          </select>
-                          <button
-                            type="button"
-                            className="btn btn-ghost view-toggle-btn"
-                            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-                          >
-                            {viewMode === "grid" ? "☰" : "⊞"}
-                          </button>
-                        </div>
-
-                        <div className={`explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`}>
-                          <Suspense fallback={<div className="filters-loading">...</div>}>
-                            <Filtersheet
-                              t={t}
-                              filtersOpen={filtersOpen}
-                              setFiltersOpen={setFiltersOpen}
-                              q={q}
-                              setQ={setQ}
-                              catFilter={catFilter}
-                              setCatFilter={setCatFilter}
-                              locFilter={locFilter}
-                              setLocFilter={setLocFilter}
-                              sortBy={sortBy}
-                              setSortBy={setSortBy}
-                              categories={categories}
-                              categoryIcons={categoryIcons}
-                              allLocations={allLocations}
-                            />
-                          </Suspense>
-
-                          <div className="explore-results-area">
-                            {listingsLoading ? (
-                              <div className="loading-state">
-                                <div className="spinner"></div>
-                                <p>{t("loading")}</p>
-                              </div>
-                            ) : filtered.length > 0 ? (
-                              <div className="results-stack">
-                                {page === 1 && filtered.some(l => l.isFeatured && l.status === "verified") && (
-                                  <div className="featured-section-container" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--accent)' }}>
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                       <span style={{ fontSize: '1.5rem' }}>🔥</span>
-                                       <h3 className="section-title" style={{ margin: 0 }}>{t("featured") || "Featured Listings"}</h3>
-                                     </div>
-                                     <div className={`listing-grid-${viewMode}`}>
-                                       {filtered.filter(l => l.isFeatured && l.status === "verified").map(l => (
-                                          <ListingCard
-                                            key={l.id}
-                                            listing={l}
-                                            t={t}
-                                            categoryIcons={categoryIcons}
-                                            getDescriptionPreview={getDescriptionPreview}
-                                            getListingStats={getListingStats}
-                                            onSelect={handleSelectListing}
-                                            onShare={handleShareListing}
-                                            showMessage={showMessage}
-                                            toggleFav={toggleFav}
-                                            isFavorite={favorites.includes(l.id)}
-                                          />
-                                       ))}
-                                     </div>
-                                  </div>
-                                )}
-                                <div className={`listing-grid-${viewMode}`}>
-                                {pagedFiltered.map((l) => (
-                                  <ListingCard
-                                    key={l.id}
-                                    listing={l}
-                                    t={t}
-                                    categoryIcons={categoryIcons}
-                                    getDescriptionPreview={getDescriptionPreview}
-                                    getListingStats={getListingStats}
-                                    onSelect={handleSelectListing}
-                                    onShare={handleShareListing}
-                                    showMessage={showMessage}
-                                    toggleFav={toggleFav}
-                                    isFavorite={favorites.includes(l.id)}
-                                  />
-                                ))}
-
-                              </div><div className="pager" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                                  <div className="pager-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <button className="btn btn-ghost small" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} aria-label={t("previousPage")}>←</button>
-                                    <span className="small-muted">{t("page")} {page} {t("of")} {totalPages}</span>
-                                    <button className="btn btn-ghost small" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} aria-label={t("nextPage")}>→</button>
-                                  </div>
-                                  <div className="pager-right" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                    <span className="small-muted">{t("resultsPerPage")}</span>
-                                    <div className="filter-select-wrapper">
-                                      <select className="filter-select-field" value={pageSize} onChange={(e) => setPageSize(parseInt(e.target.value, 10))}>
-                                        <option value="6">6</option>
-                                        <option value="12">12</option>
-                                        <option value="24">24</option>
-                                      </select>
-                                      <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                      </svg>
-                                    </div>
-                                  </div>
-                                </div></div>
-                            ) : (
-                              <div className="explore-empty-state">
-                                <div className="empty-state-icon">🔍</div>
-                                <h3 className="empty-state-title">{t("noListingsFound")}</h3>
-                                <p className="empty-state-text">
-                                  {q || catFilter || locFilter 
-                                    ? t("tryDifferentFilters")
-                                    : t("noListingsAvailable")
-                                  }
-                                </p>
-                                {(q || catFilter || locFilter) && (
-                                  <button
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                      setQ("");
-                                      setCatFilter("");
-                                      setLocFilter("");
-                                    }}
-                                  >
-                                    {t("clearFilters")}
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <ListingsTab
+                        t={t}
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
+                        q={q}
+                        setQ={setQ}
+                        catFilter={catFilter}
+                        setCatFilter={setCatFilter}
+                        locFilter={locFilter}
+                        setLocFilter={setLocFilter}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
+                        pagedFiltered={pagedFiltered}
+                        page={page}
+                        totalPages={totalPages}
+                        setPage={setPage}
+                        pageSize={pageSize}
+                        setPageSize={setPageSize}
+                        categoryIcons={categoryIcons}
+                        feedbackAverages={feedbackAverages}
+                        setSelectedListing={handleSelectListing}
+                        filtersOpen={filtersOpen}
+                        setFiltersOpen={setFiltersOpen}
+                        getDescriptionPreview={getDescriptionPreview}
+                        getListingStats={getListingStats}
+                        handleShareListing={handleShareListing}
+                        showMessage={showMessage}
+                        toggleFav={toggleFav}
+                        favorites={favorites}
+                        featuredListings={filtered.filter(l => l.isFeatured && l.status === "verified")}
+                      />
                     )}
                   </div>
                 </div>
