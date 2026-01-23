@@ -12,6 +12,7 @@
     "prerender": "node scripts/prerender.js",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "NODE_ENV=production node server.js",
     "generate-sitemap": "node scripts/generate-sitemap.js",
     "deploy": "firebase deploy",
     "firebase": "firebase"

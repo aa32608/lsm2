@@ -7,6 +7,10 @@ const toAbsolute = (p) => path.resolve(__dirname, p);
 
 const template = fs.readFileSync(toAbsolute('../dist/index.html'), 'utf-8');
 
+// Save template for SSR usage (clean shell)
+fs.writeFileSync(toAbsolute('../dist/template.html'), template);
+console.log('✅ Saved dist/template.html for SSR');
+
 (async () => {
   try {
     // 1. Fetch data
