@@ -13,6 +13,7 @@ const MyListingCard = React.memo(({
   showMessage,
   handleShareListing,
   confirmDelete,
+  requestFeatured,
 }) => {
   const stats = getListingStats(l);
   const days = getDaysUntilExpiry(l.expiresAt);
@@ -102,6 +103,9 @@ const MyListingCard = React.memo(({
 
       <div className="my-listing-footer framed-footer">
         <div className="listing-actions-primary">
+          <span className="listing-id-tiny" style={{ fontSize: '0.7rem', color: '#94a3b8', marginRight: 'auto', alignSelf: 'center' }}>
+             #{l.id.slice(-6)}
+          </span>
           <button
             className="btn btn-primary small"
             onClick={() => {
@@ -113,6 +117,17 @@ const MyListingCard = React.memo(({
           >
             👁️ {t("view")}
           </button>
+          
+          {!l.isFeatured && (
+            <button
+              className="btn btn-accent small"
+              onClick={() => requestFeatured && requestFeatured(l)}
+              title="Boost visibility for 1000 MKD"
+            >
+              🚀 {t("promote") || "Promote"}
+            </button>
+          )}
+
           <button
             className="btn small"
             onClick={() => openEdit(l)}

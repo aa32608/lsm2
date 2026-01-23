@@ -2,8 +2,6 @@
 /* global process, Buffer */
 import express from "express";
 import bodyParser from "body-parser";
-import fetch from "node-fetch";
-import crypto from "crypto";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 import cors from "cors";
@@ -94,240 +92,6 @@ app.use(
 
 app.use(bodyParser.json());
 
-/* --------------------------- PAYPAL HELPER --------------------------- */
-
-async function generateAccessToken() {
-  const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
-  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.PAYPAL_CLIENT_SECRET || "").trim();
-
-  console.log(`[PayPal] [${new Date().toISOString()}] Generating access token for env: ${env}...`);
-  console.log(`[PayPal] Using Client ID: ${clientId.substring(0, 10)}...`);
-  if (!clientId || !clientSecret) {
-    console.error("[PayPal] ERROR: PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is missing from environment variables!");
-    throw new Error("PayPal credentials missing");
-  }
-
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const url = env === "sandbox"
-    ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
-    : "https://api-m.paypal.com/v1/oauth2/token";
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials",
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("[PayPal] Token Error Response:", JSON.stringify(data, null, 2));
-      throw new Error(`PayPal Token Error: ${data.error_description || data.error || response.statusText}`);
-    }
-    console.log("[PayPal] Access token generated successfully.");
-    return data.access_token;
-  } catch (err) {
-    console.error("[PayPal] generateAccessToken exception:", err);
-    throw err;
-  }
-}
-
-async function generateClientToken() {
-  const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
-  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.PAYPAL_CLIENT_SECRET || "").trim();
-
-  if (!clientId || !clientSecret) {
-    throw new Error("PayPal credentials missing");
-  }
-
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const url = env === "sandbox"
-    ? "https://api-m.sandbox.paypal.com/v1/oauth2/token"
-    : "https://api-m.paypal.com/v1/oauth2/token";
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "grant_type=client_credentials&response_type=client_token",
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("[PayPal] Client Token Gen Error:", JSON.stringify(data, null, 2));
-      throw new Error(`PayPal Token Error: ${data.error_description || data.error}`);
-    }
-    return data.access_token;
-  } catch (err) {
-    console.error("[PayPal] generateClientToken exception:", err);
-    throw err;
-  }
-}
-
-/* ----------------------- GET PAYPAL CONFIG ---------------- */
-
-app.get("/api/paypal/config", (req, res) => {
-  const clientId = (process.env.PAYPAL_CLIENT_ID || "").trim();
-  res.json({ clientId });
-});
-
-/* ----------------------- GET PAYPAL TOKEN (for v6 SDK) ---------------- */
-
-app.get("/api/paypal/token", async (req, res) => {
-  try {
-    const clientToken = await generateClientToken();
-    res.json({ accessToken: clientToken });
-  } catch (err) {
-    console.error("[PayPal] Token Endpoint Error:", err);
-    res.status(500).json({ error: "Failed to generate token" });
-  }
-});
-
-/* ----------------------- CREATE PAYPAL ORDER ------------------------ */
-
-app.post("/api/paypal/create-order", async (req, res) => {
-  const { listingId, amount, action, returnUrl, cancelUrl } = req.body;
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [PayPal] Create Order:`, { listingId, amount, action });
-
-  try {
-    const accessToken = await generateAccessToken();
-    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
-    const url = env === "sandbox"
-      ? "https://api-m.sandbox.paypal.com/v2/checkout/orders"
-      : "https://api-m.paypal.com/v2/checkout/orders";
-
-    const formattedAmount = parseFloat(amount).toFixed(2);
-
-    const payload = {
-      intent: "CAPTURE",
-      purchase_units: [
-        {
-          reference_id: `BC-${listingId}-${Date.now()}`.substring(0, 50),
-          amount: {
-            currency_code: "EUR",
-            value: formattedAmount,
-          }
-        },
-      ],
-      application_context: {
-        brand_name: "BizCall MK",
-        landing_page: "BILLING",
-        user_action: "PAY_NOW",
-        shipping_preference: "NO_SHIPPING",
-        return_url: returnUrl || "https://bizcall.vercel.app",
-        cancel_url: cancelUrl || "https://bizcall.vercel.app"
-      }
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("[PayPal] Create Order Failed:", JSON.stringify(data, null, 2));
-      throw new Error(data.message || "PayPal order creation failed");
-    }
-
-    res.json({ orderID: data.id });
-  } catch (err) {
-    console.error("[PayPal] Create Order Exception:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/* ----------------------- CAPTURE PAYPAL ORDER ----------------------- */
-
-app.post("/api/paypal/capture", async (req, res) => {
-  const { orderID } = req.body;
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [PayPal] Capture Order: ${orderID}`);
-
-  try {
-    const accessToken = await generateAccessToken();
-    const env = (process.env.PAYPAL_ENVIRONMENT || "live").toLowerCase().trim();
-    const url = env === "sandbox"
-      ? `https://api-m.sandbox.paypal.com/v2/checkout/orders/${orderID}/capture`
-      : `https://api-m.paypal.com/v2/checkout/orders/${orderID}/capture`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("[PayPal] Capture Failed:", JSON.stringify(data, null, 2));
-      
-      // Handle declined payments gracefully
-      if (data.details && data.details[0]?.issue === "INSTRUMENT_DECLINED") {
-        return res.status(400).json({ 
-          ok: false, 
-          recoverable: true, 
-          error: "Payment declined. Please try a different card." 
-        });
-      }
-      throw new Error(data.message || "Capture failed");
-    }
-
-    console.log(`[PayPal] Capture Success: ${orderID}`);
-    res.json({ ok: true, data });
-  } catch (err) {
-    console.error("[PayPal] Capture Exception:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-
-
-/* ----------------------- VERIFY ORDER (OPTIONAL) ----------------------- */
-
-app.get("/api/paypal/verify-order/:orderId/:listingId", async (req, res) => {
-  const { orderId, listingId } = req.params;
-  try {
-    const accessToken = await generateAccessToken();
-    const response = await fetch(
-      `${
-        process.env.PAYPAL_ENVIRONMENT === "sandbox"
-          ? "https://api-m.sandbox.paypal.com"
-          : "https://api-m.paypal.com"
-      }/v2/checkout/orders/${orderId}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-    const data = await response.json();
-
-    if (data.status === "COMPLETED") {
-      await db.ref(`listings/${listingId}`).update({ status: "verified" });
-      return res.json({ ok: true });
-    }
-
-    res.status(400).json({ error: "Order not completed", status: data.status });
-  } catch (err) {
-    console.error("Order verification failed", err);
-    res.status(500).json({ error: "Verification failed" });
-  }
-});
-
 /* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
 
 app.post("/api/send-email", async (req, res) => {
@@ -378,6 +142,76 @@ app.post("/api/send-email", async (req, res) => {
   } catch (err) {
     console.error("Email send error:", err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.post("/api/request-featured", async (req, res) => {
+  const { listingId, listingName, userEmail, contact } = req.body;
+
+  if (!listingId || !userEmail) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!resend) {
+    return res.status(503).json({ error: "Email service not configured" });
+  }
+
+  try {
+    // Email to Admin
+    await resend.emails.send({
+      from: "BizCall <notifications@bizcall.mk>",
+      to: ["artin.avziu1@gmail.com"], // Admin email
+      subject: `🔥 Featured Listing Request: ${listingName}`,
+      text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
+    });
+
+    // Confirmation to User
+    await resend.emails.send({
+      from: "BizCall <notifications@bizcall.mk>",
+      to: [userEmail],
+      subject: "Request Received: Featured Listing",
+      text: `Hello,\n\nWe have received your request to feature your listing "${listingName}" (ID: ${listingId}).\n\nThe cost is 1000 MKD. We will contact you shortly at ${contact || userEmail} to arrange payment.\n\nBest,\nBizCall Team`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Featured request error:", err);
+    res.status(500).json({ error: "Failed to process request" });
+  }
+});
+
+app.post("/api/request-featured", async (req, res) => {
+  const { listingId, listingName, userEmail, contact } = req.body;
+
+  if (!listingId || !userEmail) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  if (!resend) {
+    return res.status(503).json({ error: "Email service not configured" });
+  }
+
+  try {
+    // Email to Admin
+    await resend.emails.send({
+      from: "BizCall <notifications@bizcall.mk>",
+      to: ["artin.avziu1@gmail.com"], // Admin email
+      subject: `🔥 Featured Listing Request: ${listingName}`,
+      text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
+    });
+
+    // Confirmation to User
+    await resend.emails.send({
+      from: "BizCall <notifications@bizcall.mk>",
+      to: [userEmail],
+      subject: "Request Received: Featured Listing",
+      text: `Hello,\n\nWe have received your request to feature your listing "${listingName}" (ID: ${listingId}).\n\nThe cost is 1000 MKD. We will contact you shortly at ${contact || userEmail} to arrange payment.\n\nBest,\nBizCall Team`,
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Featured request error:", err);
+    res.status(500).json({ error: "Failed to process request" });
   }
 });
 

@@ -10,7 +10,6 @@ export default defineConfig({
         manualChunks: {
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/database'],
           'vendor-react': ['react', 'react-dom', 'framer-motion'],
-          'vendor-paypal': ['@paypal/react-paypal-js'],
         }
       }
     },

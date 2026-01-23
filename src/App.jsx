@@ -25,8 +25,6 @@ import {
 } from "firebase/auth";
 
 import { AnimatePresence, motion } from "framer-motion";
-import PayPalV6 from "./components/PayPalV6";
-import BankTransferPayment from "./components/BankTransferPayment";
 import "./App.css";
 
 // Lazy loaded components
@@ -99,10 +97,6 @@ const mkSpotlightCities = [
 const featuredCategories = ["tech", "services", "homeRepair", "food", "electronics", "car"];
 const FEATURED_SLIDE_SIZE = 3;
 const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
-
-const priceMap = { "1": 3, "3": 10, "6": 16, "12": 25 }; // plan price (listing duration)
-
-
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -372,7 +366,6 @@ export default function App() {
     imagePreview: null, // local-only preview
     images: [],         // array of base64 strings (max 4)
   });
-  const [plan, setPlan] = useState("1");
 
   const [listings, setListings] = useState(() => {
     const cached = localStorage.getItem("cached_listings");
@@ -421,9 +414,6 @@ export default function App() {
   const [editForm, setEditForm] = useState(null);
 
   /* Extend flow */
-  const [extendTarget, setExtendTarget] = useState(null);
-  const [extendPlan, setExtendPlan] = useState("1");
-
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -465,6 +455,9 @@ export default function App() {
   const [savingPhone, setSavingPhone] = useState(false);
   const [phoneConfirmationResult, setPhoneConfirmationResult] = useState(null);
   const [phoneVerificationCode, setPhoneVerificationCode] = useState("");
+
+  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
+  const [featuredCandidate, setFeaturedCandidate] = useState(null);
 
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -663,15 +656,6 @@ export default function App() {
   };
 
 
-  /* Payment modal */
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [paymentIntent, setPaymentIntent] = useState(null); // { type: 'create'|'extend', orderID, amount, listingId }
-  const [paymentMethod, setPaymentMethod] = useState("paypal"); // "paypal" | "bank_transfer"
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  const [pendingOrder, setPendingOrder] = useState(null); // kept for create flow capture
-  const isCreatingOrder = React.useRef(false);
-
   /* Filters / search */
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
@@ -731,7 +715,6 @@ export default function App() {
       if (e.key === "Escape") {
         setSidebarOpen(false);
         setShowAuthModal(false);
-        setPaymentModalOpen(false);
         setShowMapPicker(false);
         if (editingListing) { setEditingListing(null); setEditForm(null); }
         if (selectedListing) setSelectedListing(null);
@@ -743,7 +726,7 @@ export default function App() {
 
   /* Lock body scroll when modals are open */
   useEffect(() => {
-    const hasOpenModal = showAuthModal || showPostForm || selectedListing || editingListing || paymentModalOpen || showMapPicker || showEditMapPicker || filtersOpen;
+    const hasOpenModal = showAuthModal || showPostForm || selectedListing || editingListing || showMapPicker || showEditMapPicker || filtersOpen;
     if (hasOpenModal) {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
@@ -756,7 +739,7 @@ export default function App() {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     };
-  }, [showAuthModal, showPostForm, selectedListing, editingListing, paymentModalOpen, showMapPicker, showEditMapPicker, filtersOpen]);
+  }, [showAuthModal, showPostForm, selectedListing, editingListing, showMapPicker, showEditMapPicker, filtersOpen]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -813,51 +796,7 @@ export default function App() {
     setPage(1);
   }, [q, catFilter, locFilter, sortBy, pageSize, selectedTab]);
 
-  // Handle PayPal Redirect Return
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const isPaypalReturn = params.get("paypal_return");
-    const token = params.get("token"); // PayPal appends this (Order ID)
-    const listingId = params.get("listingId");
-    const type = params.get("paymentType");
-    const planParam = params.get("plan");
 
-
-    if (isPaypalReturn && token && listingId) {
-      console.log("[PAYPAL_DEBUG] Returned from PayPal redirect", { token, listingId, type });
-      
-      // Clean URL immediately
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, "", newUrl);
-
-      // Restore UI state
-      setIsProcessingPayment(true);
-      
-      if (type === "extend") {
-        handleServerCaptureForExtend(token, listingId, planParam);
-      } else {
-        // Restore form data from localStorage
-        try {
-          const savedData = localStorage.getItem("pending_listing_data");
-          if (savedData) {
-            const parsedData = JSON.parse(savedData);
-            setForm(parsedData);
-            if (parsedData.plan) setPlan(parsedData.plan);
-            
-            // Proceed with capture using restored data
-            handleServerCapture(token, listingId, parsedData);
-          } else {
-            console.error("[PAYPAL_DEBUG] No saved form data found for create listing return");
-            showMessage(t("error") + " Session expired, please try again.", "error");
-            setIsProcessingPayment(false);
-          }
-        } catch (e) {
-          console.error("[PAYPAL_DEBUG] Error restoring form data", e);
-          setIsProcessingPayment(false);
-        }
-      }
-    }
-  }, []);
 
   useEffect(() => {
     if (!initialListingId || !listings.length) return;
@@ -1435,18 +1374,36 @@ export default function App() {
       console.error("Error deleting listing:", error);
     }
   }
-  async function checkPaymentStatus(listingId) {
-    setTimeout(async () => {
-      const snapshot = await fetchListing(listingId);
-      if (!snapshot) return;
-      if (snapshot.status === "pending_payment") {
-        await update(dbRef(db, `listings/${listingId}`), { status: "expired" });
-        await deleteListing(listingId);
-      }
-    }, 300000); // 5 minutes
-  }
 
-  /* Create listing + open payment modal */
+
+  const handleRequestFeatured = (listing) => {
+    setFeaturedCandidate(listing);
+    setShowFeaturedModal(true);
+  };
+
+  const submitFeaturedRequest = async () => {
+    if (!featuredCandidate) return;
+    try {
+      await fetch("/api/request-featured", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          listingId: featuredCandidate.id,
+          listingName: featuredCandidate.name,
+          userEmail: user?.email || featuredCandidate.userEmail,
+          contact: featuredCandidate.contact
+        })
+      });
+      showMessage(t("requestSent") || "Request sent! Check your email.", "success");
+      setShowFeaturedModal(false);
+      setFeaturedCandidate(null);
+    } catch (e) {
+      console.error(e);
+      showMessage(t("error") + " " + e.message, "error");
+    }
+  };
+
+  /* Create listing (Free) */
   async function handleSubmit(e) {
     e.preventDefault();
 
@@ -1464,87 +1421,40 @@ export default function App() {
     const normalizedContact = normalizePhoneForStorage(phoneForListing);
     if (!validatePhone(normalizedContact)) return showMessage(t("enterValidPhone"), "error");
 
+    // Spam Prevention: Check active listings count
+    const activeCount = userListings.filter(l => 
+      (l.status === 'verified' || l.status === 'active' || l.status === 'pending_approval') && 
+      (l.expiresAt > Date.now())
+    ).length;
+
+    if (activeCount >= 2) {
+       return showMessage(t("listingLimitReached") || "Free limit reached (2 listings). Please delete an old listing to post a new one.", "error");
+    }
+
     // refresh offerprice string from range fields
     const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
 
     setLoading(true);
     setMessage({ text: "", type: "info" });
-    const listingId = "lst_" + Date.now();
-
+    
     try {
-      // create pending listing
+      // create verified listing immediately (Free)
       await createListingInFirebase({
         ...form,
-        id: listingId,
         category: categories.find(c => t(c) === form.category) ? categories.find(c => t(c) === form.category) : form.category,
         contact: normalizedContact,
         location: finalLocation,
         locationCity: form.locationCity,
         locationExtra: form.locationExtra,
-        plan,
-        offerprice: offerpriceStr || "",   // business offer price (range)
-        status: "pending_payment",
+        plan: "1", // Default 1 month
+        offerprice: offerpriceStr || "", 
+        status: "verified", // Immediate activation
         pricePaid: 0,
-        price: priceMap[plan],              // plan price (duration)
+        price: 0,
       });
 
-      // Open payment modal immediately with intent
-      setPendingOrder({ listingId });
-      setPaymentIntent({ type: "create", amount: priceMap[plan], listingId });
-      setPaymentModalOpen(true);
-      
-      checkPaymentStatus(listingId);
-    } catch (err) {
-      console.error(err);
-      showMessage(t("error") + " " + err.message, "error");
-      await deleteListing(listingId);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  /* Capture create flow */
-  async function handleServerCapture(orderID, listingId, formDataOverride = null, skipBackendCapture = false) {
-    console.log("[PAYPAL_DEBUG] handleServerCapture called", { orderID, listingId, skipBackendCapture });
-    if (!orderID || !listingId) {
-      console.error("[PAYPAL_DEBUG] handleServerCapture missing params", { orderID, listingId });
-      return;
-    }
-    setIsProcessingPayment(true);
-
-    const currentForm = formDataOverride || form;
-    const currentPlan = formDataOverride?.plan || plan;
-
-    const finalizeSuccess = async () => {
-      console.log("[PAYPAL_DEBUG] handleServerCapture success, updating Firebase...");
-      const normalizedContact = normalizePhoneForStorage(accountPhone || currentForm.contact);
-      const offerpriceStr = formatOfferPrice(currentForm.offerMin, currentForm.offerMax, currentForm.offerCurrency);
-      const finalLocation = buildLocationString(currentForm.locationCity, currentForm.locationExtra);
-
-      await update(dbRef(db, `listings/${listingId}`), {
-        ...currentForm,
-        status: "verified",
-        pricePaid: priceMap[currentPlan],
-        contact: normalizedContact,
-        offerprice: offerpriceStr || "",
-        location: finalLocation,
-        locationCity: currentForm.locationCity,
-        locationExtra: currentForm.locationExtra,
-        plan: currentPlan,
-        price: priceMap[currentPlan],
-        id: listingId,
-        userId: user?.uid || null,
-        userEmail: user?.email || null,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + parseInt(currentPlan) * 30 * 24 * 60 * 60 * 1000,
-      });
-      console.log("[PAYPAL_DEBUG] Firebase updated successfully.");
-      showMessage(t("paymentComplete"), "success");
-      setPendingOrder(null);
-      setPaymentModalOpen(false);
-      setPaymentIntent(null);
-      // Clear local storage if we used it
-      localStorage.removeItem("pending_listing_data");
+      showMessage(t("listingCreated") || "Listing created successfully!", "success");
+      setShowPostForm(false);
       
       setForm({
         step: 1,
@@ -1564,205 +1474,16 @@ export default function App() {
         imagePreview: null,
         images: [],
       });
-    };
-
-    if (skipBackendCapture) {
-      try {
-        await finalizeSuccess();
-      } catch (err) {
-        console.error("Error in finalizeSuccess (skipBackendCapture):", err);
-        showMessage(t("error") + " " + err.message, "error");
-      } finally {
-        setIsProcessingPayment(false);
-      }
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID }),
-      });
-      console.log("[PAYPAL_DEBUG] handleServerCapture fetch status:", resp.status);
-      const json = await resp.json();
-
-      if (json.ok) {
-        await finalizeSuccess();
-      } else {
-        console.error("[PAYPAL_DEBUG] handleServerCapture error from backend:", json.error);
-        
-        // Fallback: Verify order status if capture failed (e.g. timeout, duplicate)
-        if (json.error !== "Payment declined. Please try a different card.") {
-           console.log("[PAYPAL_DEBUG] Attempting to verify order status as fallback...");
-           try {
-             const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
-             const verifyJson = await verifyResp.json();
-             if (verifyJson.ok) {
-                console.log("[PAYPAL_DEBUG] Order verified as COMPLETED. Proceeding with success logic.");
-                await finalizeSuccess();
-                return;
-             }
-           } catch (verifyErr) {
-             console.error("[PAYPAL_DEBUG] Verification fallback failed:", verifyErr);
-           }
-        }
-        
-        throw new Error(json.error || "Capture failed");
-      }
-    } catch (err) {
-      console.error("[PAYPAL_DEBUG] handleServerCapture exception:", err);
-      // Try verify one last time if it was a fetch exception (network error)
-      try {
-          console.log("[PAYPAL_DEBUG] Exception occurred, attempting verification fallback...");
-          const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
-          const verifyJson = await verifyResp.json();
-          if (verifyJson.ok) {
-            console.log("[PAYPAL_DEBUG] Order verified as COMPLETED after exception. Proceeding.");
-            await finalizeSuccess();
-            return;
-          }
-      } catch (e) {
-         console.error("[PAYPAL_DEBUG] Final verification attempt failed:", e);
-      }
       
-      showMessage(t("error") + " " + err.message, "error");
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  }
-
-  /* Extend flow */
-  const startExtendFlow = useCallback(async (listing) => {
-    if (!user) {
-      setShowAuthModal(true);
-      showMessage(t("loginRequired"), "error");
-      return;
-    }
-
-    if (listing.userId !== user.uid) {
-      showMessage(t("notOwner"), "error");
-      return;
-    }
-
-    const planKey = String(listing.plan || "1");
-    const amount = priceMap[planKey] ?? listing.price ?? 0;
-
-    // Save pending extension plan to DB for security (so we don't rely on localStorage)
-    update(dbRef(db, `listings/${listing.id}`), {
-      pending_extension_plan: planKey
-    }).catch(console.error);
-
-    setExtendTarget(listing);
-    setExtendPlan(planKey);
-    setPaymentIntent({
-      type: "extend",
-      listingId: listing.id,
-      amount,
-    });
-    setPaymentModalOpen(true);
-  }, [user, t, showMessage]);
-
-  async function handleServerCaptureForExtend(orderID, listingId, planKeyFromUI, skipBackendCapture = false) {
-    console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend called", { orderID, listingId, planKeyFromUI, skipBackendCapture });
-    if (!orderID || !listingId) {
-      console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend missing params");
-      return;
-    }
-    setIsProcessingPayment(true);
-
-    const finalizeSuccessExtend = async () => {
-      console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend success, updating Firebase...");
-      const snapshot = await fetchListing(listingId);
-      const currentExpiry = snapshot?.expiresAt || Date.now();
-      const currentStatus = snapshot?.status || "verified";
-
-      const effectivePlanKey = planKeyFromUI || String(snapshot?.plan || "1");
-      const planMonths = parseInt(effectivePlanKey, 10) || 1;
-
-      const base = (currentStatus !== "verified" || currentExpiry < Date.now()) 
-        ? Date.now() 
-        : currentExpiry;
-
-      const newExpiry = base + planMonths * 30 * 24 * 60 * 60 * 1000;
-
-      await update(dbRef(db, `listings/${listingId}`), {
-        expiresAt: newExpiry,
-        lastExtendPlan: effectivePlanKey,
-        pending_extension_plan: null // Clear security flag
-      });
-
-      console.log("[PAYPAL_DEBUG] Firebase updated successfully (extend).");
-      showMessage(t("extendSuccess"), "success");
-      setExtendTarget(null);
-      setPaymentModalOpen(false);
-      setPaymentIntent(null);
-    };
-
-    if (skipBackendCapture) {
-      try {
-        await finalizeSuccessExtend();
-      } catch (err) {
-        console.error("Error in finalizeSuccessExtend (skipBackendCapture):", err);
-        showMessage(t("error") + " " + err.message, "error");
-      } finally {
-        setIsProcessingPayment(false);
-      }
-      return;
-    }
-
-    try {
-      const resp = await fetch(`${API_BASE}/api/paypal/capture`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderID }),
-      });
-      console.log("[PAYPAL_DEBUG] handleServerCaptureForExtend fetch status:", resp.status);
-      const json = await resp.json();
-
-      if (json.ok) {
-        await finalizeSuccessExtend();
-      } else {
-        console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend error from backend:", json.error);
-        
-        // Fallback: Verify order status
-        if (json.error !== "Payment declined. Please try a different card.") {
-           console.log("[PAYPAL_DEBUG] Attempting to verify order status (extend) as fallback...");
-           try {
-             const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
-             const verifyJson = await verifyResp.json();
-             if (verifyJson.ok) {
-                console.log("[PAYPAL_DEBUG] Order verified as COMPLETED (extend). Proceeding with success logic.");
-                await finalizeSuccessExtend();
-                return;
-             }
-           } catch (verifyErr) {
-             console.error("[PAYPAL_DEBUG] Verification fallback failed (extend):", verifyErr);
-           }
-        }
-
-        throw new Error(json.error || "Capture failed");
-      }
     } catch (err) {
-      console.error("[PAYPAL_DEBUG] handleServerCaptureForExtend exception:", err);
-      // Try verify one last time
-      try {
-          console.log("[PAYPAL_DEBUG] Exception occurred (extend), attempting verification fallback...");
-          const verifyResp = await fetch(`${API_BASE}/api/paypal/verify-order/${orderID}/${listingId}`);
-          const verifyJson = await verifyResp.json();
-          if (verifyJson.ok) {
-            console.log("[PAYPAL_DEBUG] Order verified as COMPLETED after exception (extend). Proceeding.");
-            await finalizeSuccessExtend();
-            return;
-          }
-      } catch (e) {
-         console.error("[PAYPAL_DEBUG] Final verification attempt failed (extend):", e);
-      }
+      console.error(err);
       showMessage(t("error") + " " + err.message, "error");
     } finally {
-      setIsProcessingPayment(false);
+      setLoading(false);
     }
   }
+
+
 
 
   /* Editing helpers (restored) */
@@ -1788,7 +1509,7 @@ export default function App() {
       description: listing.description || "",
       contact: lockedContact,
       plan: listing.plan || "1",
-      price: listing.price || priceMap[listing.plan] || "",         // plan price
+      price: listing.price || 0,         // plan price
       offerprice: listing.offerprice || "",                         // business offer price (already formatted)
       tags: listing.tags || "",
       socialLink: listing.socialLink || "",
@@ -2124,10 +1845,6 @@ export default function App() {
     openEdit(l);
   }, [openEdit]);
 
-  const handleStartExtendFlow = useCallback((l) => {
-    startExtendFlow(l);
-  }, [startExtendFlow]);
-
   const handleConfirmDelete = useCallback((id) => {
     confirmDelete(id);
   }, [confirmDelete]);
@@ -2323,6 +2040,36 @@ export default function App() {
                 💡 {t("homeSimpleTrustLine")}
               </p>
             </section>
+
+            {/* FEATURED LISTINGS (Main Page) */}
+            {verifiedListings.some(l => l.isFeatured) && (
+              <section className="featured-section-container" style={{ margin: "24px 0" }}>
+                <div className="featured-header">
+                  <span className="featured-icon">🔥</span>
+                  <h2 className="featured-title">{t("featured") || "Featured Listings"}</h2>
+                </div>
+                <div className="listing-grid-grid">
+                  {verifiedListings
+                    .filter(l => l.isFeatured)
+                    .slice(0, 6) // Show max 6 on home
+                    .map(l => (
+                      <ListingCard
+                        key={l.id}
+                        listing={l}
+                        t={t}
+                        categoryIcons={categoryIcons}
+                        getDescriptionPreview={getDescriptionPreview}
+                        getListingStats={getListingStats}
+                        onSelect={handleSelectListing}
+                        onShare={handleShareListing}
+                        showMessage={showMessage}
+                        toggleFav={toggleFav}
+                        isFavorite={favorites.includes(l.id)}
+                      />
+                    ))}
+                </div>
+              </section>
+            )}
         
             {/* THREE CARDS */}
             <div className="home-main-grid">
@@ -2665,6 +2412,7 @@ export default function App() {
                                 showMessage={showMessage}
                                 handleShareListing={handleShareListing}
                                 confirmDelete={handleConfirmDelete}
+                                requestFeatured={handleRequestFeatured}
                               />
                             ))}
                           </div>
@@ -3286,7 +3034,33 @@ export default function App() {
                                 <p>{t("loading")}</p>
                               </div>
                             ) : filtered.length > 0 ? (
-                              <div className="results-stack"><div className={`listing-grid-${viewMode}`}>
+                              <div className="results-stack">
+                                {page === 1 && filtered.some(l => l.isFeatured && l.status === "verified") && (
+                                  <div className="featured-section-container" style={{ marginBottom: 24, padding: 16, background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--accent)' }}>
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                       <span style={{ fontSize: '1.5rem' }}>🔥</span>
+                                       <h3 className="section-title" style={{ margin: 0 }}>{t("featured") || "Featured Listings"}</h3>
+                                     </div>
+                                     <div className={`listing-grid-${viewMode}`}>
+                                       {filtered.filter(l => l.isFeatured && l.status === "verified").map(l => (
+                                          <ListingCard
+                                            key={l.id}
+                                            listing={l}
+                                            t={t}
+                                            categoryIcons={categoryIcons}
+                                            getDescriptionPreview={getDescriptionPreview}
+                                            getListingStats={getListingStats}
+                                            onSelect={handleSelectListing}
+                                            onShare={handleShareListing}
+                                            showMessage={showMessage}
+                                            toggleFav={toggleFav}
+                                            isFavorite={favorites.includes(l.id)}
+                                          />
+                                       ))}
+                                     </div>
+                                  </div>
+                                )}
+                                <div className={`listing-grid-${viewMode}`}>
                                 {pagedFiltered.map((l) => (
                                   <ListingCard
                                     key={l.id}
@@ -3852,42 +3626,6 @@ export default function App() {
                     {/* Step 3 */}
                     {form.step === 3 && (
                       <form className="form" onSubmit={handleSubmit}>
-                        <div className="plan-selector">
-                          <label className="plan-label">{t("selectDuration")}</label>
-                          <div className="plan-grid">
-                            {Object.keys(priceMap).map((months) => (
-                              <label
-                                key={months}
-                                className={`plan-option ${
-                                  plan === months ? "selected" : ""
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="plan"
-                                  value={months}
-                                  checked={plan === months}
-                                  onChange={(e) => setPlan(e.target.value)}
-                                />
-                                <div className="plan-content">
-                                  <div className="plan-duration">
-                                    {months === "1"
-                                      ? t("oneMonth")
-                                      : months === "3"
-                                      ? t("threeMonths")
-                                      : months === "6"
-                                      ? t("sixMonths")
-                                      : t("twelveMonths")}
-                                  </div>
-                                  <div className="plan-price">
-                                    {priceMap[months]} {t("eur")}
-                                  </div>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                
                         {/* Live Preview */}
                         <div className="card" style={{ marginTop: 8 }}>
                           <div className="listing-header">
@@ -3932,11 +3670,11 @@ export default function App() {
                         <button
                           type="submit"
                           className="btn submit"
-                          disabled={loading || paymentModalOpen}
+                          disabled={loading}
                         >
                           {loading
                             ? `⏳ ${t("loading")}`
-                            : `${t("createAndPay")} (${priceMap[plan]} ${t("eur")})`}
+                            : t("createListing") || "Create Listing"}
                         </button>
                       </form>
                     )}
@@ -4124,201 +3862,7 @@ export default function App() {
         </AnimatePresence>
 
 
-        {/* ===== PAYMENT MODAL (restored) ===== */}
-        <AnimatePresence>
-          {paymentModalOpen && paymentIntent && (
-            <motion.div className="modal-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }}>
-              <motion.div className="modal payment-modal" onClick={(e) => e.stopPropagation()} initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}>
-                <div className="modal-header">
-                  <h3 className="modal-title">
-                    {paymentIntent.type === "extend" ? `${t("extend")} • ${extendTarget?.name || ""}` : t("paypalCheckout")}
-                  </h3>
-                  <button className="icon-btn" onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }} aria-label={t("close")}>✕</button>
-                </div>
 
-                <div className="modal-body" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                  <div className="payment-summary">
-                    <div className="payment-row">
-                      <span>{t("totalAmount")}</span>
-                      <span className="amount">{paymentIntent.amount?.toFixed(2)} EUR</span>
-                    </div>
-                    <div className="payment-row">
-                      <span>{t("payingWith")}</span>
-                      <span>{t("payPal")}</span>
-                    </div>
-                  </div>
-
-                  {/* Plan selector only for EXTEND */}
-                  {paymentIntent.type === "extend" && (
-                    <div className="plan-selector" style={{ marginTop: 12 }}>
-                      <label className="plan-label">
-                        {t("selectExtendDuration") || t("selectDuration")}
-                      </label>
-                      <div className="plan-grid">
-                        {Object.keys(priceMap).map((months) => (
-                          <label
-                            key={months}
-                            className={`plan-option ${extendPlan === months ? "selected" : ""}`}
-                          >
-                            <input
-                              type="radio"
-                              name="extendPlan"
-                              value={months}
-                              checked={extendPlan === months}
-                              onChange={(e) => {
-                                const newPlan = e.target.value;
-                                setExtendPlan(newPlan);
-                                setPaymentIntent((prev) =>
-                                  prev && prev.type === "extend"
-                                    ? { ...prev, amount: priceMap[newPlan] }
-                                    : prev
-                                );
-                              }}
-                            />
-                            <div className="plan-content">
-                              <div className="plan-duration">
-                                {months === "1"
-                                  ? t("oneMonth")
-                                  : months === "3"
-                                  ? t("threeMonths")
-                                  : months === "6"
-                                  ? t("sixMonths")
-                                  : t("twelveMonths")}
-                              </div>
-                              <div className="plan-price">
-                                {priceMap[months]} {t("eur")}
-                              </div>
-                            </div>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="payment-buttons">
-                    {isProcessingPayment ? (
-                      <div className="processing-payment">
-                        <div className="spinner"></div>
-                        <p>{t("processingPayment") || "Processing Payment..."}</p>
-                      </div>
-                    ) : paymentIntent && (
-                      <div className="payment-options">
-                        {/* Payment Method Toggle */}
-                        <div className="payment-method-toggle" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                          <button 
-                            className={`btn ${paymentMethod === 'paypal' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ flex: 1, justifyContent: 'center' }}
-                            onClick={() => setPaymentMethod('paypal')}
-                          >
-                            <span style={{ fontStyle: 'italic', fontWeight: 'bold' }}>Pay</span><span style={{ fontWeight: 'bold' }}>Pal</span>
-                          </button>
-                          <button 
-                            className={`btn ${paymentMethod === 'bank_transfer' ? 'btn-primary' : 'btn-ghost'}`}
-                            style={{ flex: 1, justifyContent: 'center' }}
-                            onClick={() => setPaymentMethod('bank_transfer')}
-                          >
-                            🏦 {t("bankTransfer") || "Bank Transfer"}
-                          </button>
-                        </div>
-
-                        {paymentMethod === 'bank_transfer' ? (
-                          <BankTransferPayment 
-                            amount={paymentIntent.amount}
-                            listingId={paymentIntent.listingId}
-                            plan={paymentIntent.type === 'extend' ? extendPlan : plan}
-                            onConfirm={async () => {
-                              try {
-                                if (paymentIntent.type === "create") {
-                                  const normalizedContact = normalizePhoneForStorage(accountPhone || form.contact);
-                                  const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
-                                  const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
-                                  
-                                  await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
-                                    ...form,
-                                    status: "pending_approval",
-                                    paymentMethod: "bank_transfer",
-                                    contact: normalizedContact,
-                                    offerprice: offerpriceStr || "",
-                                    location: finalLocation,
-                                    locationCity: form.locationCity,
-                                    locationExtra: form.locationExtra,
-                                    plan: plan,
-                                    price: priceMap[plan],
-                                    id: paymentIntent.listingId,
-                                    userId: user?.uid || null,
-                                    userEmail: user?.email || null,
-                                    createdAt: Date.now(),
-                                  });
-                                } else {
-                                  // Extend flow
-                                  await update(dbRef(db, `listings/${paymentIntent.listingId}`), {
-                                    paymentMethod: "bank_transfer",
-                                    paymentStatus: "pending_verification",
-                                    requestedPlan: extendPlan
-                                  });
-                                }
-                                
-                                showMessage(t("listingSubmittedForApproval") || "Listing submitted! We will activate it after verifying payment.", "success");
-                                setPaymentModalOpen(false);
-                                setPaymentIntent(null);
-                              } catch (err) {
-                                console.error("Failed to save bank transfer listing:", err);
-                                showMessage("Error: " + err.message, "error");
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div className="paypal-button-container">
-                          <PayPalV6
-                            amount={paymentIntent.amount}
-                            listingId={paymentIntent.listingId}
-                            type={paymentIntent.type}
-                            plan={extendPlan}
-                            formData={form}
-                            onSuccess={async (res) => {
-                              console.log("[PAYPAL_DEBUG] onSuccess triggered, res:", res);
-                              // res is { ok: true, data: { id: "...", ... } }
-                              const id = res.data?.id || res.orderID; 
-                              
-                              try {
-                                if (paymentIntent.type === "extend") {
-                                  console.log("[PAYPAL_DEBUG] Calling handleServerCaptureForExtend...");
-                                  await handleServerCaptureForExtend(id, paymentIntent.listingId, extendPlan, true);
-                                } else {
-                                  console.log("[PAYPAL_DEBUG] Calling handleServerCapture...");
-                                  await handleServerCapture(id, paymentIntent.listingId, null, true);
-                                }
-                              } catch (err) {
-                                console.error("[PAYPAL_DEBUG] onApprove processing error:", err);
-                                showMessage(t("paypalError") + ": " + err.message, "error");
-                              }
-                            }}
-                            onCancel={() => {
-                              console.log("[PAYPAL_DEBUG] Payment cancelled by user");
-                              isCreatingOrder.current = false;
-                            }}
-                            onError={(err) => {
-                              console.error("[PAYPAL_DEBUG] SDK error callback:", err);
-                              showMessage(t("paypalError") + ": " + (err.message || "Unknown error"), "error");
-                              isCreatingOrder.current = false;
-                            }}
-                          />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="modal-actions">
-                  <button className="btn btn-ghost" onClick={() => { setPaymentModalOpen(false); setPaymentIntent(null); }}>
-                    {t("cancel")}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ===== AUTH MODAL (login + signup, email + phone) ===== */}
         <AnimatePresence>
@@ -4788,7 +4332,7 @@ export default function App() {
                         className="btn btn-ghost full-width"
                         disabled={resendBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage(t("paypalError"), "error");
+                          if (!auth.currentUser) return showMessage("You must be logged in.", "error");
                           setResendBusy(true);
                           try {
                             await sendEmailVerification(auth.currentUser);
@@ -4807,7 +4351,7 @@ export default function App() {
                         className="btn full-width"
                         disabled={verifyBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage(t("paypalError"), "error");
+                          if (!auth.currentUser) return showMessage("You must be logged in.", "error");
                           setVerifyBusy(true);
                           try {
                             await auth.currentUser.reload();
@@ -5310,6 +4854,56 @@ export default function App() {
           )}
         </AnimatePresence>
 
+        {/* Featured Request Modal */}
+        <AnimatePresence>
+          {showFeaturedModal && featuredCandidate && (
+            <motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFeaturedModal(false)}
+            >
+              <motion.div
+                className="modal"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                style={{ maxWidth: '400px' }}
+              >
+                <div className="modal-header">
+                  <h3 className="modal-title">🚀 {t("promote") || "Boost Listing"}</h3>
+                  <button className="icon-btn" onClick={() => setShowFeaturedModal(false)}>✕</button>
+                </div>
+                <div className="modal-body" style={{ padding: '24px' }}>
+                  <p style={{ marginBottom: 16 }}>
+                    <strong>{featuredCandidate.name}</strong>
+                  </p>
+                  <p style={{ marginBottom: 16 }}>
+                    {t("featuredDescription") || "Get more visibility by featuring your listing. Featured listings appear at the top of search results."}
+                  </p>
+                  <div style={{ background: 'var(--bg-subtle)', padding: 12, borderRadius: 8, marginBottom: 24, textAlign: 'center' }}>
+                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--accent)' }}>1000 MKD / {t("month") || "month"}</p>
+                  </div>
+                  <p className="small-muted" style={{ marginBottom: 24 }}>
+                    {t("featuredProcess") || "After you submit this request, we will contact you to arrange payment. Once paid, your listing will be featured immediately."}
+                  </p>
+                  
+                  <div className="modal-actions">
+                    <button className="btn btn-ghost" onClick={() => setShowFeaturedModal(false)}>
+                      {t("cancel")}
+                    </button>
+                    <button className="btn btn-accent" onClick={submitFeaturedRequest}>
+                      {t("submitRequest") || "Submit Request"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Report Listing Modal */}
         <AnimatePresence>
           {showReportModal && (
@@ -5386,3 +4980,4 @@ export default function App() {
     </>
   );
 }
+           
