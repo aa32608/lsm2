@@ -13,9 +13,36 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getDatabase(app);
+let app;
+let auth;
+let db;
+
+try {
+  if (!firebaseConfig.apiKey && typeof window === "undefined") {
+    // SSR environment without keys - mock it
+    console.warn("Firebase API key missing in SSR. Using mock.");
+    app = {}; 
+    auth = {};
+    db = {};
+  } else {
+    app = initializeApp(firebaseConfig);
+    if (typeof window !== "undefined") {
+      auth = getAuth(app);
+      db = getDatabase(app);
+    } else {
+      // SSR with keys
+      auth = getAuth(app);
+      db = getDatabase(app);
+    }
+  }
+} catch (e) {
+  console.warn("Firebase initialization failed:", e);
+  app = {};
+  auth = {};
+  db = {};
+}
+
+export { auth, db };
 // Disable logging for production performance
 // enableLogging(false); 
 export function createRecaptcha(containerId = "recaptcha-container") {

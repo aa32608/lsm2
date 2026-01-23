@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:ssr": "node server.js",
-    "build": "vite build && node scripts/generate-sitemap.js",
+    "build": "npm run build:client && npm run build:server && npm run prerender && node scripts/generate-sitemap.js",
+    "build:client": "vite build --outDir dist/client",
+    "build:server": "vite build --ssr src/entry-server.jsx --outDir dist/server",
+    "prerender": "node scripts/prerender.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "generate-sitemap": "node scripts/generate-sitemap.js"
