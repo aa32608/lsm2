@@ -47,6 +47,10 @@ const template = fs.readFileSync(toAbsolute('../dist/index.html'), 'utf-8');
     
     htmlWithHelmet = htmlWithHelmet.replace(`</head>`, `${helmetMeta}${helmetLink}${helmetScript}</head>`);
     htmlWithHelmet = htmlWithHelmet.replace(`<!--app-html-->`, html);
+    
+    // Inject initial state for hydration
+    const stateScript = `<script>window.__INITIAL_DATA__ = ${JSON.stringify(initialData).replace(/</g, '\\u003c')};</script>`;
+    htmlWithHelmet = htmlWithHelmet.replace('</body>', `${stateScript}</body>`);
 
     // 5. Save
     const filePath = toAbsolute('../dist/index.html');
