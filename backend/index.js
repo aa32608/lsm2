@@ -145,40 +145,6 @@ app.post("/api/send-email", async (req, res) => {
   }
 });
 
-app.post("/api/request-featured", async (req, res) => {
-  const { listingId, listingName, userEmail, contact } = req.body;
-
-  if (!listingId || !userEmail) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  if (!resend) {
-    return res.status(503).json({ error: "Email service not configured" });
-  }
-
-  try {
-    // Email to Admin
-    await resend.emails.send({
-      from: "BizCall <notifications@bizcall.mk>",
-      to: ["artinalimi69@gmail.com"], // Admin email
-      subject: `🔥 Featured Listing Request: ${listingName}`,
-      text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
-    });
-
-    // Confirmation to User
-    await resend.emails.send({
-      from: "BizCall <notifications@bizcall.mk>",
-      to: [userEmail],
-      subject: "Request Received: Featured Listing",
-      text: `Hello,\n\nWe have received your request to feature your listing "${listingName}" (ID: ${listingId}).\n\nThe cost is 1000 MKD. We will contact you shortly at ${contact || userEmail} to arrange payment.\n\nBest,\nBizCall Team`,
-    });
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Featured request error:", err);
-    res.status(500).json({ error: "Failed to process request" });
-  }
-});
 
 app.post("/api/request-featured", async (req, res) => {
   const { listingId, listingName, userEmail, contact } = req.body;

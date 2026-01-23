@@ -1892,7 +1892,8 @@ export default function App() {
         body: JSON.stringify({
           listingId: listing.id,
           listingName: listing.name,
-          ownerEmail: user?.email || "unknown",
+          userEmail: user?.email || "unknown",
+          contact: listing.phone || listing.contact || user?.email,
           ownerUid: user?.uid,
         }),
       });
