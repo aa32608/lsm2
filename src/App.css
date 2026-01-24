@@ -4098,6 +4098,63 @@ body {
   position: relative;
 }
 
+/* Explore Layout with Sidebar */
+.explore-layout-container {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.explore-main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.explore-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Google Ad Placeholder */
+.google-ad-placeholder {
+  width: 100%;
+  height: 250px;
+  background-color: #f1f5f9;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 0.875rem;
+  border-radius: 8px;
+}
+
+.google-ad-vertical {
+  height: 600px;
+}
+
+@media (max-width: 1024px) {
+  .explore-layout-container {
+    flex-direction: column;
+  }
+  .explore-sidebar {
+    width: 100%;
+    /* Keep it visible but stacked, or hide based on preference. 
+       Ads usually stack at bottom or middle on mobile. */
+    display: flex; 
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .google-ad-placeholder {
+    width: 300px; /* Fixed width for standard ad unit */
+  }
+}
+
+
 .explore-filters {
   position: sticky;
   top: 96px;

@@ -16,46 +16,35 @@ const ModalBackdrop = ({ children, onClose }) => (
 
 const ModalContent = ({ title, children, onClose, t }) => (
   <motion.div 
-    className="modal legal-modal"
+    className="legal-modal"
     onClick={e => e.stopPropagation()}
     initial={{ y: 20, opacity: 0, scale: 0.95 }}
     animate={{ y: 0, opacity: 1, scale: 1 }}
     exit={{ y: 20, opacity: 0, scale: 0.95 }}
-    style={{ 
-      maxWidth: '700px', 
-      width: '90%', 
-      maxHeight: '85vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      background: 'white',
-      borderRadius: '16px',
-      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-    }}
   >
-    <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-       <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>{title}</h3>
+    <div className="legal-modal-header">
+       <h3 className="legal-modal-title">{title}</h3>
        <button 
-         className="icon-btn" 
+         className="legal-modal-close-btn" 
          onClick={onClose}
          aria-label={typeof t === 'function' ? t("close") : "Close"}
-         style={{ background: '#f3f4f6', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#6b7280' }}
        >
          ✕
        </button>
     </div>
-    <div className="modal-body legal-modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+    <div className="legal-modal-body">
       {children}
     </div>
-    <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
+    <div className="legal-modal-footer">
        <button className="btn full-width" onClick={onClose} style={{ padding: '10px 20px' }}>{typeof t === 'function' ? t("close") : "Close"}</button>
     </div>
   </motion.div>
 );
 
 const Section = ({ title, children }) => (
-  <div style={{ marginBottom: '24px' }}>
-    <h4 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1f2937', marginBottom: '12px' }}>{title}</h4>
-    <div style={{ fontSize: '0.95rem', lineHeight: '1.6', color: '#4b5563' }}>
+  <div className="legal-section">
+    <h4 className="legal-section-title">{title}</h4>
+    <div className="legal-text">
       {children}
     </div>
   </div>
@@ -65,7 +54,7 @@ export const TermsModal = ({ onClose, t }) => (
   <ModalBackdrop onClose={onClose}>
     <ModalContent title={t("termsOfService") || "Terms of Service"} onClose={onClose} t={t}>
       <div className="legal-content">
-        <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '20px' }}>
+        <p className="legal-last-updated">
           {t("termsLastUpdated") || "Last Updated"}: {new Date().toLocaleDateString()}
         </p>
         
@@ -75,7 +64,7 @@ export const TermsModal = ({ onClose, t }) => (
 
         <Section title={t("terms2Title") || "2. User Responsibilities"}>
           <p>{t("terms2Text") || "Users are responsible for the accuracy of their listings. You agree not to post content that is illegal, offensive, or fraudulent."}</p>
-          <ul style={{ paddingLeft: '20px', marginTop: '8px' }}>
+          <ul className="legal-list">
             <li>{t("terms2List1") || "Maintain accurate contact information"}</li>
             <li>{t("terms2List2") || "Respect intellectual property rights"}</li>
             <li>{t("terms2List3") || "Do not engage in spam or harassment"}</li>
@@ -102,7 +91,7 @@ export const PrivacyModal = ({ onClose, t }) => (
   <ModalBackdrop onClose={onClose}>
     <ModalContent title={t("privacyPolicy") || "Privacy Policy"} onClose={onClose} t={t}>
       <div className="legal-content">
-        <p style={{ fontSize: '0.9rem', color: '#6b7280', marginBottom: '20px' }}>
+        <p className="legal-last-updated">
           {t("privacyLastUpdated") || "Last Updated"}: {new Date().toLocaleDateString()}
         </p>
 

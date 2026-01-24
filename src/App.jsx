@@ -3421,7 +3421,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                               <div key={idx} style={{ position: "relative" }}>
                                 <img
                                   src={img}
-                                  alt={`Upload ${idx + 1}`}
+                                  alt={`${t("uploadAlt")} ${idx + 1}`}
                                   className="listing-hero-image"
                                   style={{ height: "120px" }}
                                 />
@@ -3899,13 +3899,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         
                                 setPhoneLoading(true);
                                 try {
-                                  // Check if phone exists in DB
-                                  const normalizedPhone = normalizePhoneForStorage(fullPhone);
-                                  const snapshot = await get(query(dbRef(db, "users"), orderByChild("phone"), equalTo(normalizedPhone)));
-                                  if (!snapshot.exists()) {
-                                    throw new Error(t("phoneNotRegistered") || "Phone number not registered. Please sign up first.");
-                                  }
-
                                   if (!window.recaptchaVerifier)
                                     createRecaptcha("recaptcha-container");
                                   const result = await signInWithPhoneNumber(

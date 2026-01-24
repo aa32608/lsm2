@@ -20,7 +20,7 @@ const MyListingCard = React.memo(({
   const isExpired = days !== null && days <= 0;
 
   return (
-    <article className="listing-card my-listing-card elevated">
+    <article className="listing-card my-listing-card elevated" style={{display: 'inline-table'}}>
       <header className="listing-header my-listing-header rich-header">
         <div className="listing-icon-bubble">{categoryIcons[l.category] || "🏷️"}</div>
         <div className="listing-header-main">

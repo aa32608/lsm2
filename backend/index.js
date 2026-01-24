@@ -477,6 +477,60 @@ cron.schedule(cronExpression, async () => {
   }
 });
 
+/* ----------------------- EXPIRING LISTINGS CRON ----------------------- */
+
+// Check for expiring listings every day at 9:00 AM
+// Cron expression: 0 9 * * *
+cron.schedule("0 9 * * *", async () => {
+  console.log("[Cron] Checking for expiring listings (7 days warning)...");
+  if (!isFirebaseInitialized) return;
+  
+  try {
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const eightDaysMs = 8 * 24 * 60 * 60 * 1000;
+    
+    // Range: Expires between 7 and 8 days from now (to catch them once)
+    const startRange = now + sevenDaysMs;
+    const endRange = now + eightDaysMs;
+    
+    const snapshot = await db.ref("listings").orderByChild("expiresAt").startAt(startRange).endAt(endRange).once("value");
+    
+    if (!snapshot.exists()) {
+      console.log("[Cron] No listings expiring in 7 days.");
+      return;
+    }
+    
+    const listings = snapshot.val();
+    let count = 0;
+    
+    for (const [id, listing] of Object.entries(listings)) {
+      if (listing.status === "verified" && (listing.userEmail || listing.email)) {
+        const userEmail = listing.userEmail || listing.email;
+        const listingName = listing.name || "Service";
+        const link = `https://bizcall.mk/?listing=${id}`;
+        const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
+        
+        // Trilingual Subject
+        const subject = `BizCall MK: Action Required - Listing Expiring Soon / Veprim Kërkohet - Shpallja Skadon Së Shpejti / Потребна е Акција - Огласот Истекува Наскоро`;
+        
+        // Trilingual Text
+        const text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" will expire in 7 days (${expiryDate}).\nShpallja juaj "${listingName}" skadon në 7 ditë (${expiryDate}).\nВашиот оглас "${listingName}" истекува за 7 дена (${expiryDate}).\n\nTo keep your listing active and maintain your visibility, please extend it now:\nPër ta mbajtur shpalljen aktive dhe për të ruajtur dukshmërinë tuaj, ju lutemi zgjateni atë tani:\nЗа да го задржите вашиот оглас активен и да ја одржите вашата видливост, ве молиме продолжете го сега:\n\n👉 ${link}\n\nIf you do not renew, your listing will be removed from search results.\nNëse nuk e rinovoni, shpallja juaj do të hiqet nga rezultatet e kërkimit.\nАко не го обновите, вашиот оглас ќе биде отстранет од резултатите од пребарувањето.\n\nThe BizCall Team`;
+        
+        await sendEmail(userEmail, subject, text);
+        console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
+        count++;
+        
+        // Respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    console.log(`[Cron] Processed ${count} expiring listings.`);
+  } catch (err) {
+    console.error("[Cron] Error checking expiring listings:", err);
+  }
+});
+
 /* ----------------------- SSR SETUP ----------------------- */
 
 let vite;

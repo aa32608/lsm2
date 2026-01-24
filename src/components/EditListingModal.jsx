@@ -332,38 +332,38 @@ const EditListingModal = ({
               {t("images") || "Images"} (Max 4)
             </label>
             <div className="edit-image-row">
-              <label className="btn btn-ghost small" htmlFor="edit-image">
-                {t("uploadImages") || "Upload Images"}
-              </label>
-              <input
-                id="edit-image"
-                style={{ display: "none" }}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleImageUpload(e, true)}
-              />
-            </div>
-            
-            {/* Image Grid */}
-            <div className="image-preview-grid" style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-              gap: '10px', 
-              marginTop: '12px' 
-            }}>
-              {(editForm.images && editForm.images.length > 0 ? editForm.images : (editForm.imagePreview ? [editForm.imagePreview] : [])).map((img, index) => (
-                <div key={index} className="preview-item" style={{ position: 'relative' }}>
-                  <img
-                    src={img}
-                    alt={`${t("previewAlt")} ${index + 1}`}
-                    style={{ 
-                      width: '100%', 
-                      aspectRatio: '1', 
-                      objectFit: 'cover', 
-                      borderRadius: '8px' 
-                    }}
-                  />
+            <label className="btn btn-ghost small" htmlFor="edit-image">
+              {t("uploadImages") || "Upload Images"}
+            </label>
+            <input
+              id="edit-image"
+              style={{ display: "none" }}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => handleImageUpload(e, true)}
+            />
+          </div>
+          
+          {/* Image Grid */}
+          <div className="image-preview-grid" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
+            gap: '10px', 
+            marginTop: '12px' 
+          }}>
+            {(editForm.images && editForm.images.length > 0 ? editForm.images : (editForm.imagePreview ? [editForm.imagePreview] : [])).map((img, index) => (
+              <div key={index} className="preview-item" style={{ position: 'relative' }}>
+                <img
+                  src={img}
+                  alt={`${t("uploadAlt")} ${index + 1}`}
+                  style={{ 
+                    width: '100%', 
+                    aspectRatio: '1', 
+                    objectFit: 'cover', 
+                    borderRadius: '8px' 
+                  }}
+                />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(index, true)}
