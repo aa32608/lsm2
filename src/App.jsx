@@ -3492,8 +3492,30 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         {/* Plan Selection */}
                         <div className="plan-selection-section" style={{ marginTop: '24px', marginBottom: '24px' }}>
                           <h4 style={{ marginBottom: '12px' }}>{t("selectPlan") || "Select Plan"}</h4>
+                          
+                          {user && userProfile && !userProfile.hasUsedFreeTrial && (
+                            <div style={{ 
+                              background: 'linear-gradient(to right, #ecfdf5, #d1fae5)', 
+                              border: '1px solid #10b981', 
+                              borderRadius: '8px', 
+                              padding: '12px', 
+                              marginBottom: '16px', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '10px'
+                            }}>
+                               <span style={{fontSize: '1.2em'}}>🎁</span>
+                               <div>
+                                 <strong style={{color: '#047857', display: 'block'}}>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
+                                 <span style={{fontSize: '0.9em', color: '#065f46'}}>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
+                               </div>
+                            </div>
+                          )}
+
                           <div className="plan-selection-grid" style={{ display: 'grid', gap: '12px' }}>
-                            {PLANS.map(plan => (
+                            {PLANS.map(plan => {
+                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
+                              return (
                               <div 
                                 key={plan.id}
                                 className={`plan-option ${form.plan === plan.id ? 'selected' : ''}`}
@@ -3503,19 +3525,45 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                   padding: '12px',
                                   borderRadius: '8px',
                                   cursor: 'pointer',
-                                  background: form.plan === plan.id ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                                  background: form.plan === plan.id ? (isFreeTrialEligible ? '#ecfdf5' : 'var(--bg-subtle)') : 'var(--bg-card)',
                                   display: 'flex',
                                   justifyContent: 'space-between',
-                                  alignItems: 'center'
+                                  alignItems: 'center',
+                                  position: 'relative',
+                                  overflow: 'hidden'
                                 }}
                               >
                                 <div>
-                                  <span style={{ fontWeight: 'bold', display: 'block' }}>{t(`month${plan.id}`)}</span>
+                                  <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    {t(`month${plan.id}`)}
+                                    {isFreeTrialEligible && (
+                                      <span style={{
+                                        fontSize: '0.7em', 
+                                        background: '#10b981', 
+                                        color: 'white', 
+                                        padding: '2px 8px', 
+                                        borderRadius: '999px',
+                                        fontWeight: '600',
+                                        textTransform: 'uppercase'
+                                      }}>
+                                        {t("free") || "FREE"}
+                                      </span>
+                                    )}
+                                  </span>
                                   <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t(`days${plan.duration.split(' ')[0]}`)}</span>
                                 </div>
-                                <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                                <div style={{textAlign: 'right'}}>
+                                   {isFreeTrialEligible ? (
+                                      <>
+                                        <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85em', marginRight: '8px' }}>{plan.price}</span>
+                                        <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '1.1em' }}>0 EUR</span>
+                                      </>
+                                   ) : (
+                                      <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                                   )}
+                                </div>
                               </div>
-                            ))}
+                            )})}
                           </div>
                         </div>
 

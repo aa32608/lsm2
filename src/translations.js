@@ -627,6 +627,9 @@ export const TRANSLATIONS = {
     planPro: "Pro",
     planPremium: "Premium",
     extendDescription: "Choose a plan to extend your listing duration.",
+    freeTrialAvailable: "Free Trial Available!",
+    freeTrialDesc: "Select the 1 Month plan to get your first month completely free.",
+    free: "FREE",
 
     // Legal Modals
     termsLastUpdated: "Last Updated:",
@@ -1236,6 +1239,9 @@ export const TRANSLATIONS = {
     emailChangeNotAvailable: "Ndryshimi i email-it nuk është i disponueshëm për këtë llogari.",
     emailUpdateSuccess: "Email-i u përditësua me sukses.",
     emailUpdateError: "Nuk mund të përditësohej email-i.",
+    freeTrialAvailable: "Provë Falas e Disponueshme!",
+    freeTrialDesc: "Zgjidhni planin 1 Mujor për të marrë muajin e parë plotësisht falas.",
+    free: "FALAS",
 
     // Legal Modals
     termsLastUpdated: "Përditësuar së fundmi:",
@@ -1739,6 +1745,9 @@ export const TRANSLATIONS = {
     emailUpdateSuccessVerify: "Е-поштата е успешно ажурирана! Ве молиме проверете ја вашата нова е-пошта за верификација.",
     listingCreatedSuccess: "Огласот е успешно креиран!",
     freeTrialActivated: "Бесплатниот пробен период е активиран! Вашиот оглас е сега активен за 1 месец.",
+    freeTrialAvailable: "Достапен е Бесплатен Пробен Период!",
+    freeTrialDesc: "Изберете го планот од 1 месец за да го добиете првиот месец целосно бесплатно.",
+    free: "БЕСПЛАТНО",
     enterPhone: "Ве молиме внесете го вашиот телефонски број",
     enterName: "Ве молиме внесете го вашето име",
     errorOccured: "Се појави грешка. Ве молиме обидете се подоцна.",

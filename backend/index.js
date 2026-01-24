@@ -167,8 +167,8 @@ app.post("/api/create-payment", async (req, res) => {
   }
 
   // --- FREE TRIAL LOGIC ---
-  // If it's a new listing creation and we have a userId
-  if (type === 'create' && userId) {
+  // If it's a new listing creation, we have a userId, AND the selected plan is "1" (1 Month)
+  if (type === 'create' && userId && String(plan) === "1") {
       try {
         const userRef = db.ref(`users/${userId}`);
         const userSnap = await userRef.once('value');
