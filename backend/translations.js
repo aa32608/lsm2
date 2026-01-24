@@ -109,6 +109,18 @@ export const EMAIL_TRANSLATIONS = {
         sq: (name, date, url) => `Përshëndetje,\n\nShpallja juaj "${name}" është vazhduar me sukses!\n\nData e re e skadimit: ${date}\n\nMenaxhoni listimin tuaj këtu: ${url}\n\nEkipi i BizCall`,
         mk: (name, date, url) => `Здраво,\n\nВашиот оглас "${name}" е успешно продолжен!\n\nНов датум на истекување: ${date}\n\nМенаџирајте ги вашите огласи тука: ${url}\n\nТимот на BizCall`
       }
+    },
+    pre_deletion_warning: {
+      subject: {
+        en: "🚨 Final Warning: Listing Deletion in 3 Days",
+        sq: "🚨 Paralajmërimi i Fundit: Fshirja e Shpalljes në 3 Ditë",
+        mk: "🚨 Последно Предупредување: Бришење на Огласот за 3 Дена"
+      },
+      text: {
+        en: (name, url) => `Hello,\n\nYour listing "${name}" has been expired for almost 30 days. It will be permanently deleted in 3 days if not renewed.\n\nRenew now to keep it: ${url}\n\nThe BizCall Team`,
+        sq: (name, url) => `Përshëndetje,\n\nShpallja juaj "${name}" ka skaduar prej pothuajse 30 ditësh. Ajo do të fshihet përgjithmonë pas 3 ditësh nëse nuk rinovohet.\n\nRinovoni tani për ta mbajtur atë: ${url}\n\nEkipi i BizCall`,
+        mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е истечен речиси 30 дена. Ќе биде трајно избришан за 3 дена доколку не се обнови.\n\nОбновете сега за да го задржите: ${url}\n\nТимот на BizCall`
+      }
     }
   }
 };

@@ -658,6 +658,104 @@ cron.schedule("0 9 * * *", async () => {
   }
 });
 
+/* ----------------------- DAILY MAINTENANCE CRON ----------------------- */
+
+// Runs daily at 00:00 (Midnight) to handle:
+// 1. Pre-deletion warnings (3 days before deletion)
+// 2. Deletion of expired listings (> 30 days past expiry)
+// 3. Cleanup of old pending/unpaid listings (> 30 days old)
+cron.schedule("0 0 * * *", async () => {
+  console.log("[Cron] Running daily maintenance tasks...");
+  if (!isFirebaseInitialized) return;
+
+  try {
+    const snapshot = await db.ref("listings").once("value");
+    if (!snapshot.exists()) {
+       console.log("[Cron] No listings to maintain.");
+       return;
+    }
+
+    const listings = snapshot.val();
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    let warningCount = 0;
+    let expiredDeletedCount = 0;
+    let pendingDeletedCount = 0;
+
+    for (const [id, listing] of Object.entries(listings)) {
+       // 1. Handle Verified/Active Listings
+       if (listing.status === "verified" && listing.expiresAt) {
+          const daysSinceExpiry = (now - listing.expiresAt) / dayMs;
+
+          // A. Pre-deletion Warning (27 days post-expiry, 3 days before deletion)
+          // Check if between 27 and 30 days (to be safe) and no warning sent
+          if (daysSinceExpiry >= 27 && daysSinceExpiry < 30 && !listing.preDeletionWarningSent) {
+             const userEmail = listing.userEmail || listing.email;
+             if (userEmail) {
+                const listingName = listing.name || "Service";
+                const link = `https://bizcall.mk/?listing=${id}`;
+                
+                const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en + " / " + 
+                                EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.sq + " / " + 
+                                EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.mk;
+                
+                const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link) + "\n\n---\n\n" +
+                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.sq(listingName, link) + "\n\n---\n\n" +
+                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.mk(listingName, link);
+
+                await sendEmail(userEmail, subject, text);
+                await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
+                console.log(`[Cron] Sent pre-deletion warning for ${id}`);
+                warningCount++;
+                await new Promise(resolve => setTimeout(resolve, 500)); // Rate limit
+             }
+          }
+
+          // B. Delete Expired Listings (> 30 days post-expiry)
+          if (daysSinceExpiry >= 30) {
+             const userEmail = listing.userEmail || listing.email;
+             // Send notification
+             if (userEmail) {
+                 const listingName = listing.name || "Service";
+                 const link = `https://bizcall.mk/create`; // Encourage new listing
+                 
+                 const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en + " / " + 
+                                 EMAIL_TRANSLATIONS.listing.expired_deleted.subject.sq + " / " + 
+                                 EMAIL_TRANSLATIONS.listing.expired_deleted.subject.mk;
+                 
+                 const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link) + "\n\n---\n\n" +
+                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.sq(listingName, link) + "\n\n---\n\n" +
+                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.mk(listingName, link);
+                 
+                 await sendEmail(userEmail, subject, text);
+                 await new Promise(resolve => setTimeout(resolve, 500));
+             }
+             
+             // Delete
+             await db.ref(`listings/${id}`).remove();
+             console.log(`[Cron] Deleted expired listing ${id}`);
+             expiredDeletedCount++;
+          }
+       }
+
+       // 2. Handle Pending/Unpaid Listings
+       if ((listing.status === "unpaid" || listing.status === "pending") && listing.createdAt) {
+           const daysSinceCreation = (now - listing.createdAt) / dayMs;
+           if (daysSinceCreation >= 30) {
+               await db.ref(`listings/${id}`).remove();
+               console.log(`[Cron] Deleted old pending listing ${id}`);
+               pendingDeletedCount++;
+           }
+       }
+    }
+    console.log(`[Cron] Maintenance complete: ${warningCount} warnings, ${expiredDeletedCount} expired deletions, ${pendingDeletedCount} pending deletions.`);
+
+  } catch (err) {
+     console.error("[Cron] Maintenance error:", err);
+  }
+});
+
 /* ----------------------- SSR SETUP ----------------------- */
 
 let vite;

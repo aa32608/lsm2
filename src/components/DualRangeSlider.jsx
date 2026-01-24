@@ -2,70 +2,104 @@ import React, { useState, useEffect, useRef } from "react";
 import "./DualRangeSlider.css";
 
 const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
-  const [minVal, setMinVal] = useState(value.min);
-  const [maxVal, setMaxVal] = useState(value.max);
+  // Local state for inputs to allow free typing
+  const [minInput, setMinInput] = useState(value.min);
+  const [maxInput, setMaxInput] = useState(value.max);
+
+  // Refs for slider values to avoid dependency loops or stale closures
   const minValRef = useRef(value.min);
   const maxValRef = useRef(value.max);
   const range = useRef(null);
 
+  // Sync props to state when props change (e.g. parent reset)
+  useEffect(() => {
+    setMinInput(value.min);
+    setMaxInput(value.max);
+    minValRef.current = value.min;
+    maxValRef.current = value.max;
+  }, [value.min, value.max]);
+
   // Convert to percentage
-  const getPercent = (value) => Math.round(((value - min) / (max - min)) * 100);
+  const getPercent = (val) => Math.round(((val - min) / (max - min)) * 100);
 
+  // Update range track width/position
   useEffect(() => {
-    setMinVal(value.min);
-    setMaxVal(value.max);
-  }, [value]);
-
-  useEffect(() => {
-    const minPercent = getPercent(minVal);
-    const maxPercent = getPercent(maxValRef.current);
+    const minPercent = getPercent(value.min);
+    const maxPercent = getPercent(value.max);
 
     if (range.current) {
       range.current.style.left = `${minPercent}%`;
       range.current.style.width = `${maxPercent - minPercent}%`;
     }
-  }, [minVal, getPercent]);
+  }, [value.min, value.max, min, max]);
 
-  useEffect(() => {
-    const minPercent = getPercent(minValRef.current);
-    const maxPercent = getPercent(maxVal);
+  // Handle Input Changes (Typing)
+  const handleMinInputChange = (e) => {
+    setMinInput(e.target.value);
+  };
 
-    if (range.current) {
-      range.current.style.width = `${maxPercent - minPercent}%`;
+  const handleMaxInputChange = (e) => {
+    setMaxInput(e.target.value);
+  };
+
+  // Commit Input Changes (Blur/Enter)
+  const commitMinInput = () => {
+    let val = Number(minInput);
+    if (isNaN(val) || minInput === "") val = min;
+    // Clamp
+    val = Math.max(min, Math.min(val, value.max - 1));
+    setMinInput(val);
+    onChange({ min: val, max: value.max });
+  };
+
+  const commitMaxInput = () => {
+    let val = Number(maxInput);
+    if (isNaN(val) || maxInput === "") val = max;
+    // Clamp
+    val = Math.min(max, Math.max(val, value.min + 1));
+    setMaxInput(val);
+    onChange({ min: value.min, max: val });
+  };
+
+  const handleKeyDown = (e, type) => {
+    if (e.key === "Enter") {
+      if (type === "min") commitMinInput();
+      else commitMaxInput();
+      e.target.blur(); // Remove focus
     }
-  }, [maxVal, getPercent]);
+  };
 
   return (
     <div className="dual-slider-container">
       <div className="slider-inputs">
         <div className="slider-field">
-            <span className="currency-prefix">{currency}</span>
-            <input
-            type="number"
-            value={minVal}
-            onChange={(event) => {
-                const value = Math.min(Number(event.target.value), maxVal - 1);
-                setMinVal(value);
-                minValRef.current = value;
-                onChange({ min: value, max: maxVal });
-            }}
-            className="slider-number-input"
-            />
+            <span className="input-label">Min</span>
+            <div className="input-wrapper">
+                <span className="currency-prefix">{currency}</span>
+                <input
+                type="number"
+                value={minInput}
+                onChange={handleMinInputChange}
+                onBlur={commitMinInput}
+                onKeyDown={(e) => handleKeyDown(e, "min")}
+                className="slider-number-input"
+                />
+            </div>
         </div>
         <span className="slider-separator">-</span>
         <div className="slider-field">
-            <span className="currency-prefix">{currency}</span>
-            <input
-            type="number"
-            value={maxVal}
-            onChange={(event) => {
-                const value = Math.max(Number(event.target.value), minVal + 1);
-                setMaxVal(value);
-                maxValRef.current = value;
-                onChange({ min: minVal, max: value });
-            }}
-            className="slider-number-input"
-            />
+            <span className="input-label">Max</span>
+            <div className="input-wrapper">
+                <span className="currency-prefix">{currency}</span>
+                <input
+                type="number"
+                value={maxInput}
+                onChange={handleMaxInputChange}
+                onBlur={commitMaxInput}
+                onKeyDown={(e) => handleKeyDown(e, "max")}
+                className="slider-number-input"
+                />
+            </div>
         </div>
       </div>
 
@@ -74,26 +108,22 @@ const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
           type="range"
           min={min}
           max={max}
-          value={minVal}
+          value={value.min}
           onChange={(event) => {
-            const value = Math.min(Number(event.target.value), maxVal - 1);
-            setMinVal(value);
-            minValRef.current = value;
-            onChange({ min: value, max: maxVal });
+            const val = Math.min(Number(event.target.value), value.max - 1);
+            onChange({ min: val, max: value.max });
           }}
           className="thumb thumb--left"
-          style={{ zIndex: minVal > max - 100 && "5" }}
+          style={{ zIndex: value.min > max - 100 && "5" }}
         />
         <input
           type="range"
           min={min}
           max={max}
-          value={maxVal}
+          value={value.max}
           onChange={(event) => {
-            const value = Math.max(Number(event.target.value), minVal + 1);
-            setMaxVal(value);
-            maxValRef.current = value;
-            onChange({ min: minVal, max: value });
+            const val = Math.max(Number(event.target.value), value.min + 1);
+            onChange({ min: value.min, max: val });
           }}
           className="thumb thumb--right"
         />
