@@ -15,12 +15,12 @@ const GoogleAd = ({ className, style, slot }) => {
 
   return (
     <div className={`google-ad-wrapper ${className || ''}`} style={{ ...style, background: '#f8fafc', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
-       <ins class="adsbygoogle"
-      style="display:block"
-      data-ad-client="ca-pub-8385998516338936"
-      data-ad-slot="1802538697"
-      data-ad-format="auto"
-      data-full-width-responsive="true"></ins>  
+       <ins className="adsbygoogle"
+          style={{ display: "block", width: "100%", height: "100%" }}
+          data-ad-client="ca-pub-8385998516338936"
+          data-ad-slot={slot || "1802538697"}
+          data-ad-format="auto"
+          data-full-width-responsive="true"></ins>
        {/* Placeholder text visible only when ad script not loaded/blocked */}
        <div style={{ position: 'absolute', pointerEvents: 'none', color: '#cbd5e1', fontSize: '0.75rem', zIndex: 0 }}>Advertisement</div>
     </div>
@@ -179,9 +179,9 @@ export default function ListingsTab({
 
         {/* SIDEBAR (RIGHT) */}
         <aside className="explore-sidebar">
-          <GoogleAd className="mb-6" style={{ minHeight: '250px', marginBottom: '24px' }} slot="1234567890" />
+          <GoogleAd className="mb-6" style={{ minHeight: '250px', marginBottom: '24px' }} />
           
-          <GoogleAd className="sticky-ad" style={{ minHeight: '600px' }} slot="0987654321" />
+          <GoogleAd className="sticky-ad" style={{ minHeight: '600px' }} />
         </aside>
       </div>
 
