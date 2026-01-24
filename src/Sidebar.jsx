@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
 
-const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose, user }) => {
+const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose, user, userStats }) => {
   const navItems = [
     { id: "main", label: t("homepage"), icon: "🏠" },
     ...(user ? [
@@ -45,6 +45,47 @@ const Sidebar = React.memo(({ t, selected, onSelect, onLogout, onLogin, onClose,
             )}
           </button>
         ))}
+      </div>
+
+      {/* Unique Content: User Stats or Platform Info */}
+      <div className="sidebar-content-unique" style={{ padding: '16px 20px', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
+        {user ? (
+          <div className="sidebar-stats">
+            <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>{t("quickStats") || "Your Stats"}</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div className="stat-mini" style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: '700', color: '#0f172a' }}>{userStats?.listingsCount || 0}</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t("activeListings") || "Listings"}</span>
+              </div>
+              <div className="stat-mini" style={{ background: 'white', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <span style={{ display: 'block', fontSize: '1.2rem', fontWeight: '700', color: '#0f172a' }}>{userStats?.viewsCount || 0}</span>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>{t("totalViews") || "Views"}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="sidebar-promo">
+            <h4 style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '4px' }}>{t("joinCommunity") || "Join our Community"}</h4>
+            <p style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4' }}>{t("joinCommunityDesc") || "Post your services and reach thousands of locals."}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Support Section */}
+      <div className="sidebar-support" style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <h4 style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+          {t("support") || "Support"}
+        </h4>
+        <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '12px', lineHeight: '1.4' }}>
+          {t("supportDesc") || "Need help? We're here for you."}
+        </p>
+        <a 
+          href="mailto:support@bizcall.mk" 
+          className="btn btn-ghost small"
+          style={{ width: '100%', justifyContent: 'center', border: '1px solid #e2e8f0' }}
+        >
+          {t("contactSupport") || "Contact Support"}
+        </a>
       </div>
 
       <div className="sidebar-footer">

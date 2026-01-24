@@ -76,40 +76,37 @@ export default function ListingsTab({
                value={q}
                onChange={(e) => setQ(e.target.value)}
              />
-
-             <select
-               className="select"
-               value={catFilter}
-               onChange={(e) => setCatFilter(e.target.value)}
-             >
-               <option value="">{t("allCategories")}</option>
-               {categories && categories.map(c => (
-                 <option key={c} value={t(c)}>{t(c)}</option>
-               ))}
-             </select>
-
-             <select
-               className="select"
-               value={locFilter}
-               onChange={(e) => setLocFilter(e.target.value)}
-             >
-               <option value="">{t("allCities")}</option>
-               {allLocations && allLocations.map(city => (
-                 <option key={city} value={city}>{city}</option>
-               ))}
-             </select>
-
-             <select
-               className="select"
-               value={sortBy}
-               onChange={(e) => setSortBy(e.target.value)}
-             >
-               <option value="newest">{t("sortNewest")}</option>
-               <option value="topRated">{t("sortTopRated")}</option>
-               <option value="expiring">{t("sortExpiring")}</option>
-               <option value="az">{t("sortAZ")}</option>
-             </select>
            </div>
+
+           {/* Active Filters Chips */}
+           {(catFilter || locFilter || q) && (
+             <div className="active-filters-bar" style={{ marginBottom: '16px' }}>
+               <span className="active-filters-label">{t("filters")}:</span>
+               <div className="active-filters-chips">
+                 {catFilter && (
+                   <span className="active-filter-chip">
+                     {t("category")}: {t(catFilter) || catFilter}
+                     <button className="filter-chip-remove" onClick={() => setCatFilter("")}>✕</button>
+                   </span>
+                 )}
+                 {locFilter && (
+                   <span className="active-filter-chip">
+                     {t("location")}: {locFilter}
+                     <button className="filter-chip-remove" onClick={() => setLocFilter("")}>✕</button>
+                   </span>
+                 )}
+                 {q && (
+                   <span className="active-filter-chip">
+                     {t("search")}: {q}
+                     <button className="filter-chip-remove" onClick={() => setQ("")}>✕</button>
+                   </span>
+                 )}
+                 <button className="btn btn-ghost small" onClick={() => { setCatFilter(""); setLocFilter(""); setQ(""); }}>
+                   {t("clearAll") || "Clear All"}
+                 </button>
+               </div>
+             </div>
+           )}
 
            {/* LISTINGS GRID */}
            <div className={`listing-grid-${viewMode}`}>
@@ -154,44 +151,6 @@ export default function ListingsTab({
              </button>
            </div>
         </div>
-
-        {/* SIDEBAR (RIGHT) */}
-        <aside className="explore-sidebar">
-           {/* PROMOTIONAL BANNER (Moved to Sidebar) */}
-           <div className="promo-banner-section sidebar-promo">
-              <div className="promo-banner-content">
-                 <div className="promo-text">
-                    <h3>{t("promoteYourListing") || "Promote Your Listing"}</h3>
-                    <p>{t("promoteYourListingDesc") || "Post your own request, browse hidden gems, or boost your visibility."}</p>
-                 </div>
-                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                   <button className="btn btn-primary promo-btn full-width" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                      ➕ {t("postService") || "Post Service"}
-                   </button>
-                   <button className="btn btn-outline promo-btn full-width" onClick={() => setCatFilter("")}>
-                      🔍 {t("browseCategories") || "Browse All"}
-                   </button>
-                 </div>
-              </div>
-           </div>
-
-           {/* ADSENSE PLACEHOLDER */}
-           <div className="sidebar-ad-placeholder">
-              <div className="ad-label">Advertisement</div>
-              <div className="ad-content">
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8385998516338936" crossorigin="anonymous"></script>
-                 <ins className="adsbygoogle"
-                    style={{ display: 'block' }}
-                    data-ad-client="ca-pub-8385998516338936"
-                    data-ad-slot="1802538697"
-                    data-ad-format="auto"
-                    data-full-width-responsive="true"></ins>
-                <script>
-                    (adsbygoogle = window.adsbygoogle || []).push({});
-                </script>       
-              </div>
-           </div>
-        </aside>
       </div>
 
       <Filtersheet

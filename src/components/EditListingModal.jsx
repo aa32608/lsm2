@@ -18,6 +18,8 @@ const EditListingModal = ({
   handleShareListing,
   handleImageUpload,
   handleRemoveImage,
+  formatOfferPrice,
+  currencyOptions,
 }) => {
   if (!editingListing || !editForm) return null;
 
@@ -192,39 +194,120 @@ const EditListingModal = ({
             />
           </div>
 
-          <div className="field-row-2">
-            <div className="field-group">
-              <label className="field-label">
-                {t("priceRangeLabel")}
-              </label>
-              <input
-                className="input"
-                placeholder={t("priceRangePlaceholder")}
-                value={editForm.offerprice}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    offerprice: stripDangerous(e.target.value),
-                  })
-                }
-              />
+          <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
+            <label className="field-label">{t("priceRange") || "Price Range"}</label>
+            <div className="price-inputs-row">
+              <div className="price-input-wrapper">
+                <span className="currency-badge">{editForm.offerCurrency || "EUR"}</span>
+                <input
+                  className="input price-input"
+                  type="number"
+                  min="0"
+                  placeholder={t("minPrice")}
+                  value={editForm.offerMin}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d.,]/g, "");
+                    const updated = { ...editForm, offerMin: val };
+                    if (formatOfferPrice) {
+                      updated.offerprice = formatOfferPrice(
+                        updated.offerMin,
+                        updated.offerMax,
+                        updated.offerCurrency
+                      );
+                    }
+                    setEditForm(updated);
+                  }}
+                />
+              </div>
+              <span className="price-separator">—</span>
+              <div className="price-input-wrapper">
+                <span className="currency-badge">{editForm.offerCurrency || "EUR"}</span>
+                <input
+                  className="input price-input"
+                  type="number"
+                  min="0"
+                  placeholder={t("maxPrice")}
+                  value={editForm.offerMax}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^\d.,]/g, "");
+                    const updated = { ...editForm, offerMax: val };
+                    if (formatOfferPrice) {
+                      updated.offerprice = formatOfferPrice(
+                        updated.offerMin,
+                        updated.offerMax,
+                        updated.offerCurrency
+                      );
+                    }
+                    setEditForm(updated);
+                  }}
+                />
+              </div>
+              <select
+                className="select currency-select"
+                value={editForm.offerCurrency || "EUR"}
+                onChange={(e) => {
+                  const updated = { ...editForm, offerCurrency: e.target.value };
+                  if (formatOfferPrice) {
+                    updated.offerprice = formatOfferPrice(
+                      updated.offerMin,
+                      updated.offerMax,
+                      updated.offerCurrency
+                    );
+                  }
+                  setEditForm(updated);
+                }}
+              >
+                {(currencyOptions || ["EUR", "USD", "MKD", "ALL"]).map((cur) => (
+                  <option key={cur} value={cur}>
+                    {cur}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="field-group">
-              <label className="field-label">
-                {t("tagsFieldLabel")}
-              </label>
-              <input
-                className="input"
-                placeholder={t("tagsPlaceholder")}
-                value={editForm.tags}
-                onChange={(e) =>
-                  setEditForm({
-                    ...editForm,
-                    tags: stripDangerous(e.target.value).slice(0, 64),
-                  })
-                }
-              />
+            
+            <div className="price-slider-container">
+               <input 
+                 type="range" 
+                 min="0" 
+                 max="5000" 
+                 step="10" 
+                 className="modern-slider"
+                 value={Number(editForm.offerMax) || 0}
+                 onChange={(e) => {
+                    const val = e.target.value;
+                    const updated = { ...editForm, offerMax: val };
+                    if (formatOfferPrice) {
+                      updated.offerprice = formatOfferPrice(
+                        updated.offerMin,
+                        updated.offerMax,
+                        updated.offerCurrency
+                      );
+                    }
+                    setEditForm(updated);
+                 }}
+               />
+               <div className="slider-labels">
+                 <span>0</span>
+                 <span>5000+</span>
+               </div>
             </div>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">
+              {t("tagsFieldLabel")}
+            </label>
+            <input
+              className="input"
+              placeholder={t("tagsPlaceholder")}
+              value={editForm.tags}
+              onChange={(e) =>
+                setEditForm({
+                  ...editForm,
+                  tags: stripDangerous(e.target.value).slice(0, 64),
+                })
+              }
+            />
           </div>
 
           <div className="field-group">

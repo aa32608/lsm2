@@ -5,8 +5,19 @@ export const TRANSLATIONS = {
     // Cookie Consent
     cookieConsentText: "We use cookies to ensure you get the best experience on our website.",
     accept: "Accept",
+    close: "Close",
     
     maxImagesError: "Maksimumi 4 imazhe lejohen",
+    // Sidebar
+    quickStats: "Брза статистика",
+    activeListings: "Активни огласи",
+    totalViews: "Вкупни прегледи",
+    joinCommunity: "Приклучи се на заедницата",
+    joinCommunityDesc: "Објавете ги вашите услуги и стигнете до илјадници локалци.",
+    support: "Поддршка",
+    contactSupport: "Контактирајте поддршка",
+    supportDesc: "Ви треба помош? Тука сме за вас.",
+
     // General
     ",": ",",
     noMyListings: "You have no listings yet",
@@ -327,6 +338,9 @@ export const TRANSLATIONS = {
 
     enterPhone: "Please enter your phone number",
     enterName: "Please enter your name",
+    agreeTo: "I agree to the",
+    and: "and",
+    mustAgreeToTerms: "You must agree to the Terms of Service and Privacy Policy.",
     loginToPost: "Please log in to post a listing",
     mustLoginToCreate: "You must be logged in to create a listing",
 
@@ -597,6 +611,32 @@ export const TRANSLATIONS = {
     verifyEmailFirst: "Please verify your email first.",
     saveSuccess: "Changes saved successfully!",
 
+    // Plans
+    month1: "1 Muaj",
+    month3: "3 Muaj",
+    month6: "6 Muaj",
+    month12: "12 Muaj",
+    days30: "30 ditë",
+    days90: "90 ditë",
+    days180: "180 ditë",
+    days365: "365 ditë",
+    selectPlan: "Zgjidhni Planin",
+    planBasic: "Bazë",
+    planStandard: "Standard",
+    planPro: "Pro",
+    planPremium: "Premium",
+    extendDescription: "Zgjidhni një plan për të zgjatur kohëzgjatjen e listimit tuaj.",
+
+    // Sidebar
+    quickStats: "Statistikat e Shpejta",
+    activeListings: "Listimet Aktive",
+    totalViews: "Shikimet Totale",
+    joinCommunity: "Bashkohuni me Komunitetin",
+    joinCommunityDesc: "Postoni shërbimet tuaja dhe arrini mijëra vendas.",
+    support: "Mbështetja",
+    contactSupport: "Kontaktoni Mbështetjen",
+    supportDesc: "Keni nevojë për ndihmë? Jemi këtu për ju.",
+
     // Legal Modals
     termsLastUpdated: "Last Updated:",
     termsIntro: "Welcome to BizCall (Local Support Market). By using our app, you agree to these terms.",
@@ -633,6 +673,7 @@ export const TRANSLATIONS = {
     verified: "I verifikuar",
     pending: "Në pritje",
     closeFilters: "Mbyll filtrat",
+    close: "Mbyll",
     filterSubtitle: "Rafino kërkimin tënd",
     clearSearch: "Pastro kërkimin",
     status: "Statusi",
@@ -1245,6 +1286,7 @@ export const TRANSLATIONS = {
     extendDescription: "Изберете план за продолжување на времетраењето на вашиот оглас.",
 
     closeFilters: "Затвори филтри",
+    close: "Затвори",
     filterSubtitle: "Прецизирај го твоето пребарување",
     clearSearch: "Исчисти пребарување",
     status: "Статус",
@@ -1405,6 +1447,36 @@ export const TRANSLATIONS = {
     changePhone: "Промени го телефонскиот број",
     newPhone: "Нов телефонски број",
     savePhone: "Зачувај телефон",
+
+    // Legal Modals
+    termsLastUpdated: "Последно ажурирање:",
+    termsIntro: "Добредојдовте во BizCall. Со користење на нашата апликација, се согласувате со овие услови.",
+    terms1Title: "1. Прифаќање на Условите",
+    terms1Text: "Со пристап и користење на оваа услуга, прифаќате и се согласувате да бидете обврзани со условите и одредбите на овој договор.",
+    terms2Title: "2. Однесување на Корисникот",
+    terms2Text: "Се согласувате да ја користите услугата само за законски цели. Вие сте одговорни за целата содржина што ја објавувате.",
+    terms2List1: "Без спам или измамничка содржина.",
+    terms2List2: "Без нелегални стоки или услуги.",
+    terms2List3: "Без вознемирување или говор на омраза.",
+    terms3Title: "3. Правила за Огласување",
+    terms3Text: "Го задржуваме правото да отстраниме секој оглас што ги прекршува нашите политики без враќање на средствата.",
+    terms4Title: "4. Одговорност",
+    terms4Text: "BizCall е платформа што поврзува корисници. Не сме одговорни за квалитетот на услугите што ги нудат корисниците.",
+    terms5Title: "5. Прекин",
+    terms5Text: "Можеме да го прекинеме вашиот пристап до страницата, без причина или известување.",
+
+    privacyLastUpdated: "Последно ажурирање:",
+    privacyIntro: "Вашата приватност е важна за нас. Оваа политика објаснува како ги третираме вашите податоци.",
+    privacy1Title: "1. Информации што ги собираме",
+    privacy1Text: "Собираме информации што ни ги давате директно, како е-пошта, телефонски број и детали за огласот.",
+    privacy2Title: "2. Како ги користиме информациите",
+    privacy2Text: "Ги користиме вашите информации за да управуваме и ги подобруваме нашите услуги, да олесниме плаќања и да комуницираме со вас.",
+    privacy3Title: "3. Споделување на податоци",
+    privacy3Text: "Не ги продаваме вашите лични податоци. Можеме да споделиме податоци со даватели на услуги (на пр. Firebase) за да работи апликацијата.",
+    privacy4Title: "4. Вашите права",
+    privacy4Text: "Имате право да пристапите, ажурирате или избришете вашите лични информации во секое време преку поставките на вашата сметка.",
+    privacy5Title: "5. Контакт",
+    privacy5Text: "Ако имате прашања во врска со оваа политика, ве молиме контактирајте не.",
     expiry: "Истекување",
     resultsLabel: "резултати",
     removeFilter: "Отстрани филтер",
@@ -1504,6 +1576,7 @@ export const TRANSLATIONS = {
     loginSubtitle: "Пристапете до вашата BizCall сметка.",
     manageListings: "Управувај со огласи",
     maxPrice: "Макс",
+    priceRange: "Опсег на цени",
     memberSince: "Член од",
     menu: "Мени",
     minPrice: "Мин",

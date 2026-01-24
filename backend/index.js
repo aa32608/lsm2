@@ -101,23 +101,19 @@ app.use(bodyParser.json());
 
 /* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
 
-app.post("/api/send-email", async (req, res) => {
-  const { to, subject, text } = req.body;
-
+async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
-    return res.status(400).json({ error: "Missing required fields" });
+    console.error("sendEmail: Missing required fields");
+    return { error: "Missing required fields" };
   }
 
   try {
     if (!resend) {
-      throw new Error("Resend is not configured. Please set RESEND_API_KEY.");
+      console.warn("sendEmail: Resend is not configured.");
+      return { error: "Resend not configured" };
     }
 
-    // If we are in "testing" mode (no custom domain), Resend ONLY allows sending to your own email.
-    // If you want to allow users to email EACH OTHER, you MUST verify a domain on Resend.
-    
-    // Check if we have a verified domain configured in environment variables
-    const verifiedDomain = process.env.RESEND_DOMAIN; // e.g. "bizcall.mk"
+    const verifiedDomain = process.env.RESEND_DOMAIN;
     const isTestingMode = !verifiedDomain;
     
     let finalTo = to;
@@ -126,8 +122,6 @@ app.post("/api/send-email", async (req, res) => {
       : `BizCall MK <notifications@${verifiedDomain}>`;
 
     if (isTestingMode) {
-      // In testing, we can ONLY send to the account owner (artinalimi69@gmail.com).
-      // We'll redirect all emails to the owner so you can at least see them working.
       finalTo = "artinalimi69@gmail.com"; 
       console.log(`[TEST MODE] Redirecting email for ${to} to ${finalTo}`);
       text = `[INTENDED FOR: ${to}]\n\n${text}`;
@@ -142,14 +136,23 @@ app.post("/api/send-email", async (req, res) => {
 
     if (error) {
       console.error("Resend error:", error);
-      return res.status(500).json({ error: "Failed to send email" });
+      return { error };
     }
 
-    res.json({ ok: true, id: data.id });
+    return { ok: true, id: data.id };
   } catch (err) {
     console.error("Email send error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    return { error: err };
   }
+}
+
+app.post("/api/send-email", async (req, res) => {
+  const { to, subject, text } = req.body;
+  const result = await sendEmail(to, subject, text);
+  if (result.error) {
+    return res.status(500).json({ error: result.error });
+  }
+  res.json(result);
 });
 
 
@@ -254,23 +257,25 @@ app.post("/api/webhook", async (req, res) => {
         }
         const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
+        // Fetch listing for details
+        const snapshot = await db.ref(`listings/${listingId}`).once('value');
+        const listing = snapshot.val();
+        
+        if (!listing) {
+             console.log(`[Webhook] Listing ${listingId} not found.`);
+             return res.json({ received: true });
+        }
+
         if (type === 'create') {
             updates[`listings/${listingId}/status`] = "verified"; 
             updates[`listings/${listingId}/createdAt`] = now;
             updates[`listings/${listingId}/expiresAt`] = now + durationMs;
             updates[`listings/${listingId}/plan`] = plan;
-            
-            // Send welcome email logic here if needed
         } else if (type === 'extend') {
-            // Get current expiry to extend from there
-            const snapshot = await db.ref(`listings/${listingId}`).once('value');
-            const listing = snapshot.val();
-            
             let currentExpiry = now;
-            if (listing && listing.expiresAt && listing.expiresAt > now) {
+            if (listing.expiresAt && listing.expiresAt > now) {
                 currentExpiry = listing.expiresAt;
             }
-            
             updates[`listings/${listingId}/expiresAt`] = currentExpiry + durationMs;
             updates[`listings/${listingId}/status`] = "verified";
             updates[`listings/${listingId}/plan`] = plan;
@@ -278,6 +283,30 @@ app.post("/api/webhook", async (req, res) => {
 
         await db.ref().update(updates);
         console.log(`[Webhook] Listing ${listingId} updated successfully (Type: ${type}, Plan: ${plan})`);
+
+        // Send Notification Email
+        const userEmail = listing.userEmail || listing.email; 
+        if (userEmail) {
+            const listingName = listing.name || "Service";
+            const link = `https://bizcall.mk/?listing=${listingId}`;
+            const expiryDate = new Date(type === 'create' ? (now + durationMs) : (updates[`listings/${listingId}/expiresAt`])).toLocaleDateString();
+            
+            let subject = "";
+            let text = "";
+            
+            if (type === 'create') {
+                subject = `BizCall MK: Listing Activated / Shpallja u Aktivizua / Огласот е Активиран`;
+                text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" has been successfully activated!\nShpallja juaj "${listingName}" është aktivizuar me sukses!\nВашиот оглас "${listingName}" е успешно активиран!\n\nIt is now live on BizCall MK.\nTani është aktiv në BizCall MK.\nСега е активен на BizCall MK.\n\nManage your listing here: ${link}\n\nThe BizCall Team`;
+            } else if (type === 'extend') {
+                subject = `BizCall MK: Listing Extended / Shpallja u Vazhdua / Огласот е Продолжен`;
+                text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" has been successfully extended!\nShpallja juaj "${listingName}" është vazhduar me sukses!\nВашиот оглас "${listingName}" е успешно продолжен!\n\nNew Expiry Date: ${expiryDate}\nData e re e skadimit: ${expiryDate}\nНов датум на истекување: ${expiryDate}\n\nManage your listing here: ${link}\n\nThe BizCall Team`;
+            }
+            
+            if (subject && text) {
+                await sendEmail(userEmail, subject, text);
+                console.log(`[Webhook] Notification email sent to ${userEmail}`);
+            }
+        }
     }
 
     res.json({ received: true });

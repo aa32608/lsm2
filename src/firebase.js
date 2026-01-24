@@ -49,6 +49,11 @@ export function createRecaptcha(containerId = "recaptcha-container") {
   if (typeof window === "undefined") return null; // safety for SSR/build
 
   if (!window.recaptchaVerifier) {
+    if (typeof window !== "undefined") {
+      const container = document.getElementById(containerId);
+      if (container) container.innerHTML = ""; // Prevent "already rendered" error
+    }
+
     window.recaptchaVerifier = new RecaptchaVerifier(
       auth,                 // ✅ FIRST: auth
       containerId,          // ✅ SECOND: container ID

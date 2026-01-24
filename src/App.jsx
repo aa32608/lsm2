@@ -23,6 +23,7 @@ import {
   PhoneAuthProvider,
   updateProfile,
   deleteUser,
+  getAdditionalUserInfo,
 } from "firebase/auth";
 
 import { AnimatePresence, motion } from "framer-motion";
@@ -425,6 +426,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const [verificationCode, setVerificationCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [postSignupVerifyOpen, setPostSignupVerifyOpen] = useState(false);
   
@@ -493,6 +495,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
       // 2. Send SMS code for verification (to link/update in Auth)
       if (!window.recaptchaVerifierAccount) {
+        const accContainer = document.getElementById("recaptcha-container-account");
+        if (accContainer) accContainer.innerHTML = "";
+        
         window.recaptchaVerifierAccount = new RecaptchaVerifier(auth, "recaptcha-container-account", {
           size: "invisible"
         });
@@ -509,7 +514,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       if (err.code === "auth/credential-already-in-use") msg = t("phoneAlreadyInUse");
       showMessage(msg, "error");
       if (window.recaptchaVerifierAccount) {
-        window.recaptchaVerifierAccount.clear();
+        try {
+          window.recaptchaVerifierAccount.clear();
+        } catch (e) {
+          // ignore
+        }
         window.recaptchaVerifierAccount = null;
       }
     } finally {
@@ -1276,14 +1285,25 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   };
 
   const getSignupRecaptcha = () => {
-    if (window.signupRecaptchaVerifier) return window.signupRecaptchaVerifier;
-  
+    if (window.signupRecaptchaVerifier) {
+      // If it exists but we need a fresh one (e.g. after error), clear it first
+      try {
+        window.signupRecaptchaVerifier.clear();
+      } catch (e) {
+        // ignore if not rendered
+      }
+      window.signupRecaptchaVerifier = null;
+    }
+
+    const signupContainer = document.getElementById("recaptcha-signup");
+    if (signupContainer) signupContainer.innerHTML = "";
+
     window.signupRecaptchaVerifier = new RecaptchaVerifier(
       auth,
       "recaptcha-signup",
       { size: "invisible" }
     );
-  
+
     return window.signupRecaptchaVerifier;
   };
 
@@ -1546,6 +1566,35 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       listing.contact || accountPhone || userProfile?.phone || ""
     );
 
+    // Parse offerprice to init range fields
+    let offerMin = "";
+    let offerMax = "";
+    let offerCurrency = "EUR";
+    const op = listing.offerprice || "";
+    if (op) {
+      // "100 - 200 EUR"
+      const rangeMatch = op.match(/^([\d.,]+)\s*-\s*([\d.,]+)\s*(\w+)$/);
+      if (rangeMatch) {
+        offerMin = rangeMatch[1];
+        offerMax = rangeMatch[2];
+        offerCurrency = rangeMatch[3];
+      } else {
+        // "from 100 EUR"
+        const fromMatch = op.match(/^from\s+([\d.,]+)\s+(\w+)$/);
+        if (fromMatch) {
+          offerMin = fromMatch[1];
+          offerCurrency = fromMatch[2];
+        } else {
+          // "up to 200 EUR"
+          const toMatch = op.match(/^up to\s+([\d.,]+)\s+(\w+)$/);
+          if (toMatch) {
+            offerMax = toMatch[1];
+            offerCurrency = toMatch[2];
+          }
+        }
+      }
+    }
+
     setEditingListing(listing);
     setEditForm({
       name: listing.name || "",
@@ -1557,7 +1606,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       contact: lockedContact,
       plan: listing.plan || "1",
       price: listing.price || 0,         // plan price
-      offerprice: listing.offerprice || "",                         // business offer price (already formatted)
+      offerprice: listing.offerprice || "",
+      offerMin,
+      offerMax,
+      offerCurrency,
       tags: listing.tags || "",
       socialLink: listing.socialLink || "",
       imagePreview: listing.imagePreview || null,
@@ -1578,6 +1630,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     const normalizedContact = normalizePhoneForStorage(phoneForListing);
     if (!validatePhone(normalizedContact)) return showMessage(t("enterValidPhone"), "error");
 
+    // Recalc offerprice string
+    const finalOfferPrice = formatOfferPrice(editForm.offerMin, editForm.offerMax, editForm.offerCurrency);
+
     const updates = {
       name: stripDangerous(editForm.name),
       category: editForm.category,
@@ -1587,7 +1642,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       locationData: editForm.locationData || null,
       description: stripDangerous(editForm.description),
       contact: normalizedContact,
-      offerprice: editForm.offerprice || "",   // update only business price string
+      offerprice: finalOfferPrice,
       tags: stripDangerous(editForm.tags || ""),
       socialLink: stripDangerous(editForm.socialLink || ""),
       imagePreview: editForm.imagePreview || null,
@@ -3235,46 +3290,52 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         </div>
                 
                         {/* Offer price range + currency */}
-                        <div className="offer-price-range">
-                          <label className="field-label">{t("offerPriceLabel")}</label>
-                          <div className="offer-range-row">
-                            <input
-                              className="input"
-                              type="number"
-                              min="0"
-                              placeholder={t("minPrice")}
-                              value={form.offerMin}
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/[^\d.,]/g, "");
-                                const updated = { ...form, offerMin: val };
-                                updated.offerprice = formatOfferPrice(
-                                  updated.offerMin,
-                                  updated.offerMax,
-                                  updated.offerCurrency
-                                );
-                                setForm(updated);
-                              }}
-                            />
-                            <span>—</span>
-                            <input
-                              className="input"
-                              type="number"
-                              min="0"
-                              placeholder={t("maxPrice")}
-                              value={form.offerMax}
-                              onChange={(e) => {
-                                const val = e.target.value.replace(/[^\d.,]/g, "");
-                                const updated = { ...form, offerMax: val };
-                                updated.offerprice = formatOfferPrice(
-                                  updated.offerMin,
-                                  updated.offerMax,
-                                  updated.offerCurrency
-                                );
-                                setForm(updated);
-                              }}
-                            />
+                        <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
+                          <label className="field-label">{t("priceRange") || "Price Range"}</label>
+                          <div className="price-inputs-row">
+                            <div className="price-input-wrapper">
+                              <span className="currency-badge">{form.offerCurrency}</span>
+                              <input
+                                className="input price-input"
+                                type="number"
+                                min="0"
+                                placeholder={t("minPrice")}
+                                value={form.offerMin}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^\d.,]/g, "");
+                                  const updated = { ...form, offerMin: val };
+                                  updated.offerprice = formatOfferPrice(
+                                    updated.offerMin,
+                                    updated.offerMax,
+                                    updated.offerCurrency
+                                  );
+                                  setForm(updated);
+                                }}
+                              />
+                            </div>
+                            <span className="price-separator">—</span>
+                            <div className="price-input-wrapper">
+                              <span className="currency-badge">{form.offerCurrency}</span>
+                              <input
+                                className="input price-input"
+                                type="number"
+                                min="0"
+                                placeholder={t("maxPrice")}
+                                value={form.offerMax}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/[^\d.,]/g, "");
+                                  const updated = { ...form, offerMax: val };
+                                  updated.offerprice = formatOfferPrice(
+                                    updated.offerMin,
+                                    updated.offerMax,
+                                    updated.offerCurrency
+                                  );
+                                  setForm(updated);
+                                }}
+                              />
+                            </div>
                             <select
-                              className="select"
+                              className="select currency-select"
                               value={form.offerCurrency}
                               onChange={(e) => {
                                 const updated = { ...form, offerCurrency: e.target.value };
@@ -3292,6 +3353,31 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 </option>
                               ))}
                             </select>
+                          </div>
+                          
+                          <div className="price-slider-container">
+                             <input 
+                               type="range" 
+                               min="0" 
+                               max="5000" 
+                               step="10" 
+                               className="modern-slider"
+                               value={Number(form.offerMax) || 0}
+                               onChange={(e) => {
+                                  const val = e.target.value;
+                                  const updated = { ...form, offerMax: val };
+                                  updated.offerprice = formatOfferPrice(
+                                    updated.offerMin,
+                                    updated.offerMax,
+                                    updated.offerCurrency
+                                  );
+                                  setForm(updated);
+                               }}
+                             />
+                             <div className="slider-labels">
+                               <span>0</span>
+                               <span>5000+</span>
+                             </div>
                           </div>
                         </div>
                 
@@ -3644,6 +3730,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
               handleShareListing={handleShareListing}
               handleImageUpload={handleImageUpload}
               handleRemoveImage={handleRemoveImage}
+              formatOfferPrice={formatOfferPrice}
+              currencyOptions={currencyOptions}
             />
           </Suspense>
         </AnimatePresence>
@@ -3811,6 +3899,13 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         
                                 setPhoneLoading(true);
                                 try {
+                                  // Check if phone exists in DB
+                                  const normalizedPhone = normalizePhoneForStorage(fullPhone);
+                                  const snapshot = await get(query(dbRef(db, "users"), orderByChild("phone"), equalTo(normalizedPhone)));
+                                  if (!snapshot.exists()) {
+                                    throw new Error(t("phoneNotRegistered") || "Phone number not registered. Please sign up first.");
+                                  }
+
                                   if (!window.recaptchaVerifier)
                                     createRecaptcha("recaptcha-container");
                                   const result = await signInWithPhoneNumber(
@@ -3824,7 +3919,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                   console.error(err);
                                   showMessage(err.message, "error");
                                   if (window.recaptchaVerifier) {
-                                    window.recaptchaVerifier.clear();
+                                    try {
+                                      window.recaptchaVerifier.clear();
+                                    } catch (e) {
+                                      // ignore
+                                    }
                                     window.recaptchaVerifier = null;
                                   }
                                 } finally {
@@ -3972,12 +4071,29 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                       </div>
                     </div>
                 
+                    {/* Checkbox for Terms */}
+                    <div className="auth-field-group checkbox-group" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
+                      <input 
+                        type="checkbox" 
+                        id="agreeTerms" 
+                        checked={agreedToTerms} 
+                        onChange={(e) => setAgreedToTerms(e.target.checked)} 
+                        style={{ marginTop: '4px', width: '16px', height: '16px' }}
+                      />
+                      <label htmlFor="agreeTerms" style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.4 }}>
+                        {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ textDecoration: 'underline', color: 'var(--primary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ textDecoration: 'underline', color: 'var(--primary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{t("privacyPolicy")}</button>.
+                      </label>
+                    </div>
+
                     {/* STEP 1: SEND SMS */}
                     {!confirmationResult && (
                       <button
                         className="btn full-width"
                         disabled={phoneLoading}
                         onClick={async () => {
+                          if (!agreedToTerms)
+                            return showMessage(t("mustAgreeToTerms") || "You must agree to the Terms of Service and Privacy Policy.", "error");
+
                           if (!validateEmail(email))
                             return showMessage(t("enterValidEmail"), "error");
                           
@@ -4050,6 +4166,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 verificationCode
                               );
                               const user = result.user;
+                              const { isNewUser } = getAdditionalUserInfo(result) || {};
 
                               try {
                                 const emailCred = EmailAuthProvider.credential(
@@ -4079,7 +4196,24 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 setVerificationCode("");
                               } catch (innerErr) {
                                 console.error("Signup incomplete, rolling back user creation:", innerErr);
-                                await user.delete().catch(cleanupErr => console.error("Failed to cleanup user:", cleanupErr));
+                                
+                                // Only delete if this was a freshly created user to avoid deleting existing accounts
+                                if (isNewUser) {
+                                  await user.delete().catch(cleanupErr => console.error("Failed to cleanup user:", cleanupErr));
+                                }
+                                
+                                // Reset UI state to allow retry
+                                setConfirmationResult(null);
+                                setVerificationCode("");
+                                if (window.signupRecaptchaVerifier) {
+                                    try {
+                                      window.signupRecaptchaVerifier.clear();
+                                    } catch (e) {
+                                      // ignore
+                                    }
+                                    window.signupRecaptchaVerifier = null;
+                                }
+                                
                                 throw innerErr;
                               }
                             } catch (err) {
