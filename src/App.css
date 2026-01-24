@@ -5968,6 +5968,14 @@ body {
   }
 }
 
+@media (max-width: 640px) {
+  .section-header-row.stacked-mobile {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
 /* --- Explore Tab: Layout with Sidebar --- */
 .explore-layout-container {
   display: grid;
@@ -5991,10 +5999,9 @@ body {
     grid-template-columns: 1fr; /* Stack on smaller screens */
   }
   .explore-sidebar {
-    display: none; /* Hide sidebar on mobile/tablet or move to bottom? User said "like a sidetab" */
-    /* Alternatively, make it stack below */
-    display: flex;
+    display: flex; /* Ensure it stays visible but stacked */
     margin-top: 2rem;
+    order: 2; /* Put sidebar after content on mobile */
   }
 }
 

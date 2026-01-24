@@ -2845,8 +2845,29 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         handleShareListing={handleShareListing}
                         showMessage={showMessage}
                         toggleFav={toggleFav}
-                        favorites={favorites}
-                        featuredListings={filtered.filter(l => l.isFeatured && l.status === "verified")}
+            favorites={favorites}
+            featuredListings={filtered.filter(l => l.isFeatured && l.status === "verified")}
+            categories={categories}
+            allLocations={mkSpotlightCities}
+          />
+        )}
+
+                    {selectedTab === "allListings" && (
+                      <Filtersheet
+                        t={t}
+                        filtersOpen={filtersOpen}
+                        setFiltersOpen={setFiltersOpen}
+                        q={q}
+                        setQ={setQ}
+                        catFilter={catFilter}
+                        setCatFilter={setCatFilter}
+                        locFilter={locFilter}
+                        setLocFilter={setLocFilter}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
+                        categories={categories}
+                        categoryIcons={categoryIcons}
+                        allLocations={MK_CITIES}
                       />
                     )}
                   </div>

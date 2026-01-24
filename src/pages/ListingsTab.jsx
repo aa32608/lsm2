@@ -1,5 +1,6 @@
 import ListingCard from "../components/ListingCard";
 import { useRef, useEffect, useState } from "react";
+import Filtersheet from "../components/Filtersheet";
 
 export default function ListingsTab({
   t,
@@ -24,6 +25,8 @@ export default function ListingsTab({
   setSelectedListing,
   filtersOpen,
   setFiltersOpen,
+  categories,
+  allLocations,
   // Added for ListingCard
   getDescriptionPreview,
   getListingStats,
@@ -61,19 +64,28 @@ export default function ListingsTab({
         {/* MAIN LISTINGS CONTENT (LEFT) */}
         <div className="explore-main-content">
            {/* FILTER BAR */}
-           <div className="filters-bar">
-             <button 
-               className="icon-btn" 
-               onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
-               title={viewMode === "list" ? t("switchToGrid") || "Grid View" : t("switchToList") || "List View"}
-               style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}
-             >
-               {viewMode === "list" ? "📱" : "📝"}
-             </button>
+          <div className="filters-bar">
+            <button 
+              className="icon-btn" 
+              onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
+              title={viewMode === "list" ? t("switchToGrid") || "Grid View" : t("switchToList") || "List View"}
+              style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}
+            >
+              {viewMode === "list" ? "📱" : "📝"}
+            </button>
 
-             <input
-               type="search"
-               className="input"
+            <button 
+              className="icon-btn" 
+              onClick={() => setFiltersOpen(true)}
+              title={t("filters") || "Filters"}
+              style={{ height: '44px', width: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}
+            >
+              🔍
+            </button>
+
+            <input
+              type="search"
+              className="input"
                placeholder={t("searchPlaceholder")}
                value={q}
                onChange={(e) => setQ(e.target.value)}
@@ -85,6 +97,9 @@ export default function ListingsTab({
                onChange={(e) => setCatFilter(e.target.value)}
              >
                <option value="">{t("allCategories")}</option>
+               {categories && categories.map(c => (
+                 <option key={c} value={t(c)}>{t(c)}</option>
+               ))}
              </select>
 
              <select
@@ -93,6 +108,9 @@ export default function ListingsTab({
                onChange={(e) => setLocFilter(e.target.value)}
              >
                <option value="">{t("allCities")}</option>
+               {allLocations && allLocations.map(city => (
+                 <option key={city} value={city}>{city}</option>
+               ))}
              </select>
 
              <select
@@ -149,23 +167,28 @@ export default function ListingsTab({
                →
              </button>
            </div>
-           
-           {/* PROMOTIONAL BANNER (Bottom of Main Content) */}
-           <div className="promo-banner-section">
-              <div className="promo-banner-content">
-                 <div className="promo-text">
-                    <h3>{t("cantFindListing") || "Can't find what you're looking for?"}</h3>
-                    <p>{t("postYourOwn") || "Post your own request or browse by category to find hidden gems."}</p>
-                 </div>
-                 <button className="btn btn-primary promo-btn" onClick={() => setCatFilter("")}>
-                    {t("browseCategories") || "Browse All Categories"}
-                 </button>
-              </div>
-           </div>
         </div>
 
         {/* SIDEBAR (RIGHT) */}
         <aside className="explore-sidebar">
+           {/* PROMOTIONAL BANNER (Moved to Sidebar) */}
+           <div className="promo-banner-section sidebar-promo">
+              <div className="promo-banner-content">
+                 <div className="promo-text">
+                    <h3>{t("promoteYourListing") || "Promote Your Listing"}</h3>
+                    <p>{t("promoteYourListingDesc") || "Post your own request, browse hidden gems, or boost your visibility."}</p>
+                 </div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                   <button className="btn btn-primary promo-btn full-width" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                      ➕ {t("postService") || "Post Service"}
+                   </button>
+                   <button className="btn btn-outline promo-btn full-width" onClick={() => setCatFilter("")}>
+                      🔍 {t("browseCategories") || "Browse All"}
+                   </button>
+                 </div>
+              </div>
+           </div>
+
            {/* SIDEBAR FEATURED CAROUSEL */}
            {featuredListings && featuredListings.length > 0 && (
              <div className="sidebar-featured-widget">
@@ -206,16 +229,37 @@ export default function ListingsTab({
            <div className="sidebar-ad-placeholder">
               <div className="ad-label">Advertisement</div>
               <div className="ad-content">
-                <ins className="adsbygoogle"
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8385998516338936" crossorigin="anonymous"></script>
+                 <ins className="adsbygoogle"
                     style={{ display: 'block' }}
                     data-ad-client="ca-pub-8385998516338936"
                     data-ad-slot="1802538697"
                     data-ad-format="auto"
                     data-full-width-responsive="true"></ins>
+                <script>
+                    (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>       
               </div>
            </div>
         </aside>
       </div>
+
+      <Filtersheet
+        t={t}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+        q={q}
+        setQ={setQ}
+        catFilter={catFilter}
+        setCatFilter={setCatFilter}
+        locFilter={locFilter}
+        setLocFilter={setLocFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        categories={categories}
+        categoryIcons={categoryIcons}
+        allLocations={allLocations}
+      />
     </div>
   );
 }
