@@ -831,6 +831,51 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   /* Auth state & DB subscription */
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
 
+  /* Payment Success Handler */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const listingId = params.get("listingId");
+    const type = params.get("type"); // 'create' or 'extend'
+
+    if (paymentStatus === "success" && listingId) {
+      // Clear params
+      window.history.replaceState({}, "", window.location.pathname);
+
+      const updateListingAfterPayment = async () => {
+        try {
+            setLoading(true);
+            const updates = {};
+            if (type === 'create') {
+                updates[`listings/${listingId}/status`] = "verified";
+                updates[`listings/${listingId}/pricePaid`] = 1;
+            } else if (type === 'extend') {
+                const snapshot = await get(dbRef(db, `listings/${listingId}`));
+                const listing = snapshot.val();
+                if (listing) {
+                    const currentExpiry = listing.expiresAt || Date.now();
+                    const newExpiry = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000); // +30 days
+                    updates[`listings/${listingId}/expiresAt`] = newExpiry;
+                    updates[`listings/${listingId}/status`] = "verified";
+                }
+            }
+            
+            if (Object.keys(updates).length > 0) {
+                await update(dbRef(db), updates);
+                showMessage(type === 'extend' ? "Listing extended successfully!" : "Payment successful! Listing activated.", "success");
+            }
+        } catch (err) {
+            console.error("Payment success handling error:", err);
+            showMessage("Payment succeeded but listing update failed. Please contact support.", "error");
+        } finally {
+            setLoading(false);
+        }
+      };
+      
+      updateListingAfterPayment();
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setUserProfile(null);
@@ -1398,14 +1443,14 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     if (!validatePhone(normalizedContact)) return showMessage(t("enterValidPhone"), "error");
 
     // Spam Prevention: Check active listings count
-    const activeCount = userListings.filter(l => 
-      (l.status === 'verified' || l.status === 'active' || l.status === 'pending_approval') && 
-      (l.expiresAt > Date.now())
-    ).length;
+    // const activeCount = userListings.filter(l => 
+    //   (l.status === 'verified' || l.status === 'active' || l.status === 'pending_approval') && 
+    //   (l.expiresAt > Date.now())
+    // ).length;
 
-    if (activeCount >= 2) {
-       return showMessage(t("listingLimitReached") || "Free limit reached (2 listings). Please delete an old listing to post a new one.", "error");
-    }
+    // if (activeCount >= 2) {
+    //    return showMessage(t("listingLimitReached") || "Free limit reached (2 listings). Please delete an old listing to post a new one.", "error");
+    // }
 
     // refresh offerprice string from range fields
     const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
@@ -1414,8 +1459,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     setMessage({ text: "", type: "info" });
     
     try {
-      // create verified listing immediately (Free)
-      await createListingInFirebase({
+      // 1. Create listing with status 'unpaid'
+      const listingId = await createListingInFirebase({
         ...form,
         category: categories.find(c => t(c) === form.category) ? categories.find(c => t(c) === form.category) : form.category,
         contact: normalizedContact,
@@ -1424,12 +1469,35 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         locationExtra: form.locationExtra,
         plan: "1", // Default 1 month
         offerprice: offerpriceStr || "", 
-        status: "verified", // Immediate activation
+        status: "unpaid", // Wait for payment
         pricePaid: 0,
-        price: 0,
+        price: 1, // 1 Euro
       });
 
-      showMessage(t("listingCreated") || "Listing created successfully!", "success");
+      // 2. Initiate Payment
+      try {
+          const res = await fetch(`${API_BASE}/api/create-payment`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  listingId,
+                  type: "create",
+                  customerEmail: user?.email,
+                  customerName: userProfile?.name || user?.displayName
+              })
+          });
+          const data = await res.json();
+          if (data.checkoutUrl) {
+              window.location.href = data.checkoutUrl;
+              return; // Redirecting...
+          } else {
+              throw new Error("Payment initialization failed");
+          }
+      } catch (paymentErr) {
+          console.error("Payment error:", paymentErr);
+          showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+      }
+      
       setShowPostForm(false);
       
       setForm({
@@ -1894,13 +1962,33 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     }
   }, [user, t, showMessage]);
 
-  /* Extend flow (stub for now, or implement logic) */
-  const handleStartExtendFlow = useCallback((listing) => {
-    // For now, just open edit modal or show a message
-    // Implementation depends on requirements; usually opens a payment modal to extend expiry
-    console.log("Extend listing:", listing.id);
-    showMessage("Extend feature coming soon!", "info");
-  }, [showMessage]);
+  /* Extend flow */
+  const handleStartExtendFlow = useCallback(async (listing) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/api/create-payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              listingId: listing.id,
+              type: "extend",
+              customerEmail: user?.email,
+              customerName: userProfile?.name || user?.displayName
+          })
+      });
+      const data = await res.json();
+      if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+      } else {
+          showMessage("Failed to start payment flow", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showMessage("Payment error: " + err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [user, userProfile, showMessage]);
   
   const onLogout = useCallback(async () => {
     await signOut(auth);

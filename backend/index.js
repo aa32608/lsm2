@@ -10,6 +10,7 @@ import cron from "node-cron";
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import DodoPayments from 'dodopayments';
 
 dotenv.config();
 
@@ -182,6 +183,51 @@ app.post("/api/request-featured", async (req, res) => {
     res.status(500).json({ error: "Failed to process request" });
   }
 });
+
+/* ----------------------- DODO PAYMENTS ----------------------- */
+
+app.post("/api/create-payment", async (req, res) => {
+  const { listingId, type, customerEmail, customerName } = req.body; // type: 'create' | 'extend'
+
+  if (!listingId) {
+    return res.status(400).json({ error: "Missing listingId" });
+  }
+
+  if (!process.env.DODO_PAYMENTS_API_KEY) {
+    console.error("DODO_PAYMENTS_API_KEY is missing");
+    return res.status(503).json({ error: "Payment service not configured" });
+  }
+
+  // User must set this in their env
+  const PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
+  if (!PRODUCT_ID) {
+     console.error("DODO_PAYMENTS_PRODUCT_ID is missing");
+     return res.status(503).json({ error: "Payment product not configured" });
+  }
+
+  try {
+    const client = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+      environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+    });
+
+    // Create Checkout Session
+    const session = await client.checkoutSessions.create({
+      product_cart: [{ product_id: PRODUCT_ID, quantity: 1 }],
+      customer: { 
+        email: customerEmail || 'guest@example.com', 
+        name: customerName || 'Guest User' 
+      },
+      return_url: `${req.headers.origin || 'https://bizcall.mk'}/?payment=success&listingId=${listingId}&type=${type}`,
+    });
+
+    res.json({ checkoutUrl: session.checkout_url });
+  } catch (err) {
+    console.error("Dodo Payment Error:", err);
+    res.status(500).json({ error: "Failed to create payment session: " + err.message });
+  }
+});
+
 
 /* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
 
