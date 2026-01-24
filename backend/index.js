@@ -366,8 +366,9 @@ app.post("/api/webhook", async (req, res) => {
 cron.schedule("0 0 * * *", async () => {
     console.log("[Cron] Running daily maintenance tasks...");
     const now = Date.now();
-    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
     const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    const TWENTY_SEVEN_DAYS_MS = 27 * 24 * 60 * 60 * 1000;
 
     try {
         const listingsRef = db.ref("listings");
@@ -377,36 +378,71 @@ cron.schedule("0 0 * * *", async () => {
         if (listings) {
             const updates = {};
             const listingsToDelete = [];
+            let warningCount = 0;
 
-            Object.entries(listings).forEach(([id, listing]) => {
-                if (!listing.expiresAt) return;
-                
-                // 1. Check for Expiring Soon (3 days before)
-                const timeUntilExpiry = listing.expiresAt - now;
-                
-                // If expiring in less than 3 days, and not expired yet, and warning not sent
-                if (timeUntilExpiry > 0 && timeUntilExpiry < THREE_DAYS_MS && !listing.expiryWarningSent) {
-                    if (listing.userEmail || listing.email) {
+            for (const [id, listing] of Object.entries(listings)) {
+                // 1. Handle Verified Listings (Expiry Logic)
+                if (listing.status === "verified" && listing.expiresAt) {
+                    const timeUntilExpiry = listing.expiresAt - now;
+                    const timeSinceExpiry = now - listing.expiresAt;
+
+                    // A. Expiring Soon Warning (7 days before)
+                    if (timeUntilExpiry > 0 && timeUntilExpiry <= SEVEN_DAYS_MS && !listing.expiryWarningSent) {
                         const email = listing.userEmail || listing.email;
-                        const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
-                                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
-                                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
-                        
-                        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listing.name || "Service", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
-                                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listing.name || "Shërbimi", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
-                                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listing.name || "Услуга", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings");
+                        if (email) {
+                            const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
+                                            EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
+                                            EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
+                            
+                            const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listing.name || "Service", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
+                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listing.name || "Shërbimi", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
+                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listing.name || "Услуга", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings");
 
-                        sendEmail(email, subject, text);
-                        updates[`listings/${id}/expiryWarningSent`] = true;
-                        console.log(`[Cron] Sent expiry warning for listing ${id}`);
+                            await sendEmail(email, subject, text);
+                            updates[`listings/${id}/expiryWarningSent`] = true;
+                            console.log(`[Cron] Sent expiry warning for listing ${id}`);
+                            warningCount++;
+                            await new Promise(resolve => setTimeout(resolve, 500)); // Rate limit
+                        }
+                    }
+
+                    // B. Pre-Deletion Warning (27 days AFTER expiry, i.e., 3 days before deletion)
+                    if (timeSinceExpiry >= TWENTY_SEVEN_DAYS_MS && timeSinceExpiry < THIRTY_DAYS_MS && !listing.preDeletionWarningSent) {
+                        const email = listing.userEmail || listing.email;
+                        if (email) {
+                             const listingName = listing.name || "Service";
+                             const link = `https://bizcall.mk/?listing=${id}`; // Or renewal link
+                             
+                             const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en + " / " + 
+                                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.sq + " / " + 
+                                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.mk;
+                             
+                             const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link) + "\n\n---\n\n" +
+                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.sq(listingName, link) + "\n\n---\n\n" +
+                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.mk(listingName, link);
+ 
+                             await sendEmail(email, subject, text);
+                             updates[`listings/${id}/preDeletionWarningSent`] = true;
+                             console.log(`[Cron] Sent pre-deletion warning for listing ${id}`);
+                             warningCount++;
+                             await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
+
+                    // C. Delete Expired (> 30 days post-expiry)
+                    if (timeSinceExpiry >= THIRTY_DAYS_MS) {
+                        listingsToDelete.push({ id, email: listing.userEmail || listing.email, name: listing.name, reason: "expired" });
                     }
                 }
 
-                // 2. Check for Expired > 30 Days (Delete)
-                if (listing.expiresAt < now - THIRTY_DAYS_MS) {
-                     listingsToDelete.push({ id, email: listing.userEmail || listing.email, name: listing.name });
+                // 2. Handle Pending/Unpaid Listings (Cleanup after 30 days)
+                if ((listing.status === "unpaid" || listing.status === "pending") && listing.createdAt) {
+                    const timeSinceCreation = now - listing.createdAt;
+                    if (timeSinceCreation >= THIRTY_DAYS_MS) {
+                         listingsToDelete.push({ id, reason: "pending_stale" });
+                    }
                 }
-            });
+            }
 
             // Perform updates for warnings
             if (Object.keys(updates).length > 0) {
@@ -416,10 +452,10 @@ cron.schedule("0 0 * * *", async () => {
             // Perform deletions
             for (const item of listingsToDelete) {
                 await db.ref(`listings/${item.id}`).remove();
-                console.log(`[Cron] Deleted expired listing ${item.id}`);
+                console.log(`[Cron] Deleted listing ${item.id} (Reason: ${item.reason})`);
                 
-                // Send Deletion Email
-                if (item.email) {
+                // Send Deletion Email (only for verified expired listings)
+                if (item.reason === "expired" && item.email) {
                     const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en + " / " +
                                     EMAIL_TRANSLATIONS.listing.expired_deleted.subject.sq + " / " +
                                     EMAIL_TRANSLATIONS.listing.expired_deleted.subject.mk;
@@ -428,7 +464,8 @@ cron.schedule("0 0 * * *", async () => {
                                  EMAIL_TRANSLATIONS.listing.expired_deleted.text.sq(item.name || "Shërbimi", "https://bizcall.mk/add-listing") + "\n\n---\n\n" +
                                  EMAIL_TRANSLATIONS.listing.expired_deleted.text.mk(item.name || "Услуга", "https://bizcall.mk/add-listing");
                     
-                    sendEmail(item.email, subject, text);
+                    await sendEmail(item.email, subject, text);
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
         }

@@ -112,8 +112,8 @@ const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
 
 /* Helper: format offer price range */
 const formatOfferPrice = (min, max, currency) => {
-  const cleanMin = (min || "").trim();
-  const cleanMax = (max || "").trim();
+  const cleanMin = String(min || "").trim();
+  const cleanMax = String(max || "").trim();
   const cur = currency || "EUR";
 
   if (!cleanMin && !cleanMax) return "";
@@ -1533,7 +1533,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                     showMessage(t("listingCreatedSuccess"), "success");
                     // Refresh listings or redirect
                     setShowPostForm(false);
-                    fetchListings(); // Assuming this exists or we trigger a reload
+                    // fetchListings(); // Removed: undefined and redundant with real-time listeners
                     window.location.reload(); // Simplest way to refresh state
                     return;
                 }
@@ -3138,18 +3138,17 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                   </button>
                 </div>
         
-                <div className="modal-body" style={{ maxHeight: "80vh", overflowY: "auto" }}>
+                <div className="modal-body modal-body-scrollable">
                 {user && user.emailVerified ? (
                   <section className="card form-section">
                     <h2 className="section-title">📝 {t("submitListing")}</h2>
                 
                     {/* Step indicators */}
-                    <div className="plan-grid" style={{ marginBottom: 12 }}>
+                    <div className="step-indicators-grid">
                       {[1, 2, 3].map((s) => (
                         <div
                           key={s}
-                          className={`plan-option ${form.step === s ? "selected" : ""}`}
-                          style={{ cursor: "default" }}
+                          className={`step-indicator ${form.step === s ? "selected" : ""}`}
                         >
                           <div className="plan-content">
                             <div className="plan-duration">
@@ -3175,36 +3174,43 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           setForm({ ...form, step: 2 });
                         }}
                       >
-                        <input
-                          className="input"
-                          placeholder={t("name")}
-                          value={form.name}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              name: stripDangerous(e.target.value).slice(0, 100),
-                            })
-                          }
-                          maxLength="100"
-                          required
-                        />
-                
-                        <select
-                          className="select category-dropdown"
-                          value={form.category}
-                          onChange={(e) => setForm({ ...form, category: e.target.value })}
-                          required
-                        >
-                          <option value="">{t("selectCategory")}</option>
-                          {categories.map((cat) => (
-                            <option key={cat} value={cat}>
-                              {t(cat)}
-                            </option>
-                          ))}
-                        </select>
-                
+                        <div className="field-group">
+                          <label className="field-label">{t("name")}</label>
+                          <input
+                            className="input"
+                            placeholder={t("namePlaceholder") || t("name")}
+                            value={form.name}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                name: stripDangerous(e.target.value).slice(0, 100),
+                              })
+                            }
+                            maxLength="100"
+                            required
+                          />
+                        </div>
+
+                        <div className="field-group">
+                          <label className="field-label">{t("category")}</label>
+                          <select
+                            className="select category-dropdown"
+                            value={form.category}
+                            onChange={(e) => setForm({ ...form, category: e.target.value })}
+                            required
+                          >
+                            <option value="">{t("selectCategory")}</option>
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {t(cat)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
                         {/* Location picker with map modal */}
-                        <div className="location-picker">
+                        <div className="location-picker field-group">
+                          <label className="field-label">{t("location")}</label>
                           {/* City selector from MK_CITIES */}
                           <select
                             className="select city-dropdown"
@@ -3224,10 +3230,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                               </option>
                             ))}
                           </select>
-                
+
                           {/* Optional extra details: town / village / neighborhood etc. */}
                           <input
-                            className="input"
+                            className="input mt-sm"
                             placeholder={
                               t("locationExtra")
                             }
@@ -3241,18 +3247,17 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                               });
                             }}
                           />
-                
+
                           <button
                             type="button"
-                            className="btn btn-ghost small"
-                            style={{ marginTop: 6 }}
+                            className="btn btn-ghost small mt-sm"
                             onClick={() => setShowMapPicker(true)}
                           >
                             {t("chooseOnMap")}
                           </button>
                         </div>
-                
-                        <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
+
+                        <div className="submit-form-actions">
                           <button type="submit" className="btn">
                             {t("continue")}
                           </button>
@@ -3274,21 +3279,24 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           setForm({ ...form, contact: phoneForListing, step: 3 });
                         }}
                       >
-                        <textarea
-                          className="textarea"
-                          placeholder={t("description")}
-                          value={form.description}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              description: stripDangerous(e.target.value).slice(0, 1000),
-                            })
-                          }
-                          maxLength="1000"
-                          required
-                        />
-                
-                        <div className="contact-summary">
+                        <div className="field-group">
+                          <label className="field-label">{t("description")}</label>
+                          <textarea
+                            className="textarea"
+                            placeholder={t("descriptionPlaceholder") || t("description")}
+                            value={form.description}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                description: stripDangerous(e.target.value).slice(0, 1000),
+                              })
+                            }
+                            maxLength="1000"
+                            required
+                          />
+                        </div>
+
+                        <div className="contact-summary field-group">
                           <div className="contact-summary-main">
                             <span className="field-label">{t("contact")}</span>
                             <p className="contact-number">
@@ -3316,9 +3324,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             </button>
                           </div>
                         </div>
-                
+
                         {/* Offer price range + currency */}
-                        <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
+                        <div className="modern-price-section field-group">
                           <label className="field-label">{t("priceRange") || "Price Range"}</label>
                           <DualRangeSlider
                             min={0}
@@ -3335,10 +3343,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             }}
                             currency={form.offerCurrency || "EUR"}
                           />
-                          <div className="price-inputs-row" style={{ marginTop: '10px', justifyContent: 'flex-end' }}>
+                          <div className="price-inputs-row">
                              <select
                               className="select currency-select"
-                              style={{ width: 'auto', minWidth: '80px' }}
                               value={form.offerCurrency}
                               onChange={(e) => {
                                 const updated = { ...form, offerCurrency: e.target.value };
@@ -3358,79 +3365,78 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             </select>
                           </div>
                         </div>
-                
-                        <input
-                          className="input"
-                          placeholder={t("tagsPlaceholder")}
-                          value={form.tags}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              tags: stripDangerous(e.target.value).slice(0, 64),
-                            })
-                          }
-                          maxLength="64"
-                        />
-                
-                        <input
-                          className="input"
-                          placeholder={t("socialPlaceholder")}
-                          value={form.socialLink}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              socialLink: stripDangerous(e.target.value).slice(0, 200),
-                            })
-                          }
-                          maxLength="200"
-                        />
-                
-                        <input
-                          className="input"
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleImageUpload}
-                        />
 
-                        {form.images && form.images.length > 0 && (
-                          <div className="listing-gallery" style={{ marginTop: 8 }}>
-                            {form.images.map((img, idx) => (
-                              <div key={idx} style={{ position: "relative" }}>
-                                <img
-                                  src={img}
-                                  alt={`${t("uploadAlt")} ${idx + 1}`}
-                                  className="listing-hero-image"
-                                  style={{ height: "120px" }}
-                                />
-                                <button
-                                  type="button"
-                                  className="icon-btn"
-                                  style={{
-                                    position: "absolute",
-                                    top: 4,
-                                    right: 4,
-                                    background: "rgba(0,0,0,0.5)",
-                                    color: "white",
-                                    borderRadius: "50%",
-                                    width: 24,
-                                    height: 24,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "none",
-                                    cursor: "pointer"
-                                  }}
-                                  onClick={() => handleRemoveImage(idx)}
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ))}
+                        <div className="field-group">
+                          <label className="field-label">{t("tags") || "Tags"}</label>
+                          <input
+                            className="input"
+                            placeholder={t("tagsPlaceholder")}
+                            value={form.tags}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                tags: stripDangerous(e.target.value).slice(0, 64),
+                              })
+                            }
+                            maxLength="64"
+                          />
+                        </div>
+
+                        <div className="field-group">
+                          <label className="field-label">{t("socialLink") || "Social Link"}</label>
+                          <input
+                            className="input"
+                            placeholder={t("socialPlaceholder")}
+                            value={form.socialLink}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                socialLink: stripDangerous(e.target.value).slice(0, 200),
+                              })
+                            }
+                            maxLength="200"
+                          />
+                        </div>
+
+                        <div className="field-group">
+                          <label className="field-label">{t("images")}</label>
+                          <div
+                            onClick={() => document.getElementById("post-images").click()}
+                            className="upload-placeholder"
+                          >
+                            {t("clickToUpload") || "Click to upload images"}
                           </div>
-                        )}
-                
-                        <div className="modal-actions" style={{ padding: 0, marginTop: 8 }}>
+                          <input
+                            id="post-images"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            style={{ display: "none" }}
+                            onChange={handleImageUpload}
+                          />
+
+                          {form.images && form.images.length > 0 && (
+                            <div className="image-preview-grid">
+                              {form.images.map((img, idx) => (
+                                <div key={idx} className="preview-item">
+                                  <img
+                                    src={img}
+                                    alt={`${t("uploadAlt")} ${idx + 1}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="preview-remove-btn"
+                                    onClick={() => handleRemoveImage(idx)}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="submit-form-actions">
                           <button
                             type="button"
                             className="btn btn-ghost"
@@ -3449,7 +3455,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                     {form.step === 3 && (
                       <form className="form" onSubmit={handleSubmit}>
                         {/* Live Preview */}
-                        <div className="card" style={{ marginTop: 8 }}>
+                        <div className="preview-card">
                           <div className="listing-header">
                             <h3 className="listing-title">
                               {form.name || t("previewTitlePlaceholder")}
@@ -3466,12 +3472,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             <img
                               src={form.imagePreview}
                               alt={t("previewAlt")}
-                              style={{
-                                width: "100%",
-                                borderRadius: 12,
-                                border: "1px solid #e5e7eb",
-                                margin: "10px 0",
-                              }}
+                              className="preview-image"
                             />
                           )}
                 
@@ -3479,7 +3480,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             {form.description || t("previewDescriptionPlaceholder")}
                           </p>
                 
-                          <div className="listing-meta" style={{ marginTop: 8 }}>
+                          <div className="listing-meta listing-meta-preview">
                             {form.offerprice && (
                               <>
                                 💶 <strong>{form.offerprice}</strong>&nbsp;&nbsp;
@@ -3490,29 +3491,20 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         </div>
                 
                         {/* Plan Selection */}
-                        <div className="plan-selection-section" style={{ marginTop: '24px', marginBottom: '24px' }}>
-                          <h4 style={{ marginBottom: '12px' }}>{t("selectPlan") || "Select Plan"}</h4>
+                        <div className="plan-selection-section">
+                          <h4 className="plan-selection-title">{t("selectPlan") || "Select Plan"}</h4>
                           
                           {user && userProfile && !userProfile.hasUsedFreeTrial && (
-                            <div style={{ 
-                              background: 'linear-gradient(to right, #ecfdf5, #d1fae5)', 
-                              border: '1px solid #10b981', 
-                              borderRadius: '8px', 
-                              padding: '12px', 
-                              marginBottom: '16px', 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '10px'
-                            }}>
-                               <span style={{fontSize: '1.2em'}}>🎁</span>
-                               <div>
-                                 <strong style={{color: '#047857', display: 'block'}}>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
-                                 <span style={{fontSize: '0.9em', color: '#065f46'}}>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
+                            <div className="free-trial-banner">
+                               <div className="free-trial-icon">🎁</div>
+                               <div className="free-trial-content">
+                                 <strong>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
+                                 <span>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
                                </div>
                             </div>
                           )}
 
-                          <div className="plan-selection-grid" style={{ display: 'grid', gap: '12px' }}>
+                          <div className="plan-selection-grid">
                             {PLANS.map(plan => {
                               const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
                               return (
@@ -3520,46 +3512,26 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 key={plan.id}
                                 className={`plan-option ${form.plan === plan.id ? 'selected' : ''}`}
                                 onClick={() => setForm({ ...form, plan: plan.id })}
-                                style={{ 
-                                  border: form.plan === plan.id ? '2px solid var(--accent)' : '1px solid var(--border)',
-                                  padding: '12px',
-                                  borderRadius: '8px',
-                                  cursor: 'pointer',
-                                  background: form.plan === plan.id ? (isFreeTrialEligible ? '#ecfdf5' : 'var(--bg-subtle)') : 'var(--bg-card)',
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  position: 'relative',
-                                  overflow: 'hidden'
-                                }}
                               >
-                                <div>
-                                  <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="plan-option-content">
+                                  <div className="plan-name-row">
                                     {t(`month${plan.id}`)}
                                     {isFreeTrialEligible && (
-                                      <span style={{
-                                        fontSize: '0.7em', 
-                                        background: '#10b981', 
-                                        color: 'white', 
-                                        padding: '2px 8px', 
-                                        borderRadius: '999px',
-                                        fontWeight: '600',
-                                        textTransform: 'uppercase'
-                                      }}>
+                                      <span className="plan-badge-free">
                                         {t("free") || "FREE"}
                                       </span>
                                     )}
-                                  </span>
-                                  <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t(`days${plan.duration.split(' ')[0]}`)}</span>
+                                  </div>
+                                  <span className="plan-duration">{t(`days${plan.duration.split(' ')[0]}`)}</span>
                                 </div>
-                                <div style={{textAlign: 'right'}}>
+                                <div className="plan-price-column">
                                    {isFreeTrialEligible ? (
                                       <>
-                                        <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '0.85em', marginRight: '8px' }}>{plan.price}</span>
-                                        <span style={{ color: '#059669', fontWeight: 'bold', fontSize: '1.1em' }}>0 EUR</span>
+                                        <span className="plan-price-original">{plan.price}</span>
+                                        <span className="plan-price-final">0 EUR</span>
                                       </>
                                    ) : (
-                                      <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                                      <span className="plan-price-final">{plan.price}</span>
                                    )}
                                 </div>
                               </div>
@@ -4091,16 +4063,16 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                     </div>
                 
                     {/* Checkbox for Terms */}
-                    <div className="auth-field-group checkbox-group" style={{ flexDirection: 'row', alignItems: 'flex-start', gap: '8px', marginTop: '12px', marginBottom: '12px' }}>
+                    <div className="auth-field-group checkbox-group">
                       <input 
                         type="checkbox" 
                         id="agreeTerms" 
                         checked={agreedToTerms} 
                         onChange={(e) => setAgreedToTerms(e.target.checked)} 
-                        style={{ marginTop: '4px', width: '16px', height: '16px' }}
+                        className="auth-checkbox"
                       />
-                      <label htmlFor="agreeTerms" style={{ fontSize: '0.9rem', color: '#64748b', lineHeight: 1.4 }}>
-                        {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ textDecoration: 'underline', color: 'var(--primary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ textDecoration: 'underline', color: 'var(--primary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>{t("privacyPolicy")}</button>.
+                      <label htmlFor="agreeTerms" className="auth-terms-label">
+                        {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
                       </label>
                     </div>
 
@@ -4160,7 +4132,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                     {/* STEP 2: VERIFY CODE + LINK EMAIL */}
                     {confirmationResult && (
                       <>
-                        <div className="auth-field-group" style={{ marginTop: 12 }}>
+                        <div className="auth-field-group mt-md">
                           <span className="field-label">{t("enterCode")}</span>
                           <input
                             className="input"

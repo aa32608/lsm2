@@ -195,8 +195,8 @@ const EditListingModal = ({
             />
           </div>
 
-          <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
-            <label className="field-label">{t("priceRange") || "Price Range"}</label>
+          <div className="offer-price-range field-group">
+            <label className="field-label">{t("priceRangeLabel") || "Price Range"}</label>
             <DualRangeSlider
               min={0}
               max={5000}
@@ -214,10 +214,9 @@ const EditListingModal = ({
               }}
               currency={editForm.offerCurrency || "EUR"}
             />
-            <div className="price-inputs-row" style={{ marginTop: '10px', justifyContent: 'flex-end' }}>
+            <div className="price-inputs-row">
                <select
                 className="select currency-select"
-                style={{ width: 'auto', minWidth: '80px' }}
                 value={editForm.offerCurrency || "EUR"}
                 onChange={(e) => {
                   const updated = { ...editForm, offerCurrency: e.target.value };
@@ -276,11 +275,11 @@ const EditListingModal = ({
 
           <div className="field-group">
             <label className="field-label">
-              {t("images") || "Images"} (Max 4)
+              {t("images")} (Max 4)
             </label>
             <div className="edit-image-row">
             <label className="btn btn-ghost small" htmlFor="edit-image">
-              {t("uploadImages") || "Upload Images"}
+              {t("uploadImages")}
             </label>
             <input
               id="edit-image"
@@ -293,43 +292,17 @@ const EditListingModal = ({
           </div>
           
           {/* Image Grid */}
-          <div className="image-preview-grid" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', 
-            gap: '10px', 
-            marginTop: '12px' 
-          }}>
+          <div className="image-preview-grid">
             {(editForm.images && editForm.images.length > 0 ? editForm.images : (editForm.imagePreview ? [editForm.imagePreview] : [])).map((img, index) => (
-              <div key={index} className="preview-item" style={{ position: 'relative' }}>
+              <div key={index} className="preview-item">
                 <img
                   src={img}
                   alt={`${t("uploadAlt")} ${index + 1}`}
-                  style={{ 
-                    width: '100%', 
-                    aspectRatio: '1', 
-                    objectFit: 'cover', 
-                    borderRadius: '8px' 
-                  }}
                 />
                   <button
                     type="button"
+                    className="preview-remove-btn"
                     onClick={() => handleRemoveImage(index, true)}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      background: 'rgba(0,0,0,0.5)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '24px',
-                      height: '24px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0
-                    }}
                   >
                     ✕
                   </button>

@@ -1,78 +1,82 @@
-
 .dual-slider-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   width: 100%;
   padding: 10px 0;
 }
 
 .slider-inputs {
   display: flex;
-  align-items: flex-end; /* Align inputs with separator */
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .slider-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   flex: 1;
 }
 
 .input-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #64748b;
-    margin-left: 2px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-left: 4px;
 }
 
 .input-wrapper {
-    position: relative;
-    width: 100%;
+  position: relative;
+  width: 100%;
 }
 
 .currency-prefix {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
   color: #94a3b8;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  font-weight: 500;
   pointer-events: none;
 }
 
 .slider-number-input {
   width: 100%;
-  padding: 10px 12px 10px 45px; /* space for currency */
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: 12px 14px 12px 48px; /* space for currency */
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 1rem;
+  font-weight: 500;
   color: #0f172a;
   outline: none;
-  transition: all 0.2s;
-  background-color: #f8fafc;
+  transition: all 0.25s ease;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .slider-number-input:focus {
   border-color: #3b82f6;
-  background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .slider-separator {
   color: #cbd5e1;
   font-weight: 600;
   font-size: 1.2rem;
-  margin-bottom: 12px; /* Visual alignment with input text */
+  margin-top: 24px; /* Align with input */
 }
 
+/* TRACK & RANGE */
 .slider-track-container {
   position: relative;
   width: 100%;
-  height: 6px; /* Track height */
-  margin-top: 10px;
+  height: 6px;
+  margin-top: 12px; /* slightly more space */
 }
 
 .slider {
@@ -83,7 +87,7 @@
 .slider__track,
 .slider__range {
   position: absolute;
-  border-radius: 999px;
+  border-radius: 9999px;
   height: 6px;
   top: 50%;
   transform: translateY(-50%);
@@ -100,7 +104,7 @@
   z-index: 2;
 }
 
-/* Thumb styles */
+/* THUMB STYLES */
 .thumb {
   -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
@@ -110,41 +114,68 @@
   width: 100%;
   outline: none;
   z-index: 3;
-  top: 50%;
+  top: 50%; /* Center vertically relative to container */
   transform: translateY(-50%);
-  margin: 0;
+  margin: 0; /* Reset default margins */
 }
 
+.thumb--left {
+  z-index: 4;
+}
+
+.thumb--right {
+  z-index: 5;
+}
+
+/* Webkit Thumb */
 .thumb::-webkit-slider-thumb {
   -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
   background-color: #ffffff;
   border: 2px solid #3b82f6;
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
   cursor: grab;
   height: 24px;
   width: 24px;
-  margin-top: 2px; /* Fine-tuning */
   pointer-events: all;
   position: relative;
-  transition: transform 0.1s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.thumb::-webkit-slider-thumb:active {
-    cursor: grabbing;
-    transform: scale(1.1);
-}
-
+/* Mozilla Thumb */
 .thumb::-moz-range-thumb {
   background-color: #ffffff;
   border: 2px solid #3b82f6;
   border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.25);
   cursor: grab;
   height: 24px;
   width: 24px;
   pointer-events: all;
   position: relative;
-  transition: transform 0.1s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Hover & Active States */
+.thumb::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.35);
+}
+
+.thumb::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.35);
+}
+
+.thumb:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.05);
+  background-color: #eff6ff;
+}
+
+.thumb:active::-moz-range-thumb {
+  cursor: grabbing;
+  transform: scale(1.05);
+  background-color: #eff6ff;
 }

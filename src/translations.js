@@ -427,6 +427,14 @@ export const TRANSLATIONS = {
     websiteFieldLabel: "Website / Social link",
     websitePlaceholder: "Paste a link (optional)",
     coverImage: "Cover image",
+    
+    // Form Field Placeholders
+    namePlaceholder: "e.g. Sunny Cafe & Bakery",
+    descriptionPlaceholder: "Tell people about your services, experience, and what makes you special...",
+    clickToUpload: "Click to upload images",
+    priceRange: "Price Range",
+    tags: "Tags",
+    socialLink: "Social Link",
 
     // NEW: Sharing & trust
     share: "Share",
@@ -501,6 +509,11 @@ export const TRANSLATIONS = {
     communityTagline: "Trusted local services",
     browseListingsHint: "Browse all listings",
     createListingHint: "Create a new listing",
+    
+    // Free Trial
+    freeTrialAvailable: "Free Trial Available!",
+    freeTrialDesc: "Select the 1 Month plan to get your first month completely free.",
+    free: "FREE",
     manageListingsHint: "Manage everything in one place",
     reviewsLabel: "Reviews",
     memberSince: "Member since",
@@ -660,6 +673,15 @@ export const TRANSLATIONS = {
     privacy4Text: "You have the right to access, update, or delete your personal information at any time through your account settings.",
     privacy5Title: "5. Contact",
     privacy5Text: "If you have questions about this policy, please contact us.",
+    
+    // Missing keys added
+    namePlaceholder: "Enter listing title",
+    titlePlaceholder: "Enter listing title",
+    descriptionPlaceholder: "Describe your service...",
+    clickToUpload: "Click to upload images",
+    priceRange: "Price Range",
+    tags: "Tags",
+    socialLink: "Social Link",
   },
 
   sq: {
