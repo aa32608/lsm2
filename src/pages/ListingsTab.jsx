@@ -33,22 +33,8 @@ export default function ListingsTab({
   handleShareListing,
   showMessage,
   toggleFav,
-  favorites,
-  featuredListings = []
+  favorites
 }) {
-  const [currentFeaturedSlide, setCurrentFeaturedSlide] = useState(0);
-
-  // Auto-slide effect for Sidebar Featured
-  useEffect(() => {
-    if (!featuredListings || featuredListings.length === 0) return;
-    
-    const interval = setInterval(() => {
-      setCurrentFeaturedSlide(prev => (prev === featuredListings.length - 1 ? 0 : prev + 1));
-    }, 5500); 
-
-    return () => clearInterval(interval);
-  }, [featuredListings]);
-
   return (
     <div className="section all-listings-section">
       <div className="section-header-row stacked-mobile">
@@ -188,42 +174,6 @@ export default function ListingsTab({
                  </div>
               </div>
            </div>
-
-           {/* SIDEBAR FEATURED CAROUSEL */}
-           {featuredListings && featuredListings.length > 0 && (
-             <div className="sidebar-featured-widget">
-               <div className="sidebar-widget-header">
-                 <h3>✨ {t("featured") || "Featured"}</h3>
-               </div>
-               <div className="sidebar-carousel">
-                  <div className="sidebar-carousel-slide">
-                    <ListingCard
-                      listing={featuredListings[currentFeaturedSlide]}
-                      t={t}
-                      categoryIcons={categoryIcons}
-                      getDescriptionPreview={getDescriptionPreview}
-                      getListingStats={getListingStats}
-                      onSelect={() => {
-                        setSelectedListing(featuredListings[currentFeaturedSlide]);
-                      }}
-                      onShare={() => handleShareListing(featuredListings[currentFeaturedSlide])}
-                      showMessage={showMessage}
-                      toggleFav={toggleFav}
-                      isFavorite={favorites.includes(featuredListings[currentFeaturedSlide].id)}
-                    />
-                  </div>
-                  <div className="sidebar-carousel-dots">
-                    {featuredListings.map((_, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`dot ${idx === currentFeaturedSlide ? 'active' : ''}`}
-                        onClick={() => setCurrentFeaturedSlide(idx)}
-                      />
-                    ))}
-                  </div>
-               </div>
-             </div>
-           )}
 
            {/* ADSENSE PLACEHOLDER */}
            <div className="sidebar-ad-placeholder">

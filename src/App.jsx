@@ -98,9 +98,12 @@ const mkSpotlightCities = [
   "Kërçovë",
 ];
 
-const featuredCategories = ["tech", "services", "homeRepair", "food", "electronics", "car"];
-const FEATURED_SLIDE_SIZE = 3;
-const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
+const PLANS = [
+  { id: "1", label: "1 Month", price: "2 EUR", duration: "30 days", priceVal: 2 },
+  { id: "3", label: "3 Months", price: "5 EUR", duration: "90 days", priceVal: 5 },
+  { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
+  { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
+];
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -335,6 +338,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     socialLink: "",
     imagePreview: null, // local-only preview
     images: [],         // array of base64 strings (max 4)
+    plan: "1",          // "1", "3", "6", "12"
   });
 
   const [listings, setListings] = useState(() => {
@@ -396,6 +400,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const [editForm, setEditForm] = useState(null);
 
   /* Extend flow */
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [extendTarget, setExtendTarget] = useState(null);
+  const [selectedExtendPlan, setSelectedExtendPlan] = useState("1");
+
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -437,9 +445,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const [savingPhone, setSavingPhone] = useState(false);
   const [phoneConfirmationResult, setPhoneConfirmationResult] = useState(null);
   const [phoneVerificationCode, setPhoneVerificationCode] = useState("");
-
-  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
-  const [featuredCandidate, setFeaturedCandidate] = useState(null);
 
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -689,7 +694,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const [filtersOpen, setFiltersOpen] = useState(false); // Start closed, user can toggle
   const [modalImageIndex, setModalImageIndex] = useState(0); // For modal carousel
 
-  /* Featured carousel removal - no longer used but kept state for reference previously */
+  /* Featured carousel removal */
 
   /* Close sidebar with ESC */
   useEffect(() => {
@@ -846,17 +851,34 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         try {
             setLoading(true);
             const updates = {};
+
+            // Calculate duration based on plan
+            const plan = params.get("plan");
+            let durationDays = 30;
+            switch(String(plan)) {
+                case "1": durationDays = 30; break;
+                case "3": durationDays = 90; break;
+                case "6": durationDays = 180; break;
+                case "12": durationDays = 365; break;
+                default: durationDays = 30;
+            }
+            const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
             if (type === 'create') {
                 updates[`listings/${listingId}/status`] = "verified";
-                updates[`listings/${listingId}/pricePaid`] = 1;
+                updates[`listings/${listingId}/pricePaid`] = parseInt(plan) === 1 ? 2 : (parseInt(plan) === 3 ? 5 : (parseInt(plan) === 6 ? 8 : 12));
+                updates[`listings/${listingId}/plan`] = plan;
+                updates[`listings/${listingId}/expiresAt`] = Date.now() + durationMs;
+                updates[`listings/${listingId}/createdAt`] = Date.now();
             } else if (type === 'extend') {
                 const snapshot = await get(dbRef(db, `listings/${listingId}`));
                 const listing = snapshot.val();
                 if (listing) {
                     const currentExpiry = listing.expiresAt || Date.now();
-                    const newExpiry = Math.max(currentExpiry, Date.now()) + (30 * 24 * 60 * 60 * 1000); // +30 days
+                    const newExpiry = Math.max(currentExpiry, Date.now()) + durationMs;
                     updates[`listings/${listingId}/expiresAt`] = newExpiry;
                     updates[`listings/${listingId}/status`] = "verified";
+                    updates[`listings/${listingId}/plan`] = plan;
                 }
             }
             
@@ -1402,28 +1424,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     }
   }
 
-  const submitFeaturedRequest = async () => {
-    if (!featuredCandidate) return;
-    try {
-      await fetch("/api/request-featured", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: featuredCandidate.id,
-          listingName: featuredCandidate.name,
-          userEmail: user?.email || featuredCandidate.userEmail,
-          contact: featuredCandidate.contact
-        })
-      });
-      showMessage(t("requestSent") || "Request sent! Check your email.", "success");
-      setShowFeaturedModal(false);
-      setFeaturedCandidate(null);
-    } catch (e) {
-      console.error(e);
-      showMessage(t("error") + " " + e.message, "error");
-    }
-  };
-
   /* Create listing (Free) */
   async function handleSubmit(e) {
     e.preventDefault();
@@ -1460,6 +1460,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     
     try {
       // 1. Create listing with status 'unpaid'
+      const planId = form.plan || "1";
+      const selectedPlan = PLANS.find(p => p.id === planId) || PLANS[0];
       const listingId = await createListingInFirebase({
         ...form,
         category: categories.find(c => t(c) === form.category) ? categories.find(c => t(c) === form.category) : form.category,
@@ -1467,11 +1469,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         location: finalLocation,
         locationCity: form.locationCity,
         locationExtra: form.locationExtra,
-        plan: "1", // Default 1 month
+        plan: planId,
         offerprice: offerpriceStr || "", 
         status: "unpaid", // Wait for payment
         pricePaid: 0,
-        price: 1, // 1 Euro
+        price: selectedPlan.priceVal,
       });
 
       // 2. Initiate Payment
@@ -1483,7 +1485,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                   listingId,
                   type: "create",
                   customerEmail: user?.email,
-                  customerName: userProfile?.name || user?.displayName
+                  customerName: userProfile?.name || user?.displayName,
+                  plan: planId
               })
           });
           const data = await res.json();
@@ -1749,43 +1752,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     [favorites, feedbackAverages]
   );
 
-  const featuredByCategory = useMemo(() => {
-    const verified = deferredListings.filter((l) => l.status === "verified");
-    const map = {};
-
-    // Initialize map
-    categories.forEach(cat => map[cat] = []);
-
-    // One-pass grouping
-    verified.forEach(listing => {
-      if (map[listing.category]) {
-        const stats = feedbackAverages[listing.id] || {};
-        map[listing.category].push({
-          ...listing,
-          avgRating: stats.avg ?? 0,
-          feedbackCount: stats.count || 0,
-        });
-      }
-    });
-
-    // Sort and slice each category
-    Object.keys(map).forEach(cat => {
-      map[cat].sort((a, b) => {
-        if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
-      map[cat] = map[cat].slice(0, FEATURED_MAX_ITEMS);
-      if (map[cat].length === 0) delete map[cat];
-    });
-
-    return map;
-  }, [feedbackAverages, deferredListings]);
-
-  const featuredCategoryOrder = useMemo(
-    () => featuredCategories.filter((cat) => featuredByCategory[cat]?.length),
-    [featuredByCategory]
-  );
-
   const toggleFav = useCallback((id) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])), []);
 
@@ -1917,53 +1883,18 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     }
   }, [t, showMessage]);
 
-  /* Featured flow */
-  const handleRequestFeatured = useCallback(async (listing) => {
-    if (!listing || !listing.id) return;
-
-    // Use a browser confirm or custom modal
-    const confirmed = window.confirm(
-      `Upgrade "${listing.name}" to Featured for 1000 MKD?\n\n` +
-      `• Appears at top of home page\n` +
-      `• Highlighted design\n` +
-      `• Valid for 1 month\n\n` +
-      `Click OK to request activation.`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setLoading(true);
-
-      // Call backend endpoint to send email + save request in DB
-      const res = await fetch("https://lsm-wozo.onrender.com/api/request-featured", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: listing.id,
-          listingName: listing.name,
-          userEmail: user?.email || "unknown",
-          contact: listing.phone || listing.contact || user?.email,
-          ownerUid: user?.uid,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to request featured status");
-      }
-
-      showMessage(t("featuredRequestSent") || "Request sent! Check your email for payment instructions.", "success");
-    } catch (err) {
-      console.error(err);
-      showMessage(err.message, "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [user, t, showMessage]);
-
   /* Extend flow */
-  const handleStartExtendFlow = useCallback(async (listing) => {
+  const handleStartExtendFlow = useCallback((listing) => {
+    setExtendTarget(listing);
+    setSelectedExtendPlan("1");
+    setExtendModalOpen(true);
+  }, []);
+
+  const handleProceedExtend = async () => {
+    if (!extendTarget) return;
+    const listing = extendTarget;
+    const planId = selectedExtendPlan;
+
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/api/create-payment`, {
@@ -1973,22 +1904,22 @@ export default function App({ initialListings = [], initialPublicListings = [] }
               listingId: listing.id,
               type: "extend",
               customerEmail: user?.email,
-              customerName: userProfile?.name || user?.displayName
+              customerName: userProfile?.name || user?.displayName,
+              plan: planId
           })
       });
       const data = await res.json();
       if (data.checkoutUrl) {
           window.location.href = data.checkoutUrl;
       } else {
-          showMessage("Failed to start payment flow", "error");
+        throw new Error("No checkout URL returned");
       }
     } catch (err) {
       console.error(err);
-      showMessage("Payment error: " + err.message, "error");
-    } finally {
+      showMessage(t("paymentError") || "Payment initialization failed", "error");
       setLoading(false);
     }
-  }, [user, userProfile, showMessage]);
+  };
   
   const onLogout = useCallback(async () => {
     await signOut(auth);
@@ -2145,13 +2076,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             setShowPostForm={setShowPostForm}
             setForm={setForm}
             setSelectedTab={setSelectedTab}
-            featuredCategories={featuredCategories}
             categoryIcons={categoryIcons}
             mkSpotlightCities={mkSpotlightCities}
             activeListingCount={activeListingCount}
             verifiedListingCount={verifiedListingCount}
             verifiedListings={verifiedListings}
-            featuredListings={verifiedListings.filter(l => l.isFeatured)}
             favorites={favorites}
             toggleFav={toggleFav}
             handleSelectListing={handleSelectListing}
@@ -2435,7 +2364,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 showMessage={showMessage}
                                 handleShareListing={handleShareListing}
                                 confirmDelete={handleConfirmDelete}
-                                requestFeatured={handleRequestFeatured}
                               />
                             ))}
                           </div>
@@ -2934,7 +2862,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         showMessage={showMessage}
                         toggleFav={toggleFav}
             favorites={favorites}
-            featuredListings={filtered.filter(l => l.isFeatured && l.status === "verified")}
             categories={categories}
             allLocations={mkSpotlightCities}
           />
@@ -3057,7 +2984,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                   <ul className="feature-list">
                     <li>✔️ {t("phoneVerified")}: {phoneVerifiedCount}</li>
                     <li>✔️ {t("listingsLabel")}: {activeListingCount}</li>
-                    <li>✔️ {t("categorySpotlight")}: {featuredCategoryOrder.slice(0, 3).map((cat) => t(cat)).join(", ")}</li>
                   </ul>
                   <div className="feature-badges">
                     <span className="pill pill-soft">📬 {t("homeDigest")}</span>
@@ -3067,7 +2993,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
                 <div className="card feature-card">
                   <div className="feature-card__head">
-                    <p className="eyebrow subtle">{t("featured")}</p>
                     <h3 className="section-title-small">🧭 {t("localMissions")}</h3>
                     <p className="section-subtitle-small">
                       {t("localMissionsDesc")}
@@ -3500,6 +3425,36 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           </div>
                         </div>
                 
+                        {/* Plan Selection */}
+                        <div className="plan-selection-section" style={{ marginTop: '24px', marginBottom: '24px' }}>
+                          <h4 style={{ marginBottom: '12px' }}>{t("selectPlan") || "Select Plan"}</h4>
+                          <div className="plan-selection-grid" style={{ display: 'grid', gap: '12px' }}>
+                            {PLANS.map(plan => (
+                              <div 
+                                key={plan.id}
+                                className={`plan-option ${form.plan === plan.id ? 'selected' : ''}`}
+                                onClick={() => setForm({ ...form, plan: plan.id })}
+                                style={{ 
+                                  border: form.plan === plan.id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                                  padding: '12px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  background: form.plan === plan.id ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}
+                              >
+                                <div>
+                                  <span style={{ fontWeight: 'bold', display: 'block' }}>{t(`month${plan.id}`)}</span>
+                                  <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t(`days${plan.duration.split(' ')[0]}`)}</span>
+                                </div>
+                                <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
                         <button
                           type="submit"
                           className="btn submit"
@@ -4368,16 +4323,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                       </div>
 
                       {/* FEATURED BANNER */}
-                      {selectedListing.isFeatured && (
-                        <div className="featured-modal-banner">
-                          <div className="featured-modal-badge">
-                            ✨ {t("featured") || "Featured"}
-                          </div>
-                          <p className="featured-modal-text">
-                            {t("featuredListingDesc") || "This is a premium featured listing, highlighted for top visibility."}
-                          </p>
-                        </div>
-                      )}
+                      {/* Removed */}
 
                       {/* CAROUSEL SECTION */}
                       {(() => {
@@ -4533,16 +4479,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         </div>
                         <p className="listing-description-full">{selectedListing.description}</p>
                         
-                        {selectedListing.isFeatured && (
-                          <div className="featured-benefits-box">
-                             <h5>{t("whyFeatured") || "Why is this listing featured?"}</h5>
-                             <ul>
-                               <li>{t("featBenefit1") || "Top visibility in search results"}</li>
-                               <li>{t("featBenefit2") || "Verified by BizCall team"}</li>
-                               <li>{t("featBenefit3") || "Premium support & direct contact"}</li>
-                             </ul>
-                          </div>
-                        )}
+
 
                         <div className="soft-grid">
                           <div>
@@ -4710,15 +4647,15 @@ export default function App({ initialListings = [], initialPublicListings = [] }
           )}
         </AnimatePresence>
 
-        {/* Featured Request Modal */}
+        {/* Extend Listing Modal */}
         <AnimatePresence>
-          {showFeaturedModal && featuredCandidate && (
+          {extendModalOpen && extendTarget && (
             <motion.div
               className="modal-overlay"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowFeaturedModal(false)}
+              onClick={() => setExtendModalOpen(false)}
             >
               <motion.div
                 className="modal"
@@ -4726,32 +4663,46 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                style={{ maxWidth: '400px' }}
+                style={{ maxWidth: '500px' }}
               >
                 <div className="modal-header">
-                  <h3 className="modal-title">🚀 {t("promote") || "Boost Listing"}</h3>
-                  <button className="icon-btn" onClick={() => setShowFeaturedModal(false)}>✕</button>
+                  <h3 className="modal-title">{t("extendListing") || "Extend Listing"}</h3>
+                  <button className="icon-btn" onClick={() => setExtendModalOpen(false)}>✕</button>
                 </div>
                 <div className="modal-body" style={{ padding: '24px' }}>
                   <p style={{ marginBottom: 16 }}>
-                    <strong>{featuredCandidate.name}</strong>
-                  </p>
-                  <p style={{ marginBottom: 16 }}>
-                    {t("featuredDescription") || "Get more visibility by featuring your listing. Featured listings appear at the top of search results."}
-                  </p>
-                  <div style={{ background: 'var(--bg-subtle)', padding: 12, borderRadius: 8, marginBottom: 24, textAlign: 'center' }}>
-                    <p style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--accent)' }}>1000 MKD / {t("month") || "month"}</p>
-                  </div>
-                  <p className="small-muted" style={{ marginBottom: 24 }}>
-                    {t("featuredProcess") || "After you submit this request, we will contact you to arrange payment. Once paid, your listing will be featured immediately."}
+                    {t("extendDescription") || "Choose a plan to extend your listing duration."}
                   </p>
                   
+                  <div className="plan-selection-grid" style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+                    {PLANS.map(plan => (
+                      <div 
+                        key={plan.id}
+                        className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''}`}
+                        onClick={() => setSelectedExtendPlan(plan.id)}
+                        style={{ 
+                          border: selectedExtendPlan === plan.id ? '2px solid var(--accent)' : '1px solid var(--border)',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          background: selectedExtendPlan === plan.id ? 'var(--bg-subtle)' : 'var(--bg-card)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontWeight: 'bold' }}>{t(`month${plan.id}`)}</span>
+                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                        </div>
+                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="modal-actions">
-                    <button className="btn btn-ghost" onClick={() => setShowFeaturedModal(false)}>
+                    <button className="btn btn-ghost" onClick={() => setExtendModalOpen(false)}>
                       {t("cancel")}
                     </button>
-                    <button className="btn btn-accent" onClick={submitFeaturedRequest}>
-                      {t("submitRequest") || "Submit Request"}
+                    <button className="btn btn-accent" onClick={handleProceedExtend}>
+                      {t("proceedToPayment") || "Proceed to Payment"}
                     </button>
                   </div>
                 </div>

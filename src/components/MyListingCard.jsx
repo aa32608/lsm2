@@ -13,7 +13,6 @@ const MyListingCard = React.memo(({
   showMessage,
   handleShareListing,
   confirmDelete,
-  requestFeatured,
 }) => {
   const stats = getListingStats(l);
   const days = getDaysUntilExpiry(l.expiresAt);
@@ -118,16 +117,6 @@ const MyListingCard = React.memo(({
             👁️ {t("view")}
           </button>
           
-          {!l.isFeatured && (
-            <button
-              className="btn btn-accent small"
-              onClick={() => requestFeatured && requestFeatured(l)}
-              title="Boost visibility for 1000 MKD"
-            >
-              🚀 {t("promote") || "Promote"}
-            </button>
-          )}
-
           <button
             className="btn small"
             onClick={() => openEdit(l)}

@@ -83,4 +83,22 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://bizcall.mk/?listing=lst_1769214291398</loc>
+    <lastmod>2026-01-24T00:24:51.398Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bizcall.mk/?listing=lst_1769215291023</loc>
+    <lastmod>2026-01-24T00:41:31.023Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://bizcall.mk/?listing=lst_1769215819376</loc>
+    <lastmod>2026-01-24T00:50:19.376Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

@@ -61,8 +61,12 @@ const db = isFirebaseInitialized ? admin.database() : {
       get: async () => ({ val: () => null, exists: () => false }),
       set: async () => {},
       update: async () => {},
-      remove: async () => {}
-    })
+      remove: async () => {},
+      once: async () => ({ val: () => null, exists: () => false })
+    }),
+    once: async () => ({ val: () => null, exists: () => false }),
+    update: async () => {},
+    push: () => ({ key: 'mock-id', set: async () => {} })
   })
 };
 
@@ -149,45 +153,10 @@ app.post("/api/send-email", async (req, res) => {
 });
 
 
-app.post("/api/request-featured", async (req, res) => {
-  const { listingId, listingName, userEmail, contact } = req.body;
-
-  if (!listingId || !userEmail) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  if (!resend) {
-    return res.status(503).json({ error: "Email service not configured" });
-  }
-
-  try {
-    // Email to Admin
-    await resend.emails.send({
-      from: "BizCall <notifications@bizcall.mk>",
-      to: ["artinalimi69@gmail.com"], // Admin email
-      subject: `🔥 Featured Listing Request: ${listingName}`,
-      text: `User ${userEmail} (Contact: ${contact}) wants to feature their listing.\n\nListing ID: ${listingId}\nListing Name: ${listingName}\n\nPlease contact them to collect the 1000 MKD payment. After payment, set 'isFeatured: true' in Firebase for this listing.`,
-    });
-
-    // Confirmation to User
-    await resend.emails.send({
-      from: "BizCall <notifications@bizcall.mk>",
-      to: [userEmail],
-      subject: "Request Received: Featured Listing",
-      text: `Hello,\n\nWe have received your request to feature your listing "${listingName}" (ID: ${listingId}).\n\nThe cost is 1000 MKD. We will contact you shortly at ${contact || userEmail} to arrange payment.\n\nBest,\nBizCall Team`,
-    });
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error("Featured request error:", err);
-    res.status(500).json({ error: "Failed to process request" });
-  }
-});
-
 /* ----------------------- DODO PAYMENTS ----------------------- */
 
 app.post("/api/create-payment", async (req, res) => {
-  const { listingId, type, customerEmail, customerName } = req.body; // type: 'create' | 'extend'
+  const { listingId, type, customerEmail, customerName, plan } = req.body; // type: 'create' | 'extend'
 
   if (!listingId) {
     return res.status(400).json({ error: "Missing listingId" });
@@ -198,10 +167,33 @@ app.post("/api/create-payment", async (req, res) => {
     return res.status(503).json({ error: "Payment service not configured" });
   }
 
-  // User must set this in their env
-  const PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
+  // Map plan to product ID
+  let PRODUCT_ID;
+  switch (String(plan)) {
+    case "1":
+      PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH;
+      break;
+    case "3":
+      PRODUCT_ID = process.env.DODO_PRODUCT_3_MONTHS;
+      break;
+    case "6":
+      PRODUCT_ID = process.env.DODO_PRODUCT_6_MONTHS;
+      break;
+    case "12":
+      PRODUCT_ID = process.env.DODO_PRODUCT_12_MONTHS;
+      break;
+    default:
+      PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH; // Default fallback
+  }
+
   if (!PRODUCT_ID) {
-     console.error("DODO_PAYMENTS_PRODUCT_ID is missing");
+     console.error(`Product ID missing for plan ${plan}`);
+     // Fallback to the generic one if specific ones aren't set yet (for transition)
+     PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
+  }
+
+  if (!PRODUCT_ID) {
+     console.error("No Product ID configured");
      return res.status(503).json({ error: "Payment product not configured" });
   }
 
@@ -218,13 +210,80 @@ app.post("/api/create-payment", async (req, res) => {
         email: customerEmail || 'guest@example.com', 
         name: customerName || 'Guest User' 
       },
-      return_url: `${req.headers.origin || 'https://bizcall.mk'}/?payment=success&listingId=${listingId}&type=${type}`,
+      metadata: { listingId, type, plan },
+      return_url: `${req.headers.origin || 'https://bizcall.mk'}/?payment=success&listingId=${listingId}&type=${type}&plan=${plan}`,
     });
 
     res.json({ checkoutUrl: session.checkout_url });
   } catch (err) {
-    console.error("Dodo Payment Error:", err);
-    res.status(500).json({ error: "Failed to create payment session: " + err.message });
+    console.error("Dodo Payment Error Full:", JSON.stringify(err, null, 2));
+    res.status(500).json({ error: "Failed to create payment session. Check server logs for details. " + err.message });
+  }
+});
+
+app.post("/api/webhook", async (req, res) => {
+  try {
+    const event = req.body;
+    
+    // Log the event for debugging
+    console.log("Webhook received:", JSON.stringify(event, null, 2));
+
+    // Dodo Payments typically sends an event object
+    // We care about payment success
+    if (event.type === 'payment.succeeded') {
+        const { metadata } = event.data;
+        
+        if (!metadata || !metadata.listingId) {
+             console.log("Webhook: No metadata or listingId found, ignoring.");
+             return res.json({ received: true });
+        }
+
+        const { listingId, type, plan } = metadata;
+
+        const updates = {};
+        const now = Date.now();
+        
+        // Calculate duration based on plan
+        let durationDays = 30;
+        switch(String(plan)) {
+            case "1": durationDays = 30; break;
+            case "3": durationDays = 90; break;
+            case "6": durationDays = 180; break;
+            case "12": durationDays = 365; break;
+            default: durationDays = 30;
+        }
+        const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
+        if (type === 'create') {
+            updates[`listings/${listingId}/status`] = "verified"; 
+            updates[`listings/${listingId}/createdAt`] = now;
+            updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+            updates[`listings/${listingId}/plan`] = plan;
+            
+            // Send welcome email logic here if needed
+        } else if (type === 'extend') {
+            // Get current expiry to extend from there
+            const snapshot = await db.ref(`listings/${listingId}`).once('value');
+            const listing = snapshot.val();
+            
+            let currentExpiry = now;
+            if (listing && listing.expiresAt && listing.expiresAt > now) {
+                currentExpiry = listing.expiresAt;
+            }
+            
+            updates[`listings/${listingId}/expiresAt`] = currentExpiry + durationMs;
+            updates[`listings/${listingId}/status`] = "verified";
+            updates[`listings/${listingId}/plan`] = plan;
+        }
+
+        await db.ref().update(updates);
+        console.log(`[Webhook] Listing ${listingId} updated successfully (Type: ${type}, Plan: ${plan})`);
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error("Webhook Error:", err);
+    res.status(500).send("Webhook Error");
   }
 });
 
@@ -296,9 +355,9 @@ async function sendMarketingEmails() {
           mk: "📈 Подобрете го вашиот локален бизнис денес на BizCall MK"
         },
         texts: {
-          en: (name) => `Hello ${name || "there"},\n\nIs your service getting the visibility it deserves? 🚀\n\nThousands of local users are searching for services like yours on BizCall MK every week. If you haven't updated your listing lately, you might be missing out on valuable leads and new customers.\n\nTake 2 minutes to refresh your profile, add new photos, or post a featured listing to stay at the top of the search results. Your next big client is just one click away!\n\n✨ Manage your listings here: ${websiteUrl}\n\nTo your growth,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj dukshmërinë që meriton? 🚀\n\nMijëra përdorues lokalë kërkojnë shërbime si tuajat në BizCall MK çdo javë. Nëse nuk e keni përditësuar listimin tuaj së fundmi, mund të jeni duke humbur klientë të rëndësishëm dhe mundësi të reja.\n\nMerrni 2 minuta për të rifreskuar profilin tuaj, shtoni foto të reja ose postoni një listim të veçuar për të qëndruar në krye të rezultateve të kërkimit. Klienti juaj i radhës është vetëm një klikim larg!\n\n✨ Menaxhoni listimet tuaja këtu: ${websiteUrl}\n\nPër rritjen tuaj,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга ја добива видливоста што ја заслужува? 🚀\n\nИлјадници локални корисници бараат услуги како вашата на BizCall MK секоја недела. Ако не сте го ажурирале вашиот оглас неодамна, можеби пропуштате вредни контакти и нови клиенти.\n\nОдвојте 2 минути за да го освежите вашиот профил, додадете нови фотографии или објавете истакнат оглас за да останете на врвот на резултатите од пребарувањето. Вашиот следен голем клиент е на само еден клик подалеку!\n\n✨ Менаџирајте ги вашите огласи тука: ${websiteUrl}\n\nЗа вашиот раст,\nТимот на BizCall`
+          en: (name) => `Hello ${name || "there"},\n\nIs your service getting the visibility it deserves? 🚀\n\nThousands of local users are searching for services like yours on BizCall MK every week. If you haven't updated your listing lately, you might be missing out on valuable leads and new customers.\n\nTake 2 minutes to refresh your profile, add new photos, or update your description to stay at the top of the search results. Your next big client is just one click away!\n\n✨ Manage your listings here: ${websiteUrl}\n\nTo your growth,\nThe BizCall Team`,
+          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj dukshmërinë që meriton? 🚀\n\nMijëra përdorues lokalë kërkojnë shërbime si tuajat në BizCall MK çdo javë. Nëse nuk e keni përditësuar listimin tuaj së fundmi, mund të jeni duke humbur klientë të rëndësishëm dhe mundësi të reja.\n\nMerrni 2 minuta për të rifreskuar profilin tuaj, shtoni foto të reja ose përditësoni përshkrimin tuaj për të qëndruar në krye të rezultateve të kërkimit. Klienti juaj i radhës është vetëm një klikim larg!\n\n✨ Menaxhoni listimet tuaja këtu: ${websiteUrl}\n\nPër rritjen tuaj,\nEkipi i BizCall`,
+          mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга ја добива видливоста што ја заслужува? 🚀\n\nИлјадници локални корисници бараат услуги како вашата на BizCall MK секоја недела. Ако не сте го ажурирале вашиот оглас неодамна, можеби пропуштате вредни контакти и нови клиенти.\n\nОдвојте 2 минути за да го освежите вашиот профил, додадете нови фотографии или ажурирајте го вашиот опис за да останете на врвот на резултатите од пребарувањето. Вашиот следен голем клиент е на само еден клик подалеку!\n\n✨ Менаџирајте ги вашите огласи тука: ${websiteUrl}\n\nЗа вашиот раст,\nТимот на BizCall`
         }
       },
       {

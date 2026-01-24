@@ -998,6 +998,489 @@ const ListingCard = React.memo(({
     }
   );
 });
+const Filtersheet$1 = React.memo(({
+  t,
+  filtersOpen,
+  setFiltersOpen,
+  q,
+  setQ,
+  catFilter,
+  setCatFilter,
+  locFilter,
+  setLocFilter,
+  sortBy,
+  setSortBy,
+  categories: categories2,
+  categoryIcons: categoryIcons2,
+  allLocations,
+  // Optional filters for My Listings
+  statusFilter,
+  setStatusFilter,
+  expiryFilter,
+  setExpiryFilter
+}) => {
+  const [localSearch, setLocalSearch] = useState(q);
+  const [localCat, setLocalCat] = useState(catFilter);
+  const [localLoc, setLocalLoc] = useState(locFilter);
+  const [localSort, setLocalSort] = useState(sortBy);
+  useEffect(() => {
+    setLocalSearch(q);
+  }, [q]);
+  useEffect(() => {
+    setLocalCat(catFilter);
+  }, [catFilter]);
+  useEffect(() => {
+    setLocalLoc(locFilter);
+  }, [locFilter]);
+  useEffect(() => {
+    setLocalSort(sortBy);
+  }, [sortBy]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== q) setQ(localSearch);
+      if (localCat !== catFilter) setCatFilter(localCat);
+      if (localLoc !== locFilter) setLocFilter(localLoc);
+      if (localSort !== sortBy) setSortBy(localSort);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localSearch, localCat, localLoc, localSort, q, catFilter, locFilter, sortBy, setQ, setCatFilter, setLocFilter, setSortBy]);
+  if (!filtersOpen) return null;
+  return /* @__PURE__ */ jsxs(Fragment, { children: [
+    /* @__PURE__ */ jsx(
+      "div",
+      {
+        className: "filter-sheet-backdrop",
+        onClick: () => setFiltersOpen(false),
+        "aria-label": t("closeFilters")
+      }
+    ),
+    /* @__PURE__ */ jsxs("div", { className: "filter-sheet-wrapper", children: [
+      /* @__PURE__ */ jsx("div", { className: "filter-sheet-handle", onClick: () => setFiltersOpen(false), children: /* @__PURE__ */ jsx("div", { className: "filter-sheet-handle-bar" }) }),
+      /* @__PURE__ */ jsxs("div", { className: "filter-sheet-content", children: [
+        /* @__PURE__ */ jsxs("div", { className: "filter-sheet-header", children: [
+          /* @__PURE__ */ jsxs("div", { className: "filter-sheet-header-left", children: [
+            /* @__PURE__ */ jsx("div", { className: "filter-sheet-icon", children: "🔍" }),
+            /* @__PURE__ */ jsxs("div", { children: [
+              /* @__PURE__ */ jsx("h2", { className: "filter-sheet-title", children: t("filters") }),
+              /* @__PURE__ */ jsx("p", { className: "filter-sheet-subtitle", children: t("filterSubtitle") })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              type: "button",
+              className: "filter-sheet-close",
+              onClick: () => setFiltersOpen(false),
+              "aria-label": t("closeFilters"),
+              children: /* @__PURE__ */ jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", style: { minWidth: "24px" }, children: [
+                /* @__PURE__ */ jsx("line", { x1: "18", y1: "6", x2: "6", y2: "18" }),
+                /* @__PURE__ */ jsx("line", { x1: "6", y1: "6", x2: "18", y2: "18" })
+              ] })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxs("div", { className: "filter-sheet-scroll", children: [
+          /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "🔎" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("search") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsxs("div", { className: "filter-search-box", children: [
+              /* @__PURE__ */ jsxs("svg", { className: "filter-search-icon", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", style: { minWidth: "24px" }, children: [
+                /* @__PURE__ */ jsx("circle", { cx: "11", cy: "11", r: "8" }),
+                /* @__PURE__ */ jsx("path", { d: "m21 21-4.35-4.35" })
+              ] }),
+              /* @__PURE__ */ jsx(
+                "input",
+                {
+                  type: "search",
+                  className: "filter-search-input",
+                  placeholder: t("searchPlaceholder"),
+                  value: localSearch,
+                  onChange: (e) => setLocalSearch(e.target.value)
+                }
+              ),
+              localSearch && /* @__PURE__ */ jsx(
+                "button",
+                {
+                  type: "button",
+                  className: "filter-search-clear",
+                  onClick: () => {
+                    setLocalSearch("");
+                    setQ("");
+                  },
+                  "aria-label": t("clearSearch"),
+                  children: /* @__PURE__ */ jsxs("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", style: { minWidth: "24px" }, children: [
+                    /* @__PURE__ */ jsx("line", { x1: "18", y1: "6", x2: "6", y2: "18" }),
+                    /* @__PURE__ */ jsx("line", { x1: "6", y1: "6", x2: "18", y2: "18" })
+                  ] })
+                }
+              )
+            ] }) })
+          ] }),
+          setStatusFilter && /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "⏳" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("status") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsxs("div", { className: "filter-select-wrapper", children: [
+              /* @__PURE__ */ jsxs(
+                "select",
+                {
+                  className: "filter-select-field",
+                  value: statusFilter,
+                  onChange: (e) => setStatusFilter(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsx("option", { value: "all", children: t("allStatuses") }),
+                    /* @__PURE__ */ jsx("option", { value: "verified", children: t("verified") }),
+                    /* @__PURE__ */ jsx("option", { value: "pending", children: t("pending") })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx("svg", { className: "filter-select-arrow", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" }) })
+            ] }) })
+          ] }),
+          setExpiryFilter && /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "⏰" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("expiry") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsxs("div", { className: "filter-select-wrapper", children: [
+              /* @__PURE__ */ jsxs(
+                "select",
+                {
+                  className: "filter-select-field",
+                  value: expiryFilter,
+                  onChange: (e) => setExpiryFilter(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsx("option", { value: "all", children: t("allExpiry") }),
+                    /* @__PURE__ */ jsx("option", { value: "expiring", children: t("expiringSoon") }),
+                    /* @__PURE__ */ jsx("option", { value: "active", children: t("active") }),
+                    /* @__PURE__ */ jsx("option", { value: "expired", children: t("expired") })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx("svg", { className: "filter-select-arrow", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" }) })
+            ] }) })
+          ] }),
+          categories2 && setCatFilter && /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "📂" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("category") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsx("div", { className: "filter-options-grid", children: categories2.map((cat) => {
+              const label = t(cat);
+              const active = localCat === label;
+              return /* @__PURE__ */ jsxs(
+                "button",
+                {
+                  type: "button",
+                  className: `filter-option-card ${active ? "is-selected" : ""}`,
+                  onClick: () => setLocalCat(active ? "" : label),
+                  children: [
+                    /* @__PURE__ */ jsx("div", { className: "filter-option-icon", children: categoryIcons2[cat] }),
+                    /* @__PURE__ */ jsx("div", { className: "filter-option-label", children: label }),
+                    active && /* @__PURE__ */ jsx("div", { className: "filter-option-check", children: /* @__PURE__ */ jsx("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "3", style: { minWidth: "24" }, children: /* @__PURE__ */ jsx("polyline", { points: "20 6 9 17 4 12" }) }) })
+                  ]
+                },
+                cat
+              );
+            }) }) })
+          ] }),
+          allLocations && setLocFilter && /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "📍" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("location") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsxs("div", { className: "filter-select-wrapper", children: [
+              /* @__PURE__ */ jsxs(
+                "select",
+                {
+                  className: "filter-select-field",
+                  value: localLoc,
+                  onChange: (e) => setLocalLoc(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsx("option", { value: "", children: t("allLocations") }),
+                    allLocations.map((l) => /* @__PURE__ */ jsx("option", { value: l, children: l }, l))
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx("svg", { className: "filter-select-arrow", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" }) })
+            ] }) })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { className: "filter-group", children: [
+            /* @__PURE__ */ jsxs("div", { className: "filter-group-header", children: [
+              /* @__PURE__ */ jsx("span", { className: "filter-group-icon", children: "🔄" }),
+              /* @__PURE__ */ jsx("span", { className: "filter-group-title", children: t("sortBy") })
+            ] }),
+            /* @__PURE__ */ jsx("div", { className: "filter-group-content", children: /* @__PURE__ */ jsxs("div", { className: "filter-select-wrapper", children: [
+              /* @__PURE__ */ jsxs(
+                "select",
+                {
+                  className: "filter-select-field",
+                  value: localSort,
+                  onChange: (e) => setLocalSort(e.target.value),
+                  children: [
+                    /* @__PURE__ */ jsxs("option", { value: "topRated", children: [
+                      "⭐ ",
+                      t("sortTopRated")
+                    ] }),
+                    /* @__PURE__ */ jsxs("option", { value: "newest", children: [
+                      "🆕 ",
+                      t("sortNewest")
+                    ] }),
+                    /* @__PURE__ */ jsxs("option", { value: "expiring", children: [
+                      "⏰ ",
+                      t("sortExpiring")
+                    ] }),
+                    /* @__PURE__ */ jsxs("option", { value: "az", children: [
+                      "🔤 ",
+                      t("sortAZ")
+                    ] }),
+                    setExpiryFilter && /* @__PURE__ */ jsxs("option", { value: "oldest", children: [
+                      "📅 ",
+                      t("sortOldest")
+                    ] })
+                  ]
+                }
+              ),
+              /* @__PURE__ */ jsx("svg", { className: "filter-select-arrow", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" }) })
+            ] }) })
+          ] })
+        ] })
+      ] })
+    ] })
+  ] });
+});
+const Filtersheet$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: Filtersheet$1
+}, Symbol.toStringTag, { value: "Module" }));
+function ListingsTab({
+  t,
+  viewMode,
+  setViewMode,
+  q,
+  setQ,
+  catFilter,
+  setCatFilter,
+  locFilter,
+  setLocFilter,
+  sortBy,
+  setSortBy,
+  pagedFiltered,
+  page,
+  totalPages,
+  setPage,
+  pageSize,
+  setPageSize,
+  categoryIcons: categoryIcons2,
+  feedbackAverages,
+  setSelectedListing,
+  filtersOpen,
+  setFiltersOpen,
+  categories: categories2,
+  allLocations,
+  // Added for ListingCard
+  getDescriptionPreview: getDescriptionPreview2,
+  getListingStats,
+  handleShareListing,
+  showMessage,
+  toggleFav,
+  favorites
+}) {
+  return /* @__PURE__ */ jsxs("div", { className: "section all-listings-section", children: [
+    /* @__PURE__ */ jsx("div", { className: "section-header-row stacked-mobile", children: /* @__PURE__ */ jsxs("div", { children: [
+      /* @__PURE__ */ jsxs("h2", { className: "section-title-inner", children: [
+        "🧭 ",
+        t("explore")
+      ] }),
+      /* @__PURE__ */ jsx("p", { className: "section-subtitle-small", children: t("exploreSubtitle") })
+    ] }) }),
+    /* @__PURE__ */ jsxs("div", { className: "explore-layout-container", children: [
+      /* @__PURE__ */ jsxs("div", { className: "explore-main-content", children: [
+        /* @__PURE__ */ jsxs("div", { className: "filters-bar", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "icon-btn",
+              onClick: () => setViewMode(viewMode === "list" ? "grid" : "list"),
+              title: viewMode === "list" ? t("switchToGrid") || "Grid View" : t("switchToList") || "List View",
+              style: { height: "44px", width: "44px", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px" },
+              children: viewMode === "list" ? "📱" : "📝"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "icon-btn",
+              onClick: () => setFiltersOpen(true),
+              title: t("filters") || "Filters",
+              style: { height: "44px", width: "44px", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px" },
+              children: "🔍"
+            }
+          ),
+          /* @__PURE__ */ jsx(
+            "input",
+            {
+              type: "search",
+              className: "input",
+              placeholder: t("searchPlaceholder"),
+              value: q,
+              onChange: (e) => setQ(e.target.value)
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "select",
+            {
+              className: "select",
+              value: catFilter,
+              onChange: (e) => setCatFilter(e.target.value),
+              children: [
+                /* @__PURE__ */ jsx("option", { value: "", children: t("allCategories") }),
+                categories2 && categories2.map((c) => /* @__PURE__ */ jsx("option", { value: t(c), children: t(c) }, c))
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "select",
+            {
+              className: "select",
+              value: locFilter,
+              onChange: (e) => setLocFilter(e.target.value),
+              children: [
+                /* @__PURE__ */ jsx("option", { value: "", children: t("allCities") }),
+                allLocations && allLocations.map((city) => /* @__PURE__ */ jsx("option", { value: city, children: city }, city))
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxs(
+            "select",
+            {
+              className: "select",
+              value: sortBy,
+              onChange: (e) => setSortBy(e.target.value),
+              children: [
+                /* @__PURE__ */ jsx("option", { value: "newest", children: t("sortNewest") }),
+                /* @__PURE__ */ jsx("option", { value: "topRated", children: t("sortTopRated") }),
+                /* @__PURE__ */ jsx("option", { value: "expiring", children: t("sortExpiring") }),
+                /* @__PURE__ */ jsx("option", { value: "az", children: t("sortAZ") })
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsx("div", { className: `listing-grid-${viewMode}`, children: pagedFiltered.map((l) => /* @__PURE__ */ jsx(
+          ListingCard,
+          {
+            listing: l,
+            t,
+            categoryIcons: categoryIcons2,
+            getDescriptionPreview: getDescriptionPreview2,
+            getListingStats,
+            onSelect: () => {
+              setSelectedListing(l);
+              const url = new URL(window.location.href);
+              url.searchParams.set("listing", l.id);
+              window.history.replaceState({}, "", url.toString());
+            },
+            onShare: () => handleShareListing(l),
+            showMessage,
+            toggleFav,
+            isFavorite: favorites.includes(l.id)
+          },
+          l.id
+        )) }),
+        /* @__PURE__ */ jsxs("div", { className: "pagination", children: [
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "btn btn-ghost",
+              disabled: page <= 1,
+              onClick: () => setPage(page - 1),
+              children: "←"
+            }
+          ),
+          /* @__PURE__ */ jsxs("span", { children: [
+            t("page"),
+            " ",
+            page,
+            " ",
+            t("of"),
+            " ",
+            totalPages
+          ] }),
+          /* @__PURE__ */ jsx(
+            "button",
+            {
+              className: "btn btn-ghost",
+              disabled: page >= totalPages,
+              onClick: () => setPage(page + 1),
+              children: "→"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxs("aside", { className: "explore-sidebar", children: [
+        /* @__PURE__ */ jsx("div", { className: "promo-banner-section sidebar-promo", children: /* @__PURE__ */ jsxs("div", { className: "promo-banner-content", children: [
+          /* @__PURE__ */ jsxs("div", { className: "promo-text", children: [
+            /* @__PURE__ */ jsx("h3", { children: t("promoteYourListing") || "Promote Your Listing" }),
+            /* @__PURE__ */ jsx("p", { children: t("promoteYourListingDesc") || "Post your own request, browse hidden gems, or boost your visibility." })
+          ] }),
+          /* @__PURE__ */ jsxs("div", { style: { display: "flex", flexDirection: "column", gap: "8px", width: "100%" }, children: [
+            /* @__PURE__ */ jsxs("button", { className: "btn btn-primary promo-btn full-width", onClick: () => window.scrollTo({ top: 0, behavior: "smooth" }), children: [
+              "➕ ",
+              t("postService") || "Post Service"
+            ] }),
+            /* @__PURE__ */ jsxs("button", { className: "btn btn-outline promo-btn full-width", onClick: () => setCatFilter(""), children: [
+              "🔍 ",
+              t("browseCategories") || "Browse All"
+            ] })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxs("div", { className: "sidebar-ad-placeholder", children: [
+          /* @__PURE__ */ jsx("div", { className: "ad-label", children: "Advertisement" }),
+          /* @__PURE__ */ jsxs("div", { className: "ad-content", children: [
+            /* @__PURE__ */ jsx("script", { async: true, src: "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8385998516338936", crossorigin: "anonymous" }),
+            /* @__PURE__ */ jsx(
+              "ins",
+              {
+                className: "adsbygoogle",
+                style: { display: "block" },
+                "data-ad-client": "ca-pub-8385998516338936",
+                "data-ad-slot": "1802538697",
+                "data-ad-format": "auto",
+                "data-full-width-responsive": "true"
+              }
+            ),
+            /* @__PURE__ */ jsxs("script", { children: [
+              "(adsbygoogle = window.adsbygoogle || []).push(",
+              ");"
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsx(
+      Filtersheet$1,
+      {
+        t,
+        filtersOpen,
+        setFiltersOpen,
+        q,
+        setQ,
+        catFilter,
+        setCatFilter,
+        locFilter,
+        setLocFilter,
+        sortBy,
+        setSortBy,
+        categories: categories2,
+        categoryIcons: categoryIcons2,
+        allLocations
+      }
+    )
+  ] });
+}
 const MyListingCard = React.memo(({
   listing: l,
   t,
@@ -1010,8 +1493,7 @@ const MyListingCard = React.memo(({
   startExtendFlow,
   showMessage,
   handleShareListing,
-  confirmDelete,
-  requestFeatured
+  confirmDelete
 }) => {
   var _a2;
   const stats = getListingStats(l);
@@ -1121,18 +1603,6 @@ const MyListingCard = React.memo(({
             ]
           }
         ),
-        !l.isFeatured && /* @__PURE__ */ jsxs(
-          "button",
-          {
-            className: "btn btn-accent small",
-            onClick: () => requestFeatured && requestFeatured(l),
-            title: "Boost visibility for 1000 MKD",
-            children: [
-              "🚀 ",
-              t("promote") || "Promote"
-            ]
-          }
-        ),
         /* @__PURE__ */ jsxs(
           "button",
           {
@@ -1224,7 +1694,6 @@ function HomeTab({
   setShowPostForm,
   setForm,
   setSelectedTab,
-  featuredCategories: featuredCategories2,
   categoryIcons: categoryIcons2,
   mkSpotlightCities: mkSpotlightCities2,
   activeListingCount,
@@ -1241,21 +1710,6 @@ function HomeTab({
   setCatFilter,
   setLocFilter
 }) {
-  const featuredListings = verifiedListings.filter((l) => l.isFeatured);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  useEffect(() => {
-    if (!featuredListings.length) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => prev === featuredListings.length - 1 ? 0 : prev + 1);
-    }, 6e3);
-    return () => clearInterval(interval);
-  }, [featuredListings]);
-  const nextSlide = () => {
-    setCurrentSlide((prev) => prev === featuredListings.length - 1 ? 0 : prev + 1);
-  };
-  const prevSlide = () => {
-    setCurrentSlide((prev) => prev === 0 ? featuredListings.length - 1 : prev - 1);
-  };
   return /* @__PURE__ */ jsxs("div", { className: "app-main-content", children: [
     /* @__PURE__ */ jsxs("section", { className: "home-hero-compact", children: [
       /* @__PURE__ */ jsx("h1", { children: t("homeSimpleTitle") }),
@@ -1302,50 +1756,13 @@ function HomeTab({
         /* @__PURE__ */ jsx("p", { className: "step-desc", children: step === 1 ? t("homeHowItWorksStep1") : step === 2 ? t("homeHowItWorksStep2") : t("homeHowItWorksStep3") })
       ] }, step)) })
     ] }),
-    featuredListings.length > 0 && /* @__PURE__ */ jsxs("section", { className: "featured-section-home", children: [
-      /* @__PURE__ */ jsx("div", { className: "section-header-row", children: /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: "8px" }, children: [
-        /* @__PURE__ */ jsx("span", { className: "section-icon-large", children: "🔥" }),
-        /* @__PURE__ */ jsxs("div", { children: [
-          /* @__PURE__ */ jsx("h3", { className: "section-title-large", children: t("featured") || "Featured" }),
-          /* @__PURE__ */ jsx("p", { className: "section-subtitle", children: t("featuredSubtitle") || "Top rated services chosen for you" })
-        ] })
-      ] }) }),
-      /* @__PURE__ */ jsxs("div", { className: "home-carousel-container", children: [
-        /* @__PURE__ */ jsx("button", { className: "carousel-nav-btn prev", onClick: prevSlide, children: "‹" }),
-        /* @__PURE__ */ jsx("div", { className: "home-carousel-track", children: featuredListings.length > 0 && /* @__PURE__ */ jsx("div", { className: "home-carousel-slide", children: /* @__PURE__ */ jsx(
-          ListingCard2,
-          {
-            listing: featuredListings[currentSlide],
-            t,
-            categoryIcons: categoryIcons2,
-            getDescriptionPreview: getDescriptionPreview2,
-            getListingStats,
-            onSelect: handleSelectListing,
-            onShare: handleShareListing,
-            showMessage,
-            toggleFav,
-            isFavorite: favorites.includes(featuredListings[currentSlide].id),
-            className: "listing-card-wide"
-          }
-        ) }) }),
-        /* @__PURE__ */ jsx("button", { className: "carousel-nav-btn next", onClick: nextSlide, children: "›" }),
-        /* @__PURE__ */ jsx("div", { className: "carousel-dots-home", children: featuredListings.map((_, idx) => /* @__PURE__ */ jsx(
-          "div",
-          {
-            className: `dot ${idx === currentSlide ? "active" : ""}`,
-            onClick: () => setCurrentSlide(idx)
-          },
-          idx
-        )) })
-      ] })
-    ] }),
     /* @__PURE__ */ jsxs("div", { className: "discovery-grid", children: [
       /* @__PURE__ */ jsxs("div", { className: "discovery-card", children: [
         /* @__PURE__ */ jsx("div", { className: "discovery-header", children: /* @__PURE__ */ jsxs("h3", { children: [
           "🎯 ",
           t("homePopularCategoriesTitle")
         ] }) }),
-        /* @__PURE__ */ jsx("div", { className: "discovery-chips-grid", children: featuredCategories2.map((cat) => /* @__PURE__ */ jsxs(
+        /* @__PURE__ */ jsx("div", { className: "discovery-chips-grid", children: Object.keys(categoryIcons2).map((cat) => /* @__PURE__ */ jsxs(
           "button",
           {
             className: "discovery-chip",
@@ -1445,6 +1862,20 @@ const TRANSLATIONS = {
     signedOutAs: "Sign out",
     categories: "Categories",
     responsiveLayout: "Responsive layout",
+    // Plans
+    month1: "1 Month",
+    month3: "3 Months",
+    month6: "6 Months",
+    month12: "12 Months",
+    days30: "30 days",
+    days90: "90 days",
+    days180: "180 days",
+    days365: "365 days",
+    selectPlan: "Select Plan",
+    planBasic: "Basic",
+    planStandard: "Standard",
+    planPro: "Pro",
+    planPremium: "Premium",
     // Header / Navigation
     openDashboard: "Open Dashboard",
     closeDashboard: "Close Dashboard",
@@ -1482,9 +1913,6 @@ const TRANSLATIONS = {
     growthStepShare: "Share fast",
     growthStepRespond: "Respond anywhere",
     growthStepRespondDesc: "Compact cards and quick actions stay thumb-friendly on mobile.",
-    featured: "Featured",
-    featuredHint: "Only a handful of listings appear here. Visit Explore to see the full marketplace.",
-    topRatedShowcase: "Top rated in every category",
     phoneVerified: "Phone verified",
     mkRibbonTitle: "Made for North Macedonia",
     mkRibbonSubtitle: "Local-first layout, Macedonian-friendly language, and city shortcuts you know.",
@@ -2023,6 +2451,20 @@ const TRANSLATIONS = {
     signedOutAs: "Dil",
     categories: "Kategori",
     responsiveLayout: "Pamje responsive",
+    // Plans
+    month1: "1 Muaj",
+    month3: "3 Muaj",
+    month6: "6 Muaj",
+    month12: "12 Muaj",
+    days30: "30 ditë",
+    days90: "90 ditë",
+    days180: "180 ditë",
+    days365: "365 ditë",
+    selectPlan: "Zgjidhni Planin",
+    planBasic: "Bazë",
+    planStandard: "Standard",
+    planPro: "Pro",
+    planPremium: "Premium",
     category: "Kategoria",
     location: "Vendndodhja",
     contact: "Telefoni i Kontaktit",
@@ -2150,7 +2592,6 @@ const TRANSLATIONS = {
     exploreHint: "Kërko sipas kategorisë, çmimit dhe vendndodhjes.",
     favorite: "I preferuar",
     favorites: "Të preferuarat",
-    featured: "I rekomanduar",
     feedbackSaved: "Feedback-u u ruajt",
     feedbackSaveError: "Nuk u mundësua ruajtja e feedback-ut.",
     feedbackSidebarBlurb: "Vlerësimet ndihmojnë të gjithë të shohin listimet më të besuara.",
@@ -2332,7 +2773,6 @@ const TRANSLATIONS = {
     exploreHeroTitle: "Eksploroni njoftimet lokale të besuara",
     failed: "Dështoi",
     favoritesOnly: "Vetëm të preferuarat",
-    featuredHint: "Vetëm një pjesë e njoftimeve shfaqen këtu. Vizitoni Eksploro për të parë tregun e plotë.",
     filterByCategory: "Filtro sipas kategorisë",
     filterByLocation: "Filtro sipas vendndodhjes",
     filterHelper: "Ngushtoni kërkimin sipas emrit, qytetit, kategorisë ose preferencës së renditjes.",
@@ -2380,7 +2820,6 @@ const TRANSLATIONS = {
     tagsLabel: "Etiketat",
     tagsShortPlaceholder: "Etiketat (opsionale)",
     todaySpotlight: "Bordi i vëmendjes së sotme",
-    topRatedShowcase: "Më të vlerësuarit në çdo kategori",
     transactionHistory: "Historia e Transaksioneve",
     transactions: "Transaksionet",
     updateProfile: "Përditëso Profilin",
@@ -2547,6 +2986,20 @@ const TRANSLATIONS = {
   },
   mk: {
     // Cookie Consent
+    // Plans
+    month1: "1 Месец",
+    month3: "3 Месеци",
+    month6: "6 Месеци",
+    month12: "12 Месеци",
+    days30: "30 дена",
+    days90: "90 дена",
+    days180: "180 дена",
+    days365: "365 дена",
+    selectPlan: "Избери План",
+    planBasic: "Основен",
+    planStandard: "Стандарден",
+    planPro: "Про",
+    planPremium: "Премиум",
     closeFilters: "Затвори филтри",
     filterSubtitle: "Прецизирај го твоето пребарување",
     clearSearch: "Исчисти пребарување",
@@ -2767,7 +3220,6 @@ const TRANSLATIONS = {
     exploreHint: "Пребарувај по категорија, цена и локација.",
     favorite: "Омилено",
     favorites: "Омилени",
-    featured: "Истакнато",
     feedbackSaved: "Повратните информации се зачувани",
     feedbackSaveError: "Не можеше да се зачуваат повратните информации.",
     feedbackSidebarBlurb: "Оцените им помагаат на сите да ги видат најдоверливите огласи.",
@@ -2955,7 +3407,6 @@ const TRANSLATIONS = {
     exploreHeroTitle: "Истражете доверливи локални огласи",
     failed: "Неуспешно",
     favoritesOnly: "Само омилени",
-    featuredHint: "Само мал дел од огласите се појавуваат овде. Посетете Истражи за да го видите целиот пазар.",
     filterByCategory: "Филтрирај по категорија",
     filterByLocation: "Филтрирај по локација",
     filterHelper: "Скратете го пребарувањето по име, град, категорија или преференца за сортирање.",
@@ -3004,7 +3455,6 @@ const TRANSLATIONS = {
     tagsLabel: "Тагови",
     tagsShortPlaceholder: "Тагови (опционално)",
     todaySpotlight: "Денешна табла во фокус",
-    topRatedShowcase: "Најдобро оценети во секоја категорија",
     transactionHistory: "Историја на трансакции",
     transactions: "Трансакции",
     updateProfile: "Ажурирај профил",
@@ -3273,7 +3723,7 @@ function CookieConsent({ t }) {
 const isClient = typeof window !== "undefined";
 const NorthMacedoniaMap = isClient ? lazy(() => import("./assets/NorthMacedoniaMap-D-RtQ85F.js")) : () => null;
 const Sidebar = isClient ? lazy(() => import("./assets/Sidebar-Bk5U_7a8.js")) : () => null;
-const Filtersheet = isClient ? lazy(() => import("./assets/Filtersheet-DzWtSYfa.js")) : () => null;
+const Filtersheet = isClient ? lazy(() => Promise.resolve().then(() => Filtersheet$2)) : () => null;
 const EditListingModal = isClient ? lazy(() => import("./assets/EditListingModal-CT9XDAci.js")) : () => null;
 const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://localhost:5000" : "https://lsm-wozo.onrender.com";
 const categories = [
@@ -3328,9 +3778,12 @@ const mkSpotlightCities = [
   "Prilep",
   "Kërçovë"
 ];
-const featuredCategories = ["tech", "services", "homeRepair", "food", "electronics", "car"];
-const FEATURED_SLIDE_SIZE = 3;
-const FEATURED_MAX_ITEMS = FEATURED_SLIDE_SIZE * 3;
+const PLANS = [
+  { id: "1", label: "1 Month", price: "2 EUR", duration: "30 days", priceVal: 2 },
+  { id: "3", label: "3 Months", price: "5 EUR", duration: "90 days", priceVal: 5 },
+  { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
+  { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 }
+];
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
 const formatOfferPrice = (min, max, currency) => {
   const cleanMin = (min || "").trim();
@@ -3538,8 +3991,10 @@ function App({ initialListings = [], initialPublicListings = [] }) {
     socialLink: "",
     imagePreview: null,
     // local-only preview
-    images: []
+    images: [],
     // array of base64 strings (max 4)
+    plan: "1"
+    // "1", "3", "6", "12"
   });
   const [listings, setListings] = useState(() => {
     if (initialListings && initialListings.length > 0) return initialListings;
@@ -3588,6 +4043,9 @@ function App({ initialListings = [], initialPublicListings = [] }) {
   }, []);
   const [editingListing, setEditingListing] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [extendTarget, setExtendTarget] = useState(null);
+  const [selectedExtendPlan, setSelectedExtendPlan] = useState("1");
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -3623,8 +4081,6 @@ function App({ initialListings = [], initialPublicListings = [] }) {
   const [savingPhone, setSavingPhone] = useState(false);
   const [phoneConfirmationResult, setPhoneConfirmationResult] = useState(null);
   const [phoneVerificationCode, setPhoneVerificationCode] = useState("");
-  const [showFeaturedModal, setShowFeaturedModal] = useState(false);
-  const [featuredCandidate, setFeaturedCandidate] = useState(null);
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const handleSubscriptionChange = async (e) => {
@@ -3951,6 +4407,67 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
     checkExpiringListings();
   }, [user, deferredListings, expiryChecked, userProfile, listingsLoading]);
   useEffect(() => auth.onAuthStateChanged((u) => setUser(u)), []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const listingId = params.get("listingId");
+    const type = params.get("type");
+    if (paymentStatus === "success" && listingId) {
+      window.history.replaceState({}, "", window.location.pathname);
+      const updateListingAfterPayment = async () => {
+        try {
+          setLoading(true);
+          const updates = {};
+          const plan = params.get("plan");
+          let durationDays = 30;
+          switch (String(plan)) {
+            case "1":
+              durationDays = 30;
+              break;
+            case "3":
+              durationDays = 90;
+              break;
+            case "6":
+              durationDays = 180;
+              break;
+            case "12":
+              durationDays = 365;
+              break;
+            default:
+              durationDays = 30;
+          }
+          const durationMs = durationDays * 24 * 60 * 60 * 1e3;
+          if (type === "create") {
+            updates[`listings/${listingId}/status`] = "verified";
+            updates[`listings/${listingId}/pricePaid`] = parseInt(plan) === 1 ? 2 : parseInt(plan) === 3 ? 5 : parseInt(plan) === 6 ? 8 : 12;
+            updates[`listings/${listingId}/plan`] = plan;
+            updates[`listings/${listingId}/expiresAt`] = Date.now() + durationMs;
+            updates[`listings/${listingId}/createdAt`] = Date.now();
+          } else if (type === "extend") {
+            const snapshot = await get(ref(db, `listings/${listingId}`));
+            const listing = snapshot.val();
+            if (listing) {
+              const currentExpiry = listing.expiresAt || Date.now();
+              const newExpiry = Math.max(currentExpiry, Date.now()) + durationMs;
+              updates[`listings/${listingId}/expiresAt`] = newExpiry;
+              updates[`listings/${listingId}/status`] = "verified";
+              updates[`listings/${listingId}/plan`] = plan;
+            }
+          }
+          if (Object.keys(updates).length > 0) {
+            await update(ref(db), updates);
+            showMessage(type === "extend" ? "Listing extended successfully!" : "Payment successful! Listing activated.", "success");
+          }
+        } catch (err) {
+          console.error("Payment success handling error:", err);
+          showMessage("Payment succeeded but listing update failed. Please contact support.", "error");
+        } finally {
+          setLoading(false);
+        }
+      };
+      updateListingAfterPayment();
+    }
+  }, []);
   useEffect(() => {
     if (!user) {
       setUserProfile(null);
@@ -4370,27 +4887,6 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
       console.error("Error deleting listing:", error);
     }
   }
-  const submitFeaturedRequest = async () => {
-    if (!featuredCandidate) return;
-    try {
-      await fetch("/api/request-featured", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          listingId: featuredCandidate.id,
-          listingName: featuredCandidate.name,
-          userEmail: (user == null ? void 0 : user.email) || featuredCandidate.userEmail,
-          contact: featuredCandidate.contact
-        })
-      });
-      showMessage(t("requestSent") || "Request sent! Check your email.", "success");
-      setShowFeaturedModal(false);
-      setFeaturedCandidate(null);
-    } catch (e) {
-      console.error(e);
-      showMessage(t("error") + " " + e.message, "error");
-    }
-  };
   async function handleSubmit(e) {
     e.preventDefault();
     const finalLocation = buildLocationString(form.locationCity, form.locationExtra);
@@ -4402,32 +4898,49 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
     }
     const normalizedContact = normalizePhoneForStorage(phoneForListing);
     if (!validatePhone(normalizedContact)) return showMessage(t("enterValidPhone"), "error");
-    const activeCount = userListings.filter(
-      (l) => (l.status === "verified" || l.status === "active" || l.status === "pending_approval") && l.expiresAt > Date.now()
-    ).length;
-    if (activeCount >= 2) {
-      return showMessage(t("listingLimitReached") || "Free limit reached (2 listings). Please delete an old listing to post a new one.", "error");
-    }
     const offerpriceStr = formatOfferPrice(form.offerMin, form.offerMax, form.offerCurrency);
     setLoading(true);
     setMessage({ text: "", type: "info" });
     try {
-      await createListingInFirebase({
+      const planId = form.plan || "1";
+      const selectedPlan = PLANS.find((p) => p.id === planId) || PLANS[0];
+      const listingId = await createListingInFirebase({
         ...form,
         category: categories.find((c) => t(c) === form.category) ? categories.find((c) => t(c) === form.category) : form.category,
         contact: normalizedContact,
         location: finalLocation,
         locationCity: form.locationCity,
         locationExtra: form.locationExtra,
-        plan: "1",
-        // Default 1 month
+        plan: planId,
         offerprice: offerpriceStr || "",
-        status: "verified",
-        // Immediate activation
+        status: "unpaid",
+        // Wait for payment
         pricePaid: 0,
-        price: 0
+        price: selectedPlan.priceVal
       });
-      showMessage(t("listingCreated") || "Listing created successfully!", "success");
+      try {
+        const res = await fetch(`${API_BASE}/api/create-payment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            listingId,
+            type: "create",
+            customerEmail: user == null ? void 0 : user.email,
+            customerName: (userProfile == null ? void 0 : userProfile.name) || (user == null ? void 0 : user.displayName),
+            plan: planId
+          })
+        });
+        const data = await res.json();
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        } else {
+          throw new Error("Payment initialization failed");
+        }
+      } catch (paymentErr) {
+        console.error("Payment error:", paymentErr);
+        showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+      }
       setShowPostForm(false);
       setForm({
         step: 1,
@@ -4519,7 +5032,7 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
   const verifiedListings = useMemo(() => {
     return deferredListings.filter((l) => l.status === "verified" && (!l.expiresAt || l.expiresAt > Date.now()));
   }, [deferredListings]);
-  const allLocations = useMemo(
+  useMemo(
     () => Array.from(new Set(verifiedListings.map((l) => (l.location || "").trim()).filter(Boolean))),
     [verifiedListings]
   );
@@ -4641,37 +5154,6 @@ Renew it here to keep it active: ${window.location.origin}?tab=myListings`;
     },
     [favorites, feedbackAverages]
   );
-  const featuredByCategory = useMemo(() => {
-    const verified = deferredListings.filter((l) => l.status === "verified");
-    const map = {};
-    categories.forEach((cat) => map[cat] = []);
-    verified.forEach((listing) => {
-      if (map[listing.category]) {
-        const stats = feedbackAverages[listing.id] || {};
-        map[listing.category].push({
-          ...listing,
-          avgRating: stats.avg ?? 0,
-          feedbackCount: stats.count || 0
-        });
-      }
-    });
-    Object.keys(map).forEach((cat) => {
-      map[cat].sort((a, b) => {
-        if (b.avgRating !== a.avgRating) return b.avgRating - a.avgRating;
-        return (b.createdAt || 0) - (a.createdAt || 0);
-      });
-      map[cat] = map[cat].slice(0, FEATURED_MAX_ITEMS);
-      if (map[cat].length === 0) delete map[cat];
-    });
-    return map;
-  }, [feedbackAverages, deferredListings]);
-  const featuredCategoryOrder = useMemo(
-    () => featuredCategories.filter((cat) => {
-      var _a3;
-      return (_a3 = featuredByCategory[cat]) == null ? void 0 : _a3.length;
-    }),
-    [featuredByCategory]
-  );
   const toggleFav = useCallback((id) => setFavorites((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]), []);
   const feedbackStats = useMemo(() => {
     var _a3;
@@ -4783,47 +5265,40 @@ ${t("reviewNotificationCheck")}: ${window.location.origin}?listing=${listingId}`
       showMessage(t("shareNotSupported"), "error");
     }
   }, [t, showMessage]);
-  const handleRequestFeatured = useCallback(async (listing) => {
-    if (!listing || !listing.id) return;
-    const confirmed = window.confirm(
-      `Upgrade "${listing.name}" to Featured for 1000 MKD?
-
-• Appears at top of home page
-• Highlighted design
-• Valid for 1 month
-
-Click OK to request activation.`
-    );
-    if (!confirmed) return;
+  const handleStartExtendFlow = useCallback((listing) => {
+    setExtendTarget(listing);
+    setSelectedExtendPlan("1");
+    setExtendModalOpen(true);
+  }, []);
+  const handleProceedExtend = async () => {
+    if (!extendTarget) return;
+    const listing = extendTarget;
+    const planId = selectedExtendPlan;
     try {
       setLoading(true);
-      const res = await fetch("https://lsm-wozo.onrender.com/api/request-featured", {
+      const res = await fetch(`${API_BASE}/api/create-payment`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId: listing.id,
-          listingName: listing.name,
-          userEmail: (user == null ? void 0 : user.email) || "unknown",
-          contact: listing.phone || listing.contact || (user == null ? void 0 : user.email),
-          ownerUid: user == null ? void 0 : user.uid
+          type: "extend",
+          customerEmail: user == null ? void 0 : user.email,
+          customerName: (userProfile == null ? void 0 : userProfile.name) || (user == null ? void 0 : user.displayName),
+          plan: planId
         })
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to request featured status");
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL returned");
       }
-      showMessage(t("featuredRequestSent") || "Request sent! Check your email for payment instructions.", "success");
     } catch (err) {
       console.error(err);
-      showMessage(err.message, "error");
-    } finally {
+      showMessage(t("paymentError") || "Payment initialization failed", "error");
       setLoading(false);
     }
-  }, [user, t, showMessage]);
-  const handleStartExtendFlow = useCallback((listing) => {
-    console.log("Extend listing:", listing.id);
-    showMessage("Extend feature coming soon!", "info");
-  }, [showMessage]);
+  };
   const onLogout = useCallback(async () => {
     await signOut(auth);
     showMessage(t("signedOut"), "success");
@@ -4950,13 +5425,11 @@ Click OK to request activation.`
           setShowPostForm,
           setForm,
           setSelectedTab,
-          featuredCategories,
           categoryIcons,
           mkSpotlightCities,
           activeListingCount,
           verifiedListingCount,
           verifiedListings,
-          featuredListings: verifiedListings.filter((l) => l.isFeatured),
           favorites,
           toggleFav,
           handleSelectListing,
@@ -5254,8 +5727,7 @@ Click OK to request activation.`
                 startExtendFlow: handleStartExtendFlow,
                 showMessage,
                 handleShareListing,
-                confirmDelete: handleConfirmDelete,
-                requestFeatured: handleRequestFeatured
+                confirmDelete: handleConfirmDelete
               },
               l.id
             )) })
@@ -5728,254 +6200,60 @@ Click OK to request activation.`
               ] })
             ] })
           ] }),
-          selectedTab === "allListings" && /* @__PURE__ */ jsxs("div", { className: "section explore-section-new", children: [
-            /* @__PURE__ */ jsxs("div", { className: "explore-top-bar", children: [
-              /* @__PURE__ */ jsxs("div", { className: "explore-header-content", children: [
-                /* @__PURE__ */ jsxs("h2", { className: "explore-page-title", children: [
-                  "🔍 ",
-                  t("explore")
-                ] }),
-                /* @__PURE__ */ jsx("p", { className: "explore-page-subtitle", children: listingsLoading ? t("loading") : filtered.length === 0 ? t("noListingsFound") : `${filtered.length} ${filtered.length === 1 ? t("listing") : t("listingsLabel")} ${t("resultsLabel")} • ${t("page")} ${page} ${t("of")} ${totalPages}` })
-              ] }),
-              /* @__PURE__ */ jsxs("div", { className: "explore-top-actions", children: [
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "btn btn-ghost view-toggle-btn",
-                    onClick: () => setViewMode(viewMode === "grid" ? "list" : "grid"),
-                    title: viewMode === "grid" ? t("switchToListView") : t("switchToGridView"),
-                    children: viewMode === "grid" ? "☰" : "⊞"
-                  }
-                ),
-                /* @__PURE__ */ jsxs(
-                  "button",
-                  {
-                    type: "button",
-                    className: "btn btn-ghost filter-toggle-btn-desktop",
-                    onClick: () => setFiltersOpen((v) => !v),
-                    "aria-expanded": filtersOpen,
-                    children: [
-                      filtersOpen ? "✕ " : "🔍 ",
-                      t("filters")
-                    ]
-                  }
-                )
-              ] })
-            ] }),
-            (q || catFilter || locFilter) && /* @__PURE__ */ jsxs("div", { className: "active-filters-bar", children: [
-              /* @__PURE__ */ jsxs("span", { className: "active-filters-label", children: [
-                t("activeFilters"),
-                ":"
-              ] }),
-              /* @__PURE__ */ jsxs("div", { className: "active-filters-chips", children: [
-                q && /* @__PURE__ */ jsxs("span", { className: "active-filter-chip", children: [
-                  t("search"),
-                  ': "',
-                  q,
-                  '"',
-                  /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      className: "filter-chip-remove",
-                      onClick: () => setQ(""),
-                      "aria-label": t("removeFilter"),
-                      children: "✕"
-                    }
-                  )
-                ] }),
-                catFilter && /* @__PURE__ */ jsxs("span", { className: "active-filter-chip", children: [
-                  t("category"),
-                  ": ",
-                  catFilter,
-                  /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      className: "filter-chip-remove",
-                      onClick: () => setCatFilter(""),
-                      "aria-label": t("removeFilter"),
-                      children: "✕"
-                    }
-                  )
-                ] }),
-                locFilter && /* @__PURE__ */ jsxs("span", { className: "active-filter-chip", children: [
-                  t("location"),
-                  ": ",
-                  locFilter,
-                  /* @__PURE__ */ jsx(
-                    "button",
-                    {
-                      type: "button",
-                      className: "filter-chip-remove",
-                      onClick: () => setLocFilter(""),
-                      "aria-label": t("removeFilter"),
-                      children: "✕"
-                    }
-                  )
-                ] }),
-                /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    type: "button",
-                    className: "btn-clear-all-filters",
-                    onClick: () => {
-                      setQ("");
-                      setCatFilter("");
-                      setLocFilter("");
-                      setSortBy("topRated");
-                    },
-                    children: t("clearAll")
-                  }
-                )
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: "explore-mobile-toolbar", children: [
-              /* @__PURE__ */ jsxs(
-                "button",
-                {
-                  type: "button",
-                  className: "btn btn-ghost filter-toggle-btn",
-                  onClick: () => setFiltersOpen((v) => !v),
-                  "aria-expanded": filtersOpen,
-                  children: [
-                    filtersOpen ? "✕ " : "🔍 ",
-                    filtersOpen ? t("hideFilters") : t("showFilters")
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxs(
-                "select",
-                {
-                  className: "select sort-select-mobile",
-                  value: sortBy,
-                  onChange: (e) => setSortBy(e.target.value),
-                  children: [
-                    /* @__PURE__ */ jsx("option", { value: "topRated", children: t("sortTopRated") }),
-                    /* @__PURE__ */ jsx("option", { value: "newest", children: t("sortNewest") }),
-                    /* @__PURE__ */ jsx("option", { value: "expiring", children: t("sortExpiring") }),
-                    /* @__PURE__ */ jsx("option", { value: "az", children: t("sortAZ") })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsx(
-                "button",
-                {
-                  type: "button",
-                  className: "btn btn-ghost view-toggle-btn",
-                  onClick: () => setViewMode(viewMode === "grid" ? "list" : "grid"),
-                  children: viewMode === "grid" ? "☰" : "⊞"
-                }
-              )
-            ] }),
-            /* @__PURE__ */ jsxs("div", { className: `explore-body-new ${filtersOpen ? "filters-open" : "filters-collapsed"}`, children: [
-              /* @__PURE__ */ jsx(Suspense, { fallback: /* @__PURE__ */ jsx("div", { className: "filters-loading", children: "..." }), children: /* @__PURE__ */ jsx(
-                Filtersheet,
-                {
-                  t,
-                  filtersOpen,
-                  setFiltersOpen,
-                  q,
-                  setQ,
-                  catFilter,
-                  setCatFilter,
-                  locFilter,
-                  setLocFilter,
-                  sortBy,
-                  setSortBy,
-                  categories,
-                  categoryIcons,
-                  allLocations
-                }
-              ) }),
-              /* @__PURE__ */ jsx("div", { className: "explore-results-area", children: listingsLoading ? /* @__PURE__ */ jsxs("div", { className: "loading-state", children: [
-                /* @__PURE__ */ jsx("div", { className: "spinner" }),
-                /* @__PURE__ */ jsx("p", { children: t("loading") })
-              ] }) : filtered.length > 0 ? /* @__PURE__ */ jsxs("div", { className: "results-stack", children: [
-                page === 1 && filtered.some((l) => l.isFeatured && l.status === "verified") && /* @__PURE__ */ jsxs("div", { className: "featured-section-container", style: { marginBottom: 24, padding: 16, background: "var(--bg-elevated)", borderRadius: 12, border: "1px solid var(--accent)" }, children: [
-                  /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }, children: [
-                    /* @__PURE__ */ jsx("span", { style: { fontSize: "1.5rem" }, children: "🔥" }),
-                    /* @__PURE__ */ jsx("h3", { className: "section-title", style: { margin: 0 }, children: t("featured") || "Featured Listings" })
-                  ] }),
-                  /* @__PURE__ */ jsx("div", { className: `listing-grid-${viewMode}`, children: filtered.filter((l) => l.isFeatured && l.status === "verified").map((l) => /* @__PURE__ */ jsx(
-                    ListingCard,
-                    {
-                      listing: l,
-                      t,
-                      categoryIcons,
-                      getDescriptionPreview,
-                      getListingStats,
-                      onSelect: handleSelectListing,
-                      onShare: handleShareListing,
-                      showMessage,
-                      toggleFav,
-                      isFavorite: favorites.includes(l.id)
-                    },
-                    l.id
-                  )) })
-                ] }),
-                /* @__PURE__ */ jsx("div", { className: `listing-grid-${viewMode}`, children: pagedFiltered.map((l) => /* @__PURE__ */ jsx(
-                  ListingCard,
-                  {
-                    listing: l,
-                    t,
-                    categoryIcons,
-                    getDescriptionPreview,
-                    getListingStats,
-                    onSelect: handleSelectListing,
-                    onShare: handleShareListing,
-                    showMessage,
-                    toggleFav,
-                    isFavorite: favorites.includes(l.id)
-                  },
-                  l.id
-                )) }),
-                /* @__PURE__ */ jsxs("div", { className: "pager", style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }, children: [
-                  /* @__PURE__ */ jsxs("div", { className: "pager-left", style: { display: "flex", gap: 8, alignItems: "center" }, children: [
-                    /* @__PURE__ */ jsx("button", { className: "btn btn-ghost small", disabled: page <= 1, onClick: () => setPage((p) => Math.max(1, p - 1)), "aria-label": t("previousPage"), children: "←" }),
-                    /* @__PURE__ */ jsxs("span", { className: "small-muted", children: [
-                      t("page"),
-                      " ",
-                      page,
-                      " ",
-                      t("of"),
-                      " ",
-                      totalPages
-                    ] }),
-                    /* @__PURE__ */ jsx("button", { className: "btn btn-ghost small", disabled: page >= totalPages, onClick: () => setPage((p) => Math.min(totalPages, p + 1)), "aria-label": t("nextPage"), children: "→" })
-                  ] }),
-                  /* @__PURE__ */ jsxs("div", { className: "pager-right", style: { display: "flex", gap: 8, alignItems: "center" }, children: [
-                    /* @__PURE__ */ jsx("span", { className: "small-muted", children: t("resultsPerPage") }),
-                    /* @__PURE__ */ jsxs("div", { className: "filter-select-wrapper", children: [
-                      /* @__PURE__ */ jsxs("select", { className: "filter-select-field", value: pageSize, onChange: (e) => setPageSize(parseInt(e.target.value, 10)), children: [
-                        /* @__PURE__ */ jsx("option", { value: "6", children: "6" }),
-                        /* @__PURE__ */ jsx("option", { value: "12", children: "12" }),
-                        /* @__PURE__ */ jsx("option", { value: "24", children: "24" })
-                      ] }),
-                      /* @__PURE__ */ jsx("svg", { className: "filter-select-arrow", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.5", children: /* @__PURE__ */ jsx("polyline", { points: "6 9 12 15 18 9" }) })
-                    ] })
-                  ] })
-                ] })
-              ] }) : /* @__PURE__ */ jsxs("div", { className: "explore-empty-state", children: [
-                /* @__PURE__ */ jsx("div", { className: "empty-state-icon", children: "🔍" }),
-                /* @__PURE__ */ jsx("h3", { className: "empty-state-title", children: t("noListingsFound") }),
-                /* @__PURE__ */ jsx("p", { className: "empty-state-text", children: q || catFilter || locFilter ? t("tryDifferentFilters") : t("noListingsAvailable") }),
-                (q || catFilter || locFilter) && /* @__PURE__ */ jsx(
-                  "button",
-                  {
-                    className: "btn btn-primary",
-                    onClick: () => {
-                      setQ("");
-                      setCatFilter("");
-                      setLocFilter("");
-                    },
-                    children: t("clearFilters")
-                  }
-                )
-              ] }) })
-            ] })
-          ] })
+          selectedTab === "allListings" && /* @__PURE__ */ jsx(
+            ListingsTab,
+            {
+              t,
+              viewMode,
+              setViewMode,
+              q,
+              setQ,
+              catFilter,
+              setCatFilter,
+              locFilter,
+              setLocFilter,
+              sortBy,
+              setSortBy,
+              pagedFiltered,
+              page,
+              totalPages,
+              setPage,
+              pageSize,
+              setPageSize,
+              categoryIcons,
+              feedbackAverages,
+              setSelectedListing: handleSelectListing,
+              filtersOpen,
+              setFiltersOpen,
+              getDescriptionPreview,
+              getListingStats,
+              handleShareListing,
+              showMessage,
+              toggleFav,
+              favorites,
+              categories,
+              allLocations: mkSpotlightCities
+            }
+          ),
+          selectedTab === "allListings" && /* @__PURE__ */ jsx(
+            Filtersheet,
+            {
+              t,
+              filtersOpen,
+              setFiltersOpen,
+              q,
+              setQ,
+              catFilter,
+              setCatFilter,
+              locFilter,
+              setLocFilter,
+              sortBy,
+              setSortBy,
+              categories,
+              categoryIcons,
+              allLocations: MK_CITIES
+            }
+          )
         ] })
       ] }) }) }) : (
         /* Home (Submit + Quick Browse) */
@@ -6087,12 +6365,6 @@ Click OK to request activation.`
                   t("listingsLabel"),
                   ": ",
                   activeListingCount
-                ] }),
-                /* @__PURE__ */ jsxs("li", { children: [
-                  "✔️ ",
-                  t("categorySpotlight"),
-                  ": ",
-                  featuredCategoryOrder.slice(0, 3).map((cat) => t(cat)).join(", ")
                 ] })
               ] }),
               /* @__PURE__ */ jsxs("div", { className: "feature-badges", children: [
@@ -6108,7 +6380,6 @@ Click OK to request activation.`
             ] }),
             /* @__PURE__ */ jsxs("div", { className: "card feature-card", children: [
               /* @__PURE__ */ jsxs("div", { className: "feature-card__head", children: [
-                /* @__PURE__ */ jsx("p", { className: "eyebrow subtle", children: t("featured") }),
                 /* @__PURE__ */ jsxs("h3", { className: "section-title-small", children: [
                   "🧭 ",
                   t("localMissions")
@@ -6516,6 +6787,34 @@ Click OK to request activation.`
                           form.tags
                         ] })
                       ] })
+                    ] }),
+                    /* @__PURE__ */ jsxs("div", { className: "plan-selection-section", style: { marginTop: "24px", marginBottom: "24px" }, children: [
+                      /* @__PURE__ */ jsx("h4", { style: { marginBottom: "12px" }, children: t("selectPlan") || "Select Plan" }),
+                      /* @__PURE__ */ jsx("div", { className: "plan-selection-grid", style: { display: "grid", gap: "12px" }, children: PLANS.map((plan) => /* @__PURE__ */ jsxs(
+                        "div",
+                        {
+                          className: `plan-option ${form.plan === plan.id ? "selected" : ""}`,
+                          onClick: () => setForm({ ...form, plan: plan.id }),
+                          style: {
+                            border: form.plan === plan.id ? "2px solid var(--accent)" : "1px solid var(--border)",
+                            padding: "12px",
+                            borderRadius: "8px",
+                            cursor: "pointer",
+                            background: form.plan === plan.id ? "var(--bg-subtle)" : "var(--bg-card)",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                          },
+                          children: [
+                            /* @__PURE__ */ jsxs("div", { children: [
+                              /* @__PURE__ */ jsx("span", { style: { fontWeight: "bold", display: "block" }, children: plan.label }),
+                              /* @__PURE__ */ jsx("span", { style: { fontSize: "0.9rem", color: "var(--text-muted)" }, children: plan.duration })
+                            ] }),
+                            /* @__PURE__ */ jsx("span", { style: { color: "var(--accent)", fontWeight: "bold" }, children: plan.price })
+                          ]
+                        },
+                        plan.id
+                      )) })
                     ] }),
                     /* @__PURE__ */ jsx(
                       "button",
@@ -7334,13 +7633,6 @@ Click OK to request activation.`
                       ] })
                     ] })
                   ] }),
-                  selectedListing.isFeatured && /* @__PURE__ */ jsxs("div", { className: "featured-modal-banner", children: [
-                    /* @__PURE__ */ jsxs("div", { className: "featured-modal-badge", children: [
-                      "✨ ",
-                      t("featured") || "Featured"
-                    ] }),
-                    /* @__PURE__ */ jsx("p", { className: "featured-modal-text", children: t("featuredListingDesc") || "This is a premium featured listing, highlighted for top visibility." })
-                  ] }),
                   (() => {
                     const images = selectedListing.images && selectedListing.images.length > 0 ? selectedListing.images : selectedListing.imagePreview ? [selectedListing.imagePreview] : [];
                     if (images.length === 0) return null;
@@ -7487,14 +7779,6 @@ Click OK to request activation.`
                       ] })
                     ] }),
                     /* @__PURE__ */ jsx("p", { className: "listing-description-full", children: selectedListing.description }),
-                    selectedListing.isFeatured && /* @__PURE__ */ jsxs("div", { className: "featured-benefits-box", children: [
-                      /* @__PURE__ */ jsx("h5", { children: t("whyFeatured") || "Why is this listing featured?" }),
-                      /* @__PURE__ */ jsxs("ul", { children: [
-                        /* @__PURE__ */ jsx("li", { children: t("featBenefit1") || "Top visibility in search results" }),
-                        /* @__PURE__ */ jsx("li", { children: t("featBenefit2") || "Verified by BizCall team" }),
-                        /* @__PURE__ */ jsx("li", { children: t("featBenefit3") || "Premium support & direct contact" })
-                      ] })
-                    ] }),
                     /* @__PURE__ */ jsxs("div", { className: "soft-grid", children: [
                       /* @__PURE__ */ jsxs("div", { children: [
                         /* @__PURE__ */ jsx("p", { className: "highlight-label", children: t("pricing") }),
@@ -7694,14 +7978,14 @@ Click OK to request activation.`
           ] })
         }
       ) }),
-      /* @__PURE__ */ jsx(AnimatePresence, { children: showFeaturedModal && featuredCandidate && /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx(AnimatePresence, { children: extendModalOpen && extendTarget && /* @__PURE__ */ jsx(
         motion.div,
         {
           className: "modal-overlay",
           initial: { opacity: 0 },
           animate: { opacity: 1 },
           exit: { opacity: 0 },
-          onClick: () => setShowFeaturedModal(false),
+          onClick: () => setExtendModalOpen(false),
           children: /* @__PURE__ */ jsxs(
             motion.div,
             {
@@ -7710,26 +7994,39 @@ Click OK to request activation.`
               initial: { scale: 0.95, opacity: 0 },
               animate: { scale: 1, opacity: 1 },
               exit: { scale: 0.95, opacity: 0 },
-              style: { maxWidth: "400px" },
+              style: { maxWidth: "500px" },
               children: [
                 /* @__PURE__ */ jsxs("div", { className: "modal-header", children: [
-                  /* @__PURE__ */ jsxs("h3", { className: "modal-title", children: [
-                    "🚀 ",
-                    t("promote") || "Boost Listing"
-                  ] }),
-                  /* @__PURE__ */ jsx("button", { className: "icon-btn", onClick: () => setShowFeaturedModal(false), children: "✕" })
+                  /* @__PURE__ */ jsx("h3", { className: "modal-title", children: t("extendListing") || "Extend Listing" }),
+                  /* @__PURE__ */ jsx("button", { className: "icon-btn", onClick: () => setExtendModalOpen(false), children: "✕" })
                 ] }),
                 /* @__PURE__ */ jsxs("div", { className: "modal-body", style: { padding: "24px" }, children: [
-                  /* @__PURE__ */ jsx("p", { style: { marginBottom: 16 }, children: /* @__PURE__ */ jsx("strong", { children: featuredCandidate.name }) }),
-                  /* @__PURE__ */ jsx("p", { style: { marginBottom: 16 }, children: t("featuredDescription") || "Get more visibility by featuring your listing. Featured listings appear at the top of search results." }),
-                  /* @__PURE__ */ jsx("div", { style: { background: "var(--bg-subtle)", padding: 12, borderRadius: 8, marginBottom: 24, textAlign: "center" }, children: /* @__PURE__ */ jsxs("p", { style: { fontSize: "1.2rem", fontWeight: "bold", color: "var(--accent)" }, children: [
-                    "1000 MKD / ",
-                    t("month") || "month"
-                  ] }) }),
-                  /* @__PURE__ */ jsx("p", { className: "small-muted", style: { marginBottom: 24 }, children: t("featuredProcess") || "After you submit this request, we will contact you to arrange payment. Once paid, your listing will be featured immediately." }),
+                  /* @__PURE__ */ jsx("p", { style: { marginBottom: 16 }, children: t("extendDescription") || "Choose a plan to extend your listing duration." }),
+                  /* @__PURE__ */ jsx("div", { className: "plan-selection-grid", style: { display: "grid", gap: "12px", marginBottom: "24px" }, children: PLANS.map((plan) => /* @__PURE__ */ jsxs(
+                    "div",
+                    {
+                      className: `plan-option ${selectedExtendPlan === plan.id ? "selected" : ""}`,
+                      onClick: () => setSelectedExtendPlan(plan.id),
+                      style: {
+                        border: selectedExtendPlan === plan.id ? "2px solid var(--accent)" : "1px solid var(--border)",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        background: selectedExtendPlan === plan.id ? "var(--bg-subtle)" : "var(--bg-card)"
+                      },
+                      children: [
+                        /* @__PURE__ */ jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+                          /* @__PURE__ */ jsx("span", { style: { fontWeight: "bold" }, children: plan.label }),
+                          /* @__PURE__ */ jsx("span", { style: { color: "var(--accent)", fontWeight: "bold" }, children: plan.price })
+                        ] }),
+                        /* @__PURE__ */ jsx("div", { style: { fontSize: "0.9rem", color: "var(--text-muted)" }, children: plan.duration })
+                      ]
+                    },
+                    plan.id
+                  )) }),
                   /* @__PURE__ */ jsxs("div", { className: "modal-actions", children: [
-                    /* @__PURE__ */ jsx("button", { className: "btn btn-ghost", onClick: () => setShowFeaturedModal(false), children: t("cancel") }),
-                    /* @__PURE__ */ jsx("button", { className: "btn btn-accent", onClick: submitFeaturedRequest, children: t("submitRequest") || "Submit Request" })
+                    /* @__PURE__ */ jsx("button", { className: "btn btn-ghost", onClick: () => setExtendModalOpen(false), children: t("cancel") }),
+                    /* @__PURE__ */ jsx("button", { className: "btn btn-accent", onClick: handleProceedExtend, children: t("proceedToPayment") || "Proceed to Payment" })
                   ] })
                 ] })
               ]

@@ -5,7 +5,6 @@ export default function HomeTab({
   setShowPostForm,
   setForm,
   setSelectedTab,
-  featuredCategories,
   categoryIcons,
   mkSpotlightCities,
   activeListingCount,
@@ -22,26 +21,6 @@ export default function HomeTab({
   setCatFilter,
   setLocFilter
 }) {
-  const featuredListings = verifiedListings.filter(l => l.isFeatured);
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  // Auto-slide for Home Carousel
-  useEffect(() => {
-    if (!featuredListings.length) return;
-    const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev === featuredListings.length - 1 ? 0 : prev + 1));
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [featuredListings]);
-
-  const nextSlide = () => {
-    setCurrentSlide(prev => (prev === featuredListings.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide(prev => (prev === 0 ? featuredListings.length - 1 : prev - 1));
-  };
-
   return (
     <div className="app-main-content">
       {/* HERO SECTION - COMPACT */}
@@ -89,55 +68,6 @@ export default function HomeTab({
           </div>
       </div>
 
-      {/* FEATURED LISTINGS - SINGLE SLIDE CAROUSEL */}
-      {featuredListings.length > 0 && (
-        <section className="featured-section-home">
-          <div className="section-header-row">
-             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-               <span className="section-icon-large">🔥</span>
-               <div>
-                 <h3 className="section-title-large">{t("featured") || "Featured"}</h3>
-                 <p className="section-subtitle">{t("featuredSubtitle") || "Top rated services chosen for you"}</p>
-               </div>
-             </div>
-          </div>
-          
-          <div className="home-carousel-container">
-            <button className="carousel-nav-btn prev" onClick={prevSlide}>‹</button>
-            <div className="home-carousel-track">
-               {featuredListings.length > 0 && (
-                 <div className="home-carousel-slide">
-                    <ListingCard
-                      listing={featuredListings[currentSlide]}
-                      t={t}
-                      categoryIcons={categoryIcons}
-                      getDescriptionPreview={getDescriptionPreview}
-                      getListingStats={getListingStats}
-                      onSelect={handleSelectListing}
-                      onShare={handleShareListing}
-                      showMessage={showMessage}
-                      toggleFav={toggleFav}
-                      isFavorite={favorites.includes(featuredListings[currentSlide].id)}
-                      className="listing-card-wide" // Custom class for wide/short style
-                    />
-                 </div>
-               )}
-            </div>
-            <button className="carousel-nav-btn next" onClick={nextSlide}>›</button>
-            
-            <div className="carousel-dots-home">
-               {featuredListings.map((_, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`dot ${idx === currentSlide ? 'active' : ''}`}
-                    onClick={() => setCurrentSlide(idx)}
-                  />
-               ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* CATEGORIES & CITIES GRID */}
       <div className="discovery-grid">
         {/* POPULAR CATEGORIES */}
@@ -146,7 +76,7 @@ export default function HomeTab({
             <h3>🎯 {t("homePopularCategoriesTitle")}</h3>
           </div>
           <div className="discovery-chips-grid">
-            {featuredCategories.map((cat) => (
+            {Object.keys(categoryIcons).map((cat) => (
               <button
                 key={cat}
                 className="discovery-chip"
