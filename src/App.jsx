@@ -587,10 +587,24 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     try {
       setLoading(true);
       const uid = user.uid;
-      // Delete from DB first (optional, but good practice if rules allow)
-      // await remove(dbRef(db, `users/${uid}`)); // Keeping user data for safety/logs usually, but here we can keep it simple.
-      // Actually, let's just delete the Auth user. The DB cleanup might need admin privs or specific rules.
       
+      // 1. Delete user's listings
+      const listingsRef = dbRef(db, "listings");
+      const userListingsQuery = query(listingsRef, orderByChild("userId"), equalTo(uid));
+      const snapshot = await get(userListingsQuery);
+      
+      if (snapshot.exists()) {
+        const updates = {};
+        snapshot.forEach((childSnapshot) => {
+          updates[childSnapshot.key] = null;
+        });
+        await update(listingsRef, updates);
+      }
+      
+      // 2. Delete user profile from DB
+      await remove(dbRef(db, `users/${uid}`));
+      
+      // 3. Delete Auth user
       await deleteUser(user);
       
       showMessage(t("accountDeleted"), "success");
@@ -1500,20 +1514,31 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       });
 
       // 2. Initiate Payment
-      try {
-          const res = await fetch(`${API_BASE}/api/create-payment`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                  listingId,
-                  type: "create",
-                  customerEmail: user?.email,
-                  customerName: userProfile?.name || user?.displayName,
-                  plan: planId
-              })
-          });
-          const data = await res.json();
-          if (data.checkoutUrl) {
+            try {
+                const res = await fetch(`${API_BASE}/api/create-payment`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        listingId,
+                        type: "create",
+                        userId: user?.uid,
+                        customerEmail: user?.email,
+                        customerName: userProfile?.name || user?.displayName,
+                        plan: planId
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success && data.isFreeTrial) {
+                    showMessage(t("listingCreatedSuccess"), "success");
+                    // Refresh listings or redirect
+                    setShowPostForm(false);
+                    fetchListings(); // Assuming this exists or we trigger a reload
+                    window.location.reload(); // Simplest way to refresh state
+                    return;
+                }
+
+                if (data.checkoutUrl) {
               window.location.href = data.checkoutUrl;
               return; // Redirecting...
           } else {

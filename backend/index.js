@@ -11,6 +11,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import DodoPayments from 'dodopayments';
+import { EMAIL_TRANSLATIONS } from './translations.js';
 
 dotenv.config();
 
@@ -159,11 +160,54 @@ app.post("/api/send-email", async (req, res) => {
 /* ----------------------- DODO PAYMENTS ----------------------- */
 
 app.post("/api/create-payment", async (req, res) => {
-  const { listingId, type, customerEmail, customerName, plan } = req.body; // type: 'create' | 'extend'
+  const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
 
   if (!listingId) {
     return res.status(400).json({ error: "Missing listingId" });
   }
+
+  // --- FREE TRIAL LOGIC ---
+  // If it's a new listing creation and we have a userId
+  if (type === 'create' && userId) {
+      try {
+        const userRef = db.ref(`users/${userId}`);
+        const userSnap = await userRef.once('value');
+        const userData = userSnap.val();
+
+        // Check if user exists and hasn't used free trial
+        if (userData && !userData.hasUsedFreeTrial) {
+            // Activate Free Trial (1 Month)
+            const now = Date.now();
+            const durationMs = 30 * 24 * 60 * 60 * 1000; // 30 days
+            
+            const updates = {};
+            updates[`listings/${listingId}/status`] = "verified";
+            updates[`listings/${listingId}/createdAt`] = now;
+            updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+            updates[`listings/${listingId}/plan`] = "free_trial";
+            updates[`listings/${listingId}/pricePaid`] = 0;
+            updates[`users/${userId}/hasUsedFreeTrial`] = true;
+
+            await db.ref().update(updates);
+            
+            console.log(`[Free Trial] Activated for user ${userId}, listing ${listingId}`);
+            
+            // Send Confirmation Email
+            const subject = "BizCall MK: Free Trial Activated / Provë Falas e Aktivizuar / Бесплатен Пробен Период Активиран";
+            const text = `Hello / Përshëndetje / Здраво,\n\nYour first listing has been activated for free for 1 month! 🎉\nShpallja juaj e parë është aktivizuar falas për 1 muaj!\nВашиот прв оглас е активиран бесплатно за 1 месец!\n\nEnjoy the full benefits of BizCall MK.\nShijoni përfitimet e plota të BizCall MK.\nУживајте во целосните придобивки на BizCall MK.\n\nThe BizCall Team`;
+            
+            if (customerEmail) {
+                sendEmail(customerEmail, subject, text);
+            }
+
+            return res.json({ success: true, isFreeTrial: true });
+        }
+      } catch (err) {
+          console.error("[Free Trial] Error checking eligibility:", err);
+          // Fall through to normal payment if error
+      }
+  }
+  // ------------------------
 
   if (!process.env.DODO_PAYMENTS_API_KEY) {
     console.error("DODO_PAYMENTS_API_KEY is missing");
@@ -317,6 +361,103 @@ app.post("/api/webhook", async (req, res) => {
 });
 
 
+/* ----------------------- DAILY MAINTENANCE CRON ----------------------- */
+// Runs every day at midnight (00:00)
+cron.schedule("0 0 * * *", async () => {
+    console.log("[Cron] Running daily maintenance tasks...");
+    const now = Date.now();
+    const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+    try {
+        const listingsRef = db.ref("listings");
+        const snapshot = await listingsRef.once("value");
+        const listings = snapshot.val();
+        
+        if (listings) {
+            const updates = {};
+            const listingsToDelete = [];
+
+            Object.entries(listings).forEach(([id, listing]) => {
+                if (!listing.expiresAt) return;
+                
+                // 1. Check for Expiring Soon (3 days before)
+                const timeUntilExpiry = listing.expiresAt - now;
+                
+                // If expiring in less than 3 days, and not expired yet, and warning not sent
+                if (timeUntilExpiry > 0 && timeUntilExpiry < THREE_DAYS_MS && !listing.expiryWarningSent) {
+                    if (listing.userEmail || listing.email) {
+                        const email = listing.userEmail || listing.email;
+                        const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
+                                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
+                                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
+                        
+                        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listing.name || "Service", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
+                                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listing.name || "Shërbimi", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
+                                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listing.name || "Услуга", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings");
+
+                        sendEmail(email, subject, text);
+                        updates[`listings/${id}/expiryWarningSent`] = true;
+                        console.log(`[Cron] Sent expiry warning for listing ${id}`);
+                    }
+                }
+
+                // 2. Check for Expired > 30 Days (Delete)
+                if (listing.expiresAt < now - THIRTY_DAYS_MS) {
+                     listingsToDelete.push({ id, email: listing.userEmail || listing.email, name: listing.name });
+                }
+            });
+
+            // Perform updates for warnings
+            if (Object.keys(updates).length > 0) {
+                await db.ref().update(updates);
+            }
+
+            // Perform deletions
+            for (const item of listingsToDelete) {
+                await db.ref(`listings/${item.id}`).remove();
+                console.log(`[Cron] Deleted expired listing ${item.id}`);
+                
+                // Send Deletion Email
+                if (item.email) {
+                    const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en + " / " +
+                                    EMAIL_TRANSLATIONS.listing.expired_deleted.subject.sq + " / " +
+                                    EMAIL_TRANSLATIONS.listing.expired_deleted.subject.mk;
+                    
+                    const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(item.name || "Service", "https://bizcall.mk/add-listing") + "\n\n---\n\n" +
+                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.sq(item.name || "Shërbimi", "https://bizcall.mk/add-listing") + "\n\n---\n\n" +
+                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.mk(item.name || "Услуга", "https://bizcall.mk/add-listing");
+                    
+                    sendEmail(item.email, subject, text);
+                }
+            }
+        }
+        
+        // 3. Deleted User Cleanup
+        // Remove listings where the user ID no longer exists in 'users' node
+        const usersSnap = await db.ref("users").once("value");
+        const users = usersSnap.val() || {};
+        
+        // Refresh listings snapshot as we might have deleted some
+        const updatedListingsSnap = await listingsRef.once("value");
+        const updatedListings = updatedListingsSnap.val();
+        
+        if (updatedListings) {
+            Object.entries(updatedListings).forEach(async ([lid, l]) => {
+                // If listing has a userId, check if it exists in users
+                if (l.userId && !users[l.userId]) {
+                     console.log(`[Cron] Removing listing ${lid} because user ${l.userId} does not exist.`);
+                     await db.ref(`listings/${lid}`).remove();
+                }
+            });
+        }
+
+    } catch (err) {
+        console.error("[Cron] Error:", err);
+    }
+});
+
+
 /* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
 
 async function sendMarketingEmails() {
@@ -352,54 +493,38 @@ async function sendMarketingEmails() {
     const templates = [
       {
         id: "weekly_roundup_cta",
-        subjects: {
-          en: "🔥 Don't Miss Out! New Local Services Just Added on BizCall MK",
-          sq: "🔥 Mos e humbisni! Shërbime të reja lokale sapo u shtuan në BizCall MK",
-          mk: "🔥 Не пропуштајте! Нови локални услуги штотуку се додадени на BizCall MK"
-        },
+        subjects: EMAIL_TRANSLATIONS.marketing.weekly_roundup.subject,
         texts: {
-          en: (name) => `Hello ${name || "there"},\n\nLooking for the best local experts in your area? 🧐\n\nNew opportunities and trusted services are being added to BizCall MK every single day. Whether you need a quick home repair, a reliable mechanic, or the best catering in town, we've got you covered.\n\nOur community is growing fast, and we don't want you to be the last to know. Find exactly what you need in seconds and support your local community at the same time.\n\n👉 Discover what's new today: ${websiteUrl}\n\nTo your success,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nPo kërkoni ekspertët më të mirë lokalë në zonën tuaj? 🧐\n\nMundësi të reja dhe shërbime të besueshme po shtohen në BizCall MK çdo ditë. Pavarësisht nëse keni nevojë për një riparim të shpejtë në shtëpi, një mekanik të besueshëm apo kateringun më të mirë në qytet, ne jemi këtu për ju.\n\nKomuniteti ynë po rritet me shpejtësi dhe nuk duam që ju të jeni të fundit që e merrni vesh. Gjeni saktësisht atë që ju nevojitet në pak sekonda dhe mbështetni komunitetin tuaj lokal në të njëjtën kohë.\n\n👉 Zbuloni çfarë ka të re sot: ${websiteUrl}\n\nMe respekt,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nГи барате најдобрите локални експерти во вашата област? 🧐\n\nНови можности и доверливи услуги се додаваат на BizCall MK секој ден. Без разлика дали ви треба брза поправка дома, сигурен механичар или најдобриот кетеринг во градот, ние сме тука за вас.\n\nНашата заедница расте брзо и не сакаме да бидете последните што ќе дознаат. Најдете го точно она што ви треба за неколку секунди и поддржете ја вашата локална заедница во исто време.\n\n👉 Откријте што е ново денес: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
+          en: (name) => EMAIL_TRANSLATIONS.marketing.weekly_roundup.text.en(name, websiteUrl),
+          sq: (name) => EMAIL_TRANSLATIONS.marketing.weekly_roundup.text.sq(name, websiteUrl),
+          mk: (name) => EMAIL_TRANSLATIONS.marketing.weekly_roundup.text.mk(name, websiteUrl)
         }
       },
       {
         id: "community_connection_cta",
-        subjects: {
-          en: "🤝 Your Community is Calling! Connect with Pros on BizCall MK",
-          sq: "🤝 Komuniteti juaj po ju thërret! Lidhuni me profesionistët në BizCall MK",
-          mk: "🤝 Вашата заедnica ве повикува! Поврзете се со професионалци на BizCall MK"
-        },
+        subjects: EMAIL_TRANSLATIONS.marketing.community_connection.subject,
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nWhy search for hours when the best pros are right in your neighborhood? 🏠\n\nAt BizCall MK, we believe in the power of community. We've built a platform where you can find verified local talent for any task, big or small. From tech support to health services, your neighbors are here to help.\n\nStop scrolling and start connecting. Save time, save money, and get the job done right by someone you can trust.\n\n🔗 Browse the community map now: ${websiteUrl}\n\nBest regards,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nPse të kërkoni me orë të tëra kur profesionistët më të mirë janë pikërisht në lagjen tuaj? 🏠\n\nNë BizCall MK, ne besojmë në fuqinë e komunitetit. Ne kemi ndërtuar një platformë ku mund të gjeni talente lokale të verifikuara për çdo detyrë, të madhe apo të vogël. Nga mbështetja teknike te shërbimet shëndetësore, fqinjët tuaj janë këtu për t'ju ndihmuar.\n\nMos kërkoni më tej dhe filloni të lidheni. Kurseni kohë, kurseni para dhe kryejeni punën siç duhet nga dikush që mund t'i besoni.\n\n🔗 Shfletoni hartën e komunitetit tani: ${websiteUrl}\n\nMe respekt,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nЗошто да барате со часови кога најдобрите професионалци се токму во вашето соседство? 🏠\n\nВо BizCall MK, веруваме во моќта на заедницата. Изградивме платформа каде што можете да најдете проверени локални таленти за која било задача, голема или мала. Од техничка поддршка до здравствени услуги, вашите соседи се тука да ви помогнат.\n\nПрестанете да барате бесконечно и почнете да се поврзувате. Заштедете време, заштедете пари и завршете ја работата правилно со некој на кој можете да му верувате.\n\n🔗 Прелистајте ја мапата на заедницата сега: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
+          en: (name) => EMAIL_TRANSLATIONS.marketing.community_connection.text.en(name, websiteUrl),
+          sq: (name) => EMAIL_TRANSLATIONS.marketing.community_connection.text.sq(name, websiteUrl),
+          mk: (name) => EMAIL_TRANSLATIONS.marketing.community_connection.text.mk(name, websiteUrl)
         }
       },
       {
         id: "growth_marketing_cta",
-        subjects: {
-          en: "📈 Boost Your Local Business Today on BizCall MK",
-          sq: "📈 Rritni biznesin tuaj lokal sot në BizCall MK",
-          mk: "📈 Подобрете го вашиот локален бизнис денес на BizCall MK"
-        },
+        subjects: EMAIL_TRANSLATIONS.marketing.growth_marketing.subject,
         texts: {
-          en: (name) => `Hello ${name || "there"},\n\nIs your service getting the visibility it deserves? 🚀\n\nThousands of local users are searching for services like yours on BizCall MK every week. If you haven't updated your listing lately, you might be missing out on valuable leads and new customers.\n\nTake 2 minutes to refresh your profile, add new photos, or update your description to stay at the top of the search results. Your next big client is just one click away!\n\n✨ Manage your listings here: ${websiteUrl}\n\nTo your growth,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nA po merr shërbimi juaj dukshmërinë që meriton? 🚀\n\nMijëra përdorues lokalë kërkojnë shërbime si tuajat në BizCall MK çdo javë. Nëse nuk e keni përditësuar listimin tuaj së fundmi, mund të jeni duke humbur klientë të rëndësishëm dhe mundësi të reja.\n\nMerrni 2 minuta për të rifreskuar profilin tuaj, shtoni foto të reja ose përditësoni përshkrimin tuaj për të qëndruar në krye të rezultateve të kërkimit. Klienti juaj i radhës është vetëm një klikim larg!\n\n✨ Menaxhoni listimet tuaja këtu: ${websiteUrl}\n\nPër rritjen tuaj,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nДали вашата услуга ја добива видливоста што ја заслужува? 🚀\n\nИлјадници локални корисници бараат услуги како вашата на BizCall MK секоја недела. Ако не сте го ажурирале вашиот оглас неодамна, можеби пропуштате вредни контакти и нови клиенти.\n\nОдвојте 2 минути за да го освежите вашиот профил, додадете нови фотографии или ажурирајте го вашиот опис за да останете на врвот на резултатите од пребарувањето. Вашиот следен голем клиент е на само еден клик подалеку!\n\n✨ Менаџирајте ги вашите огласи тука: ${websiteUrl}\n\nЗа вашиот раст,\nТимот на BizCall`
+          en: (name) => EMAIL_TRANSLATIONS.marketing.growth_marketing.text.en(name, websiteUrl),
+          sq: (name) => EMAIL_TRANSLATIONS.marketing.growth_marketing.text.sq(name, websiteUrl),
+          mk: (name) => EMAIL_TRANSLATIONS.marketing.growth_marketing.text.mk(name, websiteUrl)
         }
       },
       {
-        id: "trust_verified_cta",
-        subjects: {
-          en: "💎 Quality You Can Trust: Verified Pros on BizCall MK",
-          sq: "💎 Cilësi që mund t'i besoni: Profesionistë të verifikuar në BizCall MK",
-          mk: "💎 Квалитет на кој можете да му верувате: Проверени професионалци на BizCall MK"
-        },
+        id: "trust_and_quality_cta",
+        subjects: EMAIL_TRANSLATIONS.marketing.trust_and_quality.subject,
         texts: {
-          en: (name) => `Hi ${name || "there"},\n\nTired of unreliable services? We hear you. 🤝\n\nThat's why BizCall MK is dedicated to connecting you with the highest-rated, most trusted local experts in North Macedonia. Our platform makes it easy to read reviews, compare services, and find someone who actually delivers on their promises.\n\nDon't settle for less. Choose quality, choose local, and get the peace of mind you deserve for your next project.\n\n🎯 Find a trusted pro today: ${websiteUrl}\n\nStay safe,\nThe BizCall Team`,
-          sq: (name) => `Përshëndetje ${name || "ju"},\n\nJeni lodhur nga shërbimet jo të besueshme? Ne ju kuptojmë. 🤝\n\nKjo është arsyeja pse BizCall MK i është përkushtuar lidhjes tuaj me ekspertët lokalë më të vlerësuar dhe më të besuar në Maqedoninë e Veriut. Platforma jonë e bën të lehtë leximin e vlerësimeve, krahasimin e shërbimeve dhe gjetjen e dikujt që me të vërtetë i mban premtimet e veta.\n\nMos u kënaqni me pak. Zgjidhni cilësinë, zgjidhni lokalet dhe fitoni qetësinë që meritoni për projektin tuaj të radhës.\n\n🎯 Gjeni një profesionist të besuar sot: ${websiteUrl}\n\nGjithë të mirat,\nEkipi i BizCall`,
-          mk: (name) => `Здраво ${name || "таму"},\n\nУморни сте од несигурни услуги? Ве разбираме. 🤝\n\nЗатоа BizCall MK е посветен на тоа да ве поврзе со најдобро оценетите и најдоверливите локални експерти во Северна Македонија. Нашата платформа го олеснува читањето на рецензии, споредувањето услуги и наоѓањето на некој кој навистина ги исполнува своите ветувања.\n\nНе се задоволувајте со помалку. Изберете квалитет, изберете локално и добијте го мирот што го заслужувате за вашиот следен проект.\n\n🎯 Најдете доверлив професионалец денес: ${websiteUrl}\n\nСо почит,\nТимот на BizCall`
+          en: (name) => EMAIL_TRANSLATIONS.marketing.trust_and_quality.text.en(name, websiteUrl),
+          sq: (name) => EMAIL_TRANSLATIONS.marketing.trust_and_quality.text.sq(name, websiteUrl),
+          mk: (name) => EMAIL_TRANSLATIONS.marketing.trust_and_quality.text.mk(name, websiteUrl)
         }
       }
     ];
@@ -511,11 +636,13 @@ cron.schedule("0 9 * * *", async () => {
         const link = `https://bizcall.mk/?listing=${id}`;
         const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
         
-        // Trilingual Subject
-        const subject = `BizCall MK: Action Required - Listing Expiring Soon / Veprim Kërkohet - Shpallja Skadon Së Shpejti / Потребна е Акција - Огласот Истекува Наскоро`;
+        const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
+                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
+                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
         
-        // Trilingual Text
-        const text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" will expire in 7 days (${expiryDate}).\nShpallja juaj "${listingName}" skadon në 7 ditë (${expiryDate}).\nВашиот оглас "${listingName}" истекува за 7 дена (${expiryDate}).\n\nTo keep your listing active and maintain your visibility, please extend it now:\nPër ta mbajtur shpalljen aktive dhe për të ruajtur dukshmërinë tuaj, ju lutemi zgjateni atë tani:\nЗа да го задржите вашиот оглас активен и да ја одржите вашата видливост, ве молиме продолжете го сега:\n\n👉 ${link}\n\nIf you do not renew, your listing will be removed from search results.\nNëse nuk e rinovoni, shpallja juaj do të hiqet nga rezultatet e kërkimit.\nАко не го обновите, вашиот оглас ќе биде отстранет од резултатите од пребарувањето.\n\nThe BizCall Team`;
+        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link) + "\n\n---\n\n" +
+                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listingName, expiryDate, link) + "\n\n---\n\n" +
+                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listingName, expiryDate, link);
         
         await sendEmail(userEmail, subject, text);
         console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
