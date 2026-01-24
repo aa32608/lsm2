@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import DualRangeSlider from "./DualRangeSlider";
 
 const EditListingModal = ({
   t,
@@ -196,54 +197,27 @@ const EditListingModal = ({
 
           <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
             <label className="field-label">{t("priceRange") || "Price Range"}</label>
-            <div className="price-inputs-row">
-              <div className="price-input-wrapper">
-                <span className="currency-badge">{editForm.offerCurrency || "EUR"}</span>
-                <input
-                  className="input price-input"
-                  type="number"
-                  min="0"
-                  placeholder={t("minPrice")}
-                  value={editForm.offerMin}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^\d.,]/g, "");
-                    const updated = { ...editForm, offerMin: val };
-                    if (formatOfferPrice) {
-                      updated.offerprice = formatOfferPrice(
-                        updated.offerMin,
-                        updated.offerMax,
-                        updated.offerCurrency
-                      );
-                    }
-                    setEditForm(updated);
-                  }}
-                />
-              </div>
-              <span className="price-separator">—</span>
-              <div className="price-input-wrapper">
-                <span className="currency-badge">{editForm.offerCurrency || "EUR"}</span>
-                <input
-                  className="input price-input"
-                  type="number"
-                  min="0"
-                  placeholder={t("maxPrice")}
-                  value={editForm.offerMax}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^\d.,]/g, "");
-                    const updated = { ...editForm, offerMax: val };
-                    if (formatOfferPrice) {
-                      updated.offerprice = formatOfferPrice(
-                        updated.offerMin,
-                        updated.offerMax,
-                        updated.offerCurrency
-                      );
-                    }
-                    setEditForm(updated);
-                  }}
-                />
-              </div>
-              <select
+            <DualRangeSlider
+              min={0}
+              max={5000}
+              value={{ min: Number(editForm.offerMin) || 0, max: Number(editForm.offerMax) || 0 }}
+              onChange={({ min, max }) => {
+                const updated = { ...editForm, offerMin: min, offerMax: max };
+                if (formatOfferPrice) {
+                  updated.offerprice = formatOfferPrice(
+                    min,
+                    max,
+                    updated.offerCurrency || "EUR"
+                  );
+                }
+                setEditForm(updated);
+              }}
+              currency={editForm.offerCurrency || "EUR"}
+            />
+            <div className="price-inputs-row" style={{ marginTop: '10px', justifyContent: 'flex-end' }}>
+               <select
                 className="select currency-select"
+                style={{ width: 'auto', minWidth: '80px' }}
                 value={editForm.offerCurrency || "EUR"}
                 onChange={(e) => {
                   const updated = { ...editForm, offerCurrency: e.target.value };
@@ -263,33 +237,6 @@ const EditListingModal = ({
                   </option>
                 ))}
               </select>
-            </div>
-            
-            <div className="price-slider-container">
-               <input 
-                 type="range" 
-                 min="0" 
-                 max="5000" 
-                 step="10" 
-                 className="modern-slider"
-                 value={Number(editForm.offerMax) || 0}
-                 onChange={(e) => {
-                    const val = e.target.value;
-                    const updated = { ...editForm, offerMax: val };
-                    if (formatOfferPrice) {
-                      updated.offerprice = formatOfferPrice(
-                        updated.offerMin,
-                        updated.offerMax,
-                        updated.offerCurrency
-                      );
-                    }
-                    setEditForm(updated);
-                 }}
-               />
-               <div className="slider-labels">
-                 <span>0</span>
-                 <span>5000+</span>
-               </div>
             </div>
           </div>
 

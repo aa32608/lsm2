@@ -37,6 +37,7 @@ const Filtersheet = isClient ? lazy(() => import("./components/Filtersheet")) : 
 const EditListingModal = isClient ? lazy(() => import("./components/EditListingModal")) : () => null;
 
 import ListingCard from "./components/ListingCard";
+import DualRangeSlider from "./components/DualRangeSlider";
 import ListingsTab from "./pages/ListingsTab";
 import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./pages/HomeTab";
@@ -982,6 +983,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       
       if (currentCache !== newCache) {
         try {
+          // Explicitly remove old cache before adding new, as requested to ensure freshness
+          localStorage.removeItem("cached_listings");
           localStorage.setItem("cached_listings", newCache);
         } catch (e) {
           console.error("Cache storage failed:", e);
@@ -999,7 +1002,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       dbRef(db, "listings"),
       orderByChild("status"),
       equalTo("verified"),
-      limitToLast(150) // Further reduced for speed, matching cache limit
+      limitToLast(100) // Reduced for speed
     );
 
     let isFirstLoad = true;
@@ -3292,50 +3295,25 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         {/* Offer price range + currency */}
                         <div className="offer-price-range modern-price-section" style={{ marginBottom: '16px' }}>
                           <label className="field-label">{t("priceRange") || "Price Range"}</label>
-                          <div className="price-inputs-row">
-                            <div className="price-input-wrapper">
-                              <span className="currency-badge">{form.offerCurrency}</span>
-                              <input
-                                className="input price-input"
-                                type="number"
-                                min="0"
-                                placeholder={t("minPrice")}
-                                value={form.offerMin}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^\d.,]/g, "");
-                                  const updated = { ...form, offerMin: val };
-                                  updated.offerprice = formatOfferPrice(
-                                    updated.offerMin,
-                                    updated.offerMax,
-                                    updated.offerCurrency
-                                  );
-                                  setForm(updated);
-                                }}
-                              />
-                            </div>
-                            <span className="price-separator">—</span>
-                            <div className="price-input-wrapper">
-                              <span className="currency-badge">{form.offerCurrency}</span>
-                              <input
-                                className="input price-input"
-                                type="number"
-                                min="0"
-                                placeholder={t("maxPrice")}
-                                value={form.offerMax}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/[^\d.,]/g, "");
-                                  const updated = { ...form, offerMax: val };
-                                  updated.offerprice = formatOfferPrice(
-                                    updated.offerMin,
-                                    updated.offerMax,
-                                    updated.offerCurrency
-                                  );
-                                  setForm(updated);
-                                }}
-                              />
-                            </div>
-                            <select
+                          <DualRangeSlider
+                            min={0}
+                            max={5000}
+                            value={{ min: Number(form.offerMin) || 0, max: Number(form.offerMax) || 0 }}
+                            onChange={({ min, max }) => {
+                              const updated = { ...form, offerMin: min, offerMax: max };
+                              updated.offerprice = formatOfferPrice(
+                                min,
+                                max,
+                                updated.offerCurrency
+                              );
+                              setForm(updated);
+                            }}
+                            currency={form.offerCurrency || "EUR"}
+                          />
+                          <div className="price-inputs-row" style={{ marginTop: '10px', justifyContent: 'flex-end' }}>
+                             <select
                               className="select currency-select"
+                              style={{ width: 'auto', minWidth: '80px' }}
                               value={form.offerCurrency}
                               onChange={(e) => {
                                 const updated = { ...form, offerCurrency: e.target.value };
@@ -3353,31 +3331,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 </option>
                               ))}
                             </select>
-                          </div>
-                          
-                          <div className="price-slider-container">
-                             <input 
-                               type="range" 
-                               min="0" 
-                               max="5000" 
-                               step="10" 
-                               className="modern-slider"
-                               value={Number(form.offerMax) || 0}
-                               onChange={(e) => {
-                                  const val = e.target.value;
-                                  const updated = { ...form, offerMax: val };
-                                  updated.offerprice = formatOfferPrice(
-                                    updated.offerMin,
-                                    updated.offerMax,
-                                    updated.offerCurrency
-                                  );
-                                  setForm(updated);
-                               }}
-                             />
-                             <div className="slider-labels">
-                               <span>0</span>
-                               <span>5000+</span>
-                             </div>
                           </div>
                         </div>
                 
@@ -3757,8 +3710,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                 exit={{ y: 20, opacity: 0 }}
               >
                 {/* Header */}
-                <div className="modal-header">
-                  <h3 className="modal-title">
+                <div className="modal-header auth-modal-header">
+                  <h3 className="modal-title auth-title">
                     {authMode === "signup"
                       ? t("createAccount")
                       : authTab === "email"
