@@ -15,7 +15,7 @@ import { AnimatePresence } from "framer-motion";
 
 // Helper component to consume context
 const LayoutContent = ({ children }) => {
-  const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen } = useApp();
+  const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal } = useApp();
 
   return (
     <div className={`app-container ${sidebarOpen ? "sidebar-open" : ""}`}>
@@ -26,7 +26,9 @@ const LayoutContent = ({ children }) => {
          {children}
       </main>
 
-      <AuthModal />
+      <AnimatePresence>
+        {showAuthModal && <AuthModal />}
+      </AnimatePresence>
       <PostListingDrawer />
       <ExtendListingModal />
       <EditListingModal />

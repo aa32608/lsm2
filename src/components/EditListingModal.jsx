@@ -1,65 +1,68 @@
 "use client";
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "../context/AppContext";
 import DualRangeSlider from "./DualRangeSlider";
 
-const EditListingModal = ({
-  t,
-  editingListing,
-  setEditingListing,
-  editForm,
-  setEditForm,
-  saveEdit,
-  categories,
-  MK_CITIES,
-  stripDangerous,
-  editLocationPreview,
-  setShowEditMapPicker,
-  plan,
-  setSelectedTab,
-  handleShareListing,
-  handleImageUpload,
-  handleRemoveImage,
-  formatOfferPrice,
-  currencyOptions,
-}) => {
-  if (!editingListing || !editForm) return null;
+const EditListingModal = () => {
+  const {
+    t,
+    editingListing,
+    setEditingListing,
+    editForm,
+    setEditForm,
+    saveEdit,
+    categories,
+    MK_CITIES,
+    stripDangerous,
+    editLocationPreview,
+    setShowEditMapPicker,
+    plan,
+    setSelectedTab,
+    handleShareListing,
+    handleImageUpload,
+    handleRemoveImage,
+    formatOfferPrice,
+    currencyOptions,
+  } = useApp();
 
   return (
-    <motion.div
-      className="modal-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => {
-        setEditingListing(null);
-        setEditForm(null);
-        setShowEditMapPicker(false);
-      }}
-    >
-      <motion.div
-        className="modal edit-modal"
-        onClick={(e) => e.stopPropagation()}
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 20, opacity: 0 }}
-      >
-        <div className="modal-header">
-          <h3 className="modal-title">{t("edit")}</h3>
-          <button
-            className="icon-btn"
-            onClick={() => {
-              setEditingListing(null);
-              setEditForm(null);
-              setShowEditMapPicker(false);
-            }}
-            aria-label={t("close")}
+    <AnimatePresence>
+      {editingListing && editForm && (
+        <motion.div
+          className="modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => {
+            setEditingListing(null);
+            setEditForm(null);
+            setShowEditMapPicker(false);
+          }}
+        >
+          <motion.div
+            className="modal edit-modal"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
           >
-            ✕
-          </button>
-        </div>
+            <div className="modal-header">
+              <h3 className="modal-title">{t("edit")}</h3>
+              <button
+                className="icon-btn"
+                onClick={() => {
+                  setEditingListing(null);
+                  setEditForm(null);
+                  setShowEditMapPicker(false);
+                }}
+                aria-label={t("close")}
+              >
+                ✕
+              </button>
+            </div>
 
-        <div className="modal-body edit-modal-body">
+            <div className="modal-body edit-modal-body">
           <div className="edit-summary-banner">
             <div>
               <p className="eyebrow subtle">{t("preview")}</p>
@@ -330,6 +333,8 @@ const EditListingModal = ({
         </div>
       </motion.div>
     </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
