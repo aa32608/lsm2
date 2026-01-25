@@ -2,6 +2,8 @@ import React from 'react';
 import LayoutWrapper from '../components/LayoutWrapper';
 import './globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Tetovo LMS',
   description: 'Listing Management System',

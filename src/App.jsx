@@ -38,9 +38,9 @@ const EditListingModal = isClient ? lazy(() => import("./components/EditListingM
 
 import ListingCard from "./components/ListingCard";
 import DualRangeSlider from "./components/DualRangeSlider";
-import ListingsTab from "./pages/ListingsTab";
+import ListingsTab from "./legacy_pages/ListingsTab";
 import MyListingCard from "./components/MyListingCard";
-import HomeTab from "./pages/HomeTab";
+import HomeTab from "./legacy_pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
