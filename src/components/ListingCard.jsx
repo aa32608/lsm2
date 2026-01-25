@@ -1,13 +1,14 @@
 "use client";
 import React, { useState } from "react";
 
+import Link from "next/link";
+
 const ListingCard = React.memo(({
   listing: l,
   t,
   categoryIcons,
   getDescriptionPreview,
   getListingStats,
-  onSelect,
   onShare,
   className = "",
 }) => {
@@ -20,19 +21,22 @@ const ListingCard = React.memo(({
     : (l.imagePreview ? [l.imagePreview] : []);
 
   const handlePrev = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     setImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
   const handleNext = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   return (
-    <article
+    <Link
+      href={`/listings/${l.id}`}
       className={`listing-card explore-card-modern ${className}`}
-      onClick={() => onSelect(l)}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
     >
       <div className="listing-card-image-container">
         {images.length > 0 ? (
@@ -92,7 +96,7 @@ const ListingCard = React.memo(({
         </div>
       </div>
 
-      <div className="listing-footer-row" onClick={(e) => e.stopPropagation()} style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '8px', paddingRight: '8px' }}>
+      <div className="listing-footer-row" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border)', paddingLeft: '8px', paddingRight: '8px' }}>
         <div className="listing-footer-left">
           {l.contact && (
             <span className="pill pill-contact ghost-pill">
@@ -134,7 +138,7 @@ const ListingCard = React.memo(({
           </button>
         </div>
       </div>
-    </article>
+    </Link>
   );
 });
 

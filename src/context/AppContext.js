@@ -440,6 +440,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     repeatNewPassword: "",
   });
 
+  const [authLoading, setAuthLoading] = useState(true);
+
   /* Static Pages Modals */
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
@@ -456,6 +458,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
             setUserProfile(data);
             if (data.language) setLang(data.language);
           }
+          setAuthLoading(false);
         });
         
         // Load Favorites
@@ -467,6 +470,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       } else {
         setUserProfile(null);
         setFavorites([]);
+        setAuthLoading(false);
       }
     });
     return () => unsubscribe();
@@ -697,6 +701,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     phoneLoading, setPhoneLoading,
     agreedToTerms, setAgreedToTerms,
     passwordForm, setPasswordForm,
+    authLoading,
     // Constants
     categories: ["food", "car", "electronics", "homeRepair", "health", "education", "clothing", "pets", "services", "tech", "entertainment", "events", "other"],
     categoryIcons,

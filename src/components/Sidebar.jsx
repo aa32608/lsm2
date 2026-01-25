@@ -33,7 +33,7 @@ const Sidebar = ({ onClose }) => {
   ];
 
   return (
-    <div className="sidebar-panel">
+    <div className="sidebar-panel mobile-only">
       <div className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="sidebar-header-content">

@@ -6,7 +6,7 @@ import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
 const Header = ({ onMenuOpen }) => {
-  const { t, lang, setLang, user, onLogout, onLogin, verifiedListings, myListingsRaw } = useApp();
+  const { t, lang, setLang, user, onLogout, onLogin, verifiedListings, myListingsRaw, authLoading } = useApp();
   const pathname = usePathname();
 
   // Helper to check active state
@@ -80,7 +80,9 @@ const Header = ({ onMenuOpen }) => {
             <option value="en">🇬🇧 EN</option>
           </select>
 
-          {user ? (
+          {authLoading ? (
+             <div style={{ width: '80px', height: '36px' }}></div> // Skeleton placeholder
+          ) : user ? (
             <button className="btn btn-ghost desktop-only" onClick={onLogout}>
               {t("logout")}
             </button>
