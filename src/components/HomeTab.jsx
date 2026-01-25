@@ -8,7 +8,10 @@ export default function HomeTab() {
   const router = useRouter();
   const {
     t,
+    user,
     setShowPostForm,
+    setShowAuthModal,
+    setAuthMode,
     setForm,
     setSelectedTab,
     categoryIcons,
@@ -37,15 +40,20 @@ export default function HomeTab() {
           <button
             className="btn btn-primary"
             onClick={() => {
-              setShowPostForm(true);
-              setForm((f) => ({ ...f, step: 1 }));
+              if (!user) {
+                setAuthMode("login");
+                setShowAuthModal(true);
+              } else {
+                setShowPostForm(true);
+                setForm((f) => ({ ...f, step: 1 }));
+              }
             }}
           >
             📝 {t("homeSimpleCtaPost")}
           </button>
           <button
             className="btn btn-outline"
-            onClick={() => setSelectedTab("allListings")}
+            onClick={() => router.push('/listings')}
           >
             🔍 {t("homeSimpleCtaBrowse")}
           </button>

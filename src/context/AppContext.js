@@ -160,13 +160,72 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   /* Filters / search */
   const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q);
   const [catFilter, setCatFilter] = useState("");
   const [locFilter, setLocFilter] = useState("");
   const [sortBy, setSortBy] = useState("topRated");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  /* Favorites */
+  // Derived filtered listings
+  const verifiedListings = useMemo(() => listings.filter(l => l.status === "verified"), [listings]);
+
+  const filtered = useMemo(() => {
+    let arr = [...verifiedListings];
+    if (deferredQ.trim()) {
+      const term = deferredQ.trim().toLowerCase();
+      arr = arr.filter(
+        (l) =>
+          (l.name || "").toLowerCase().includes(term) ||
+          (l.description || "").toLowerCase().includes(term)
+      );
+    }
+    if (catFilter) {
+      // Handle both raw category and translated category match
+      arr = arr.filter((l) => (t(l.category) === catFilter || l.category === catFilter));
+    }
+    if (locFilter) arr = arr.filter((l) => l.locationCity === locFilter || l.location === locFilter);
+    
+    if (sortBy === "topRated") {
+      arr.sort((a, b) => {
+        const aStats = feedbackAverages[a.id] || {};
+        const bStats = feedbackAverages[b.id] || {};
+        const bAvg = bStats.avg ?? -1;
+        const aAvg = aStats.avg ?? -1;
+        if (bAvg !== aAvg) return bAvg - aAvg;
+        const bCount = bStats.count || 0;
+        const aCount = aStats.count || 0;
+        if (bCount !== aCount) return bCount - aCount;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+    } else if (sortBy === "newest") {
+      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } else if (sortBy === "expiring") {
+      arr.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
+    } else if (sortBy === "az") {
+      arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+    return arr;
+  }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, t]);
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filtered.length / pageSize)),
+    [filtered.length, pageSize]
+  );
+
+  const pagedFiltered = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
+
+  const allLocations = useMemo(() => {
+    const locs = new Set();
+    publicListings.forEach(l => {
+      if (l.locationCity) locs.add(l.locationCity);
+    });
+    return Array.from(locs).sort();
+  }, [publicListings]);
   const [favorites, setFavorites] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -365,6 +424,20 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   /* Auth modal */
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("+389");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    repeatNewPassword: "",
+  });
 
   /* Static Pages Modals */
   const [showTerms, setShowTerms] = useState(false);
@@ -520,14 +593,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   // Memoize listings for performance
   const myListingsRaw = useMemo(() => userListings, [userListings]);
-  const verifiedListings = useMemo(() => listings.filter(l => l.status === "verified"), [listings]);
-  const allLocations = useMemo(() => {
-    const locs = new Set();
-    publicListings.forEach(l => {
-      if (l.locationCity) locs.add(l.locationCity);
-    });
-    return Array.from(locs).sort();
-  }, [publicListings]);
 
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportingListingId, setReportingListingId] = useState(null);
@@ -597,6 +662,16 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     loading, setLoading,
     message, showMessage,
     selectedListing, setSelectedListing,
+    q, setQ,
+    catFilter, setCatFilter,
+    locFilter, setLocFilter,
+    sortBy, setSortBy,
+    page, setPage,
+    totalPages,
+    pageSize, setPageSize,
+    pagedFiltered,
+    filtersOpen, setFiltersOpen,
+    allLocations,
     sidebarOpen, setSidebarOpen,
     selectedTab, setSelectedTab,
     viewMode, setViewMode,
@@ -613,6 +688,17 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     onLogout, onLogin,
     favorites,
     feedbackAverages,
+    // Auth State
+    email, setEmail,
+    password, setPassword,
+    displayName, setDisplayName,
+    phoneNumber, setPhoneNumber,
+    countryCode, setCountryCode,
+    verificationCode, setVerificationCode,
+    confirmationResult, setConfirmationResult,
+    phoneLoading, setPhoneLoading,
+    agreedToTerms, setAgreedToTerms,
+    passwordForm, setPasswordForm,
     // Constants
     categories: ["food", "car", "electronics", "homeRepair", "health", "education", "clothing", "pets", "services", "tech", "entertainment", "events", "other"],
     categoryIcons,

@@ -10,8 +10,29 @@ export default function MyListingsTab() {
     handleSelectListing, handleOpenEdit, handleStartExtendFlow,
     showMessage, handleShareListing, confirmDelete,
     getDaysUntilExpiry, getListingStats, getDescriptionPreview,
-    setShowPostForm,
+    setShowPostForm, setShowAuthModal, setAuthMode
   } = useApp();
+
+  if (!user) {
+    return (
+      <div className="section" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔐</div>
+        <h2>{t("loginToSeeMore") || "Please Login"}</h2>
+        <p style={{ color: "#64748b", marginBottom: "2rem" }}>
+          {t("loginDescription") || "You need to be logged in to view and manage your listings."}
+        </p>
+        <button 
+          className="btn btn-primary"
+          onClick={() => {
+            setAuthMode("login");
+            setShowAuthModal(true);
+          }}
+        >
+          {t("login") || "Login"}
+        </button>
+      </div>
+    );
+  }
 
   // Local UI State
   const [filtersOpen, setFiltersOpen] = useState(false);
