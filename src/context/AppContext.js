@@ -96,7 +96,7 @@ const validatePhone = (p) => {
   return p && p.length > 6; 
 };
 
-export const AppProvider = ({ children, initialListings = [] }) => {
+export const AppProvider = ({ children, initialListings = [], initialPublicListings = [] }) => {
   /* i18n */
   const [lang, setLang] = useState("sq");
   
