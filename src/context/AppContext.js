@@ -459,6 +459,76 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, [user, listings]);
 
+  const getDaysUntilExpiry = (expiresAt) => {
+    if (!expiresAt) return 0;
+    const diff = expiresAt - Date.now();
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const getListingStats = (listing) => {
+    if (!listing) return { views: 0, likes: 0 };
+    return {
+      views: listing.views || 0,
+      likes: listing.likes || 0
+    };
+  };
+
+  const getDescriptionPreview = (desc) => {
+    if (!desc) return "";
+    return desc.length > 100 ? desc.substring(0, 100) + "..." : desc;
+  };
+
+  const handleShareListing = (listing) => {
+    if (!listing) return;
+    if (navigator.share) {
+      navigator.share({
+        title: listing.name,
+        text: listing.description,
+        url: window.location.href
+      }).catch(console.error);
+    } else {
+      // Fallback
+      navigator.clipboard.writeText(window.location.href);
+      showMessage(t("linkCopied"), "success");
+    }
+  };
+
+  const confirmDelete = async (id) => {
+    if (window.confirm(t("deleteConfirm"))) {
+      await deleteListing(id);
+    }
+  };
+
+  const deleteListing = async (id) => {
+    try {
+      setLoading(true);
+      await remove(dbRef(db, `listings/${id}`));
+      showMessage(t("listingDeleted"), "success");
+    } catch (err) {
+      console.error(err);
+      showMessage(t("error"), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectListing = (listing) => {
+    setSelectedListing(listing);
+    // Navigate or open modal
+  };
+
+  // Memoize listings for performance
+  const myListingsRaw = useMemo(() => userListings, [userListings]);
+  const verifiedListings = useMemo(() => listings.filter(l => l.status === "verified"), [listings]);
+  const allLocations = useMemo(() => {
+    const locs = new Set();
+    publicListings.forEach(l => {
+      if (l.locationCity) locs.add(l.locationCity);
+    });
+    return Array.from(locs).sort();
+  }, [publicListings]);
+
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportingListingId, setReportingListingId] = useState(null);
 
