@@ -167,6 +167,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [feedbackAverages, setFeedbackAverages] = useState({});
 
   // Derived filtered listings
   const verifiedListings = useMemo(() => listings.filter(l => l.status === "verified"), [listings]);
@@ -442,9 +443,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   /* Static Pages Modals */
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-
-  /* User Data */
-  const [feedbackAverages, setFeedbackAverages] = useState({});
 
   // Load User Logic (Effect)
   useEffect(() => {
