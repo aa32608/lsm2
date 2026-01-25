@@ -1,0 +1,101 @@
+"use client";
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useApp } from "../context/AppContext";
+import logo from "../assets/logo.png";
+
+const Header = ({ onMenuOpen }) => {
+  const { t, lang, setLang, user, onLogout, onLogin, verifiedListings, myListingsRaw } = useApp();
+  const pathname = usePathname();
+
+  // Helper to check active state
+  const isActive = (path) => {
+    if (path === "/" && pathname === "/") return true;
+    if (path !== "/" && pathname?.startsWith(path)) return true;
+    return false;
+  };
+
+  const navItems = [
+    { id: "main", label: t("homepage"), icon: "🏠", path: "/" },
+    { id: "allListings", label: t("explore"), icon: "🧭", path: "/listings", badge: verifiedListings?.length || 0 },
+    ...(user
+      ? [
+          { id: "myListings", label: t("myListings"), icon: "📂", path: "/mylistings", badge: myListingsRaw?.length || 0 },
+          { id: "account", label: t("account"), icon: "👤", path: "/account" },
+        ]
+      : []),
+  ];
+
+  return (
+    <header className="header">
+      <div className="header-inner">
+        <button
+          className="icon-btn mobile-menu-btn"
+          onClick={onMenuOpen}
+          aria-label={t("menu")}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+
+        <Link href="/" className="brand">
+          <div className="brand-mark">
+            <div className="brand-logo-wrap">
+              <img
+                src={logo.src || logo} // Next.js img import might be object
+                alt={t("bizcallLogo")}
+                className="brand-logo"
+                loading="lazy"
+              />
+            </div>
+          </div>
+          <div className="brand-text">
+            <h1 className="brand-title">{t("bizCall")}</h1>
+            <p className="brand-tagline">{t("communityTagline")}</p>
+          </div>
+        </Link>
+
+        <nav className="header-nav desktop-nav" aria-label={t("primaryNav")}>
+          {navItems.map((item) => (
+            <Link
+              key={item.id}
+              href={item.path}
+              className={`nav-chip ${isActive(item.path) ? "active" : ""}`}
+              style={{ color: "#000" }} // Preserving inline style from original
+            >
+              <span className="nav-chip-label">{item.icon} {item.label}</span>
+              {item.badge !== undefined && item.badge > 0 && <span className="nav-chip-badge">{item.badge}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="header-actions">
+          <select className="lang-select" value={lang} onChange={(e) => setLang(e.target.value)}>
+            <option value="sq">🇦🇱 SQ</option>
+            <option value="mk">🇲🇰 MK</option>
+            <option value="en">🇬🇧 EN</option>
+          </select>
+
+          {user ? (
+            <button className="btn btn-ghost desktop-only" onClick={onLogout}>
+              {t("logout")}
+            </button>
+          ) : (
+            <button
+              className="btn desktop-only"
+              onClick={onLogin}
+            >
+              {t("login")}
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
