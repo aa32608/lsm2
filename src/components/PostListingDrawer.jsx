@@ -437,7 +437,7 @@ const PostListingDrawer = () => {
                                     showMessage(t("phoneSynced"), "success");
                                 } else {
                                     setShowPostForm(false);
-                                    setSelectedTab("account");
+                                    router.push("/account");
                                     showMessage(t("addPhoneInAccount"), "error");
                                 }
                                 }}

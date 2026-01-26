@@ -38,7 +38,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="sq">
       <head>
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/logo.png" />
       </head>
       <body>
         <LayoutWrapper initialListings={allListings} initialPublicListings={publicListings}>

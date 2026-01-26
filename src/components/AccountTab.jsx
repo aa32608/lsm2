@@ -467,7 +467,7 @@ const AccountTab = () => {
             <div className="account-quick-links-list">
               <button 
                 className="account-quick-link-item"
-                onClick={() => setSelectedTab("myListings")}
+                onClick={() => router.push("/mylistings")}
               >
                 <span className="quick-link-icon">📁</span>
                 <div className="quick-link-content">
