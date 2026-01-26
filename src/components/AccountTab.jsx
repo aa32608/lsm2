@@ -330,8 +330,8 @@ const AccountTab = () => {
         </aside>
 
         <main className="account-main">
-        {/* Profile Information Card */}
-        <div className="account-card">
+          {/* Profile Information Card */}
+          <div className="account-card">
           <div className="account-card-header">
             <h3>📋 {t("profileInfo")}</h3>
             <p>{t("accountDetails")}</p>
@@ -480,10 +480,10 @@ const AccountTab = () => {
               </div>
             )}
           </div>
-        </div>
+          </div>
 
-        {/* Quick Links Card */}
-        <div className="card account-card account-quick-links">
+          {/* Quick Links Card */}
+          <div className="card account-card account-quick-links">
           <div className="account-card-header">
             <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
           </div>
@@ -549,9 +549,9 @@ const AccountTab = () => {
               <span className="quick-link-arrow">→</span>
             </button>
           </div>
-        </div>
+          </div>
 
-        <div className="account-column">
+          <div className="account-column">
           {/* Edit Profile Card */}
           <div className="card account-card account-profile-section">
             <div className="account-card-header">
@@ -720,9 +720,10 @@ const AccountTab = () => {
               </button>
             </div>
           </div>
-        </div>
-      </div>
+          </div>
+        </main>
     </div>
+  </div>
   );
 };
 
