@@ -20,7 +20,8 @@ export default function ListingDetailClient({ id, initialListing }) {
     submitFeedback,
     feedbackSaving,
     setReportingListingId,
-    setShowReportModal
+    setShowReportModal,
+    listings: allListings
   } = useApp();
 
   const [listing, setListing] = useState(initialListing || null);
@@ -33,9 +34,40 @@ export default function ListingDetailClient({ id, initialListing }) {
   const [comment, setComment] = useState("");
   const [localFeedbackStats, setLocalFeedbackStats] = useState({ avg: null, count: 0, comments: [] });
 
+  // First try to find listing in context
   useEffect(() => {
-    if (initialListing) return; // Skip fetch if we have initial data
-    if (!id || !db) return;
+    if (initialListing) {
+      setListing(initialListing);
+      setLoading(false);
+      return;
+    }
+
+    if (allListings && allListings.length > 0 && id) {
+      const foundListing = allListings.find(l => l.id === id);
+      if (foundListing) {
+        setListing(foundListing);
+        setLoading(false);
+        return;
+      }
+    }
+
+    // If not found in context, fetch from Firebase
+    if (!id) {
+      setListing(null);
+      setLoading(false);
+      return;
+    }
+
+    if (!db) {
+      // Wait a bit for db to initialize
+      const timer = setTimeout(() => {
+        if (!db) {
+          setLoading(false);
+          setListing(null);
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
 
     const fetchListing = async () => {
       try {
@@ -49,13 +81,14 @@ export default function ListingDetailClient({ id, initialListing }) {
       } catch (error) {
         console.error("Error fetching listing:", error);
         showMessage(t("error") || "Error loading listing", "error");
+        setListing(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchListing();
-  }, [id, db, initialListing]);
+  }, [id, db, initialListing, allListings, showMessage, t]);
 
   // Load Feedback for this listing
   useEffect(() => {
@@ -102,8 +135,9 @@ export default function ListingDetailClient({ id, initialListing }) {
 
   if (loading) {
     return (
-      <div className="container" style={{ padding: "4rem", textAlign: "center" }}>
-        <div className="spinner"></div>
+      <div className="detail-loading-container">
+        <div className="spinner" aria-label="Loading listing"></div>
+        <p className="detail-loading-text">{t("loading") || "Loading listing..."}</p>
       </div>
     );
   }

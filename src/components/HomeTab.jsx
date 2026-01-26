@@ -14,6 +14,9 @@ export default function HomeTab() {
     setForm,
     categoryIcons,
     setCatFilter,
+    activeListingCount,
+    verifiedListingCount,
+    publicListings,
   } = useApp();
   
   const router = useRouter();
@@ -110,6 +113,38 @@ export default function HomeTab() {
         </div>
       </section>
 
+      {/* STATS SECTION */}
+      <section 
+        className="stats-section" 
+        aria-labelledby="stats-title"
+      >
+        <div className="container">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon" aria-hidden="true">📋</div>
+              <div className="stat-content">
+                <div className="stat-value">{activeListingCount || 0}</div>
+                <div className="stat-label">{t("activeListings") || "Active Listings"}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon" aria-hidden="true">✓</div>
+              <div className="stat-content">
+                <div className="stat-value">{verifiedListingCount || 0}</div>
+                <div className="stat-label">{t("verifiedListings") || "Verified Listings"}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon" aria-hidden="true">👥</div>
+              <div className="stat-content">
+                <div className="stat-value">{publicListings?.length || 0}</div>
+                <div className="stat-label">{t("publicListings") || "Public Listings"}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CATEGORIES */}
       <section 
         className="categories-section" 
@@ -143,6 +178,52 @@ export default function HomeTab() {
                   <span className="category-name">{t(cat)}</span>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES SECTION */}
+      <section 
+        className="features-section" 
+        aria-labelledby="features-title"
+      >
+        <div className="container">
+          <div className="section-header">
+            <h2 id="features-title" className="section-title">
+              <span className="section-icon" aria-hidden="true">🌟</span>
+              {t("whyChooseUs") || "Why Choose BizCall MK?"}
+            </h2>
+          </div>
+          
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon" aria-hidden="true">🔒</div>
+              <h3 className="feature-title">{t("verifiedListings") || "Verified Listings"}</h3>
+              <p className="feature-description">
+                {t("verifiedListingsDesc") || "All listings are verified for authenticity and trustworthiness."}
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon" aria-hidden="true">💰</div>
+              <h3 className="feature-title">{t("noCommissions") || "No Commissions"}</h3>
+              <p className="feature-description">
+                {t("noCommissionsDesc") || "Connect directly with service providers. No middleman, no fees."}
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon" aria-hidden="true">📱</div>
+              <h3 className="feature-title">{t("easyContact") || "Easy Contact"}</h3>
+              <p className="feature-description">
+                {t("easyContactDesc") || "Contact listings directly via phone, WhatsApp, or email."}
+              </p>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon" aria-hidden="true">⭐</div>
+              <h3 className="feature-title">{t("ratingsReviews") || "Ratings & Reviews"}</h3>
+              <p className="feature-description">
+                {t("ratingsReviewsDesc") || "Read reviews from real users to make informed decisions."}
+              </p>
             </div>
           </div>
         </div>

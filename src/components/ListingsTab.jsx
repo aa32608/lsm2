@@ -220,8 +220,14 @@ export default function ListingsTab() {
           <div className="sidebar-ad">
             <GoogleAd style={{ minHeight: '250px' }} />
           </div>
+          <div className="sidebar-ad">
+            <GoogleAd style={{ minHeight: '250px' }} />
+          </div>
           <div className="sidebar-ad sticky-ad">
             <GoogleAd style={{ minHeight: '600px' }} />
+          </div>
+          <div className="sidebar-ad">
+            <GoogleAd style={{ minHeight: '250px' }} />
           </div>
         </aside>
       </div>
