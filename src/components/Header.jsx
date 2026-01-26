@@ -116,12 +116,12 @@ const Header = ({ onMenuOpen }) => {
             animation: 'shimmer 1.5s infinite'
           }}></div>
         ) : user ? (
-          <button className="btn btn-ghost desktop-only" onClick={onLogout}>
+          <button className="btn btn-ghost" onClick={onLogout}>
             {t("logout")}
           </button>
         ) : (
           <button
-            className="btn btn-primary desktop-only"
+            className="btn btn-primary"
             onClick={() => {
               setAuthMode("login");
               setShowAuthModal(true);
