@@ -114,8 +114,13 @@ const AuthModal = () => {
     try {
       setPhoneLoading(true);
       const appVerifier = createRecaptcha("recaptcha-container");
-      const formattedPhone = normalizePhoneForStorage(phoneNumber);
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      // Combine country code with phone number
+      const raw = phoneNumber.replace(/\D/g, "");
+      if (!raw || raw.length < 5) {
+        return showMessage(t("enterValidPhone"), "error");
+      }
+      const fullPhone = countryCode + raw;
+      const confirmation = await signInWithPhoneNumber(auth, fullPhone, appVerifier);
       setVerificationId(confirmation);
       showMessage(t("otpSent"), "success");
     } catch (err) {
@@ -272,12 +277,27 @@ const AuthModal = () => {
                     <div className="field-group">
                       <label className="field-label">{t("phoneNumber")}</label>
                       <div className="phone-input-group" style={{ display: 'flex', gap: '0.5rem' }}>
+                        <select
+                          className="select phone-country"
+                          style={{ width: '120px', flexShrink: 0 }}
+                          value={countryCode}
+                          onChange={(e) => setCountryCode(e.target.value)}
+                        >
+                          {countryCodes.map((c) => (
+                            <option key={c.code} value={c.code}>
+                              {c.name} {c.code}
+                            </option>
+                          ))}
+                        </select>
                         <input
-                          className="input"
+                          className="input phone-number"
                           type="tel"
-                          placeholder="+389 70 123 456"
+                          placeholder="70 123 456"
                           value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                          maxLength="12"
+                          inputMode="numeric"
+                          style={{ flex: 1 }}
                         />
                       </div>
                       <div id="recaptcha-container" style={{ marginTop: '10px' }}></div>

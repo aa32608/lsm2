@@ -764,16 +764,83 @@ img {
   -webkit-line-clamp: 2;
 }
 
-/* Mobile adjustments for horizontal card */
-@media (max-width: 640px) {
-  .listing-card.horizontal {
-    flex-direction: column;
-    height: auto;
+/* Mobile adjustments for horizontal card - Keep horizontal on mobile */
+@media (max-width: 768px) {
+  /* Make all listing cards horizontal on mobile */
+  .listing-card {
+    flex-direction: row;
+    height: 140px; /* Shorter height for mobile */
+    align-items: stretch;
   }
   
-  .listing-card.horizontal .listing-card-image-container {
-    width: 100%;
-    height: 200px;
+  .listing-card .listing-card-image-container {
+    width: 160px; /* Fixed width image */
+    height: 100%;
+    aspect-ratio: auto;
+    flex-shrink: 0;
+  }
+  
+  .listing-card .listing-card-content {
+    padding: var(--spacing-sm) var(--spacing-md);
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  
+  .listing-card .listing-card-title {
+    font-size: 0.95rem;
+    -webkit-line-clamp: 2;
+    margin-bottom: 0.25rem;
+  }
+  
+  .listing-card .listing-card-description {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 2;
+    margin-bottom: 0.5rem;
+    flex: 0;
+  }
+  
+  .listing-card .listing-card-meta {
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .listing-card .listing-card-footer {
+    padding-top: 0.5rem;
+    margin-top: 0;
+    border-top: 1px solid var(--border);
+  }
+  
+  .listing-card .listing-stat {
+    font-size: 0.7rem;
+  }
+  
+  .listing-card .listing-card-actions {
+    gap: 0.25rem;
+  }
+  
+  .listing-card .listing-action-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+  
+  .listing-card .pill {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.5rem;
+  }
+  
+  .listing-card-badges {
+    top: 6px;
+    left: 6px;
+    right: 6px;
+  }
+  
+  .listing-card-badges .pill {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
   }
 }
 
