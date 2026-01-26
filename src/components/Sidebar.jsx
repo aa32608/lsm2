@@ -1,12 +1,13 @@
 "use client";
 import React, { useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 
 const Sidebar = ({ onClose }) => {
-  const { t, user, onLogout, onLogin, myListingsRaw } = useApp();
+  const { t, user, onLogout, onLogin, myListingsRaw, selectedTab, setSelectedTab } = useApp();
   const pathname = usePathname();
+  const router = useRouter();
 
   const userStats = useMemo(() => {
     if (!user || !myListingsRaw) return null;
@@ -17,20 +18,27 @@ const Sidebar = ({ onClose }) => {
   }, [user, myListingsRaw]);
 
   // Helper to check active state
-  const isActive = (path) => {
-    if (path === "/" && pathname === "/") return true;
-    if (path !== "/" && pathname?.startsWith(path)) return true;
+  const isActive = (id) => {
+    if (pathname === "/" && selectedTab === id) return true;
     return false;
   };
 
   const navItems = [
-    { id: "main", label: t("homepage"), icon: "🏠", path: "/" },
+    { id: "home", label: t("homepage"), icon: "🏠" },
     ...(user ? [
-      { id: "myListings", label: t("myListings"), icon: "📂", path: "/mylistings" },
-      { id: "account", label: t("account"), icon: "👤", path: "/account" },
+      { id: "myListings", label: t("myListings"), icon: "📂" },
+      { id: "account", label: t("account"), icon: "👤" },
     ] : []),
-    { id: "allListings", label: t("explore"), icon: "🧭", path: "/listings" },
+    { id: "explore", label: t("explore"), icon: "🧭" },
   ];
+
+  const handleNav = (id) => {
+    setSelectedTab(id);
+    if (pathname !== "/") {
+      router.push("/");
+    }
+    onClose();
+  };
 
   return (
     <div className="sidebar-panel mobile-only">
@@ -51,22 +59,21 @@ const Sidebar = ({ onClose }) => {
 
       <div className="sidebar-nav">
         {navItems.map((item) => (
-          <Link
+          <button
             key={item.id}
-            href={item.path}
-            className={`sidebar-btn ${isActive(item.path) ? "active" : ""}`}
-            onClick={onClose} // Close sidebar on navigation
+            className={`sidebar-btn ${isActive(item.id) ? "active" : ""}`}
+            onClick={() => handleNav(item.id)}
           >
             <span className="sidebar-icon">{item.icon}</span>
             <span className="sidebar-label">{item.label}</span>
-            {isActive(item.path) && (
+            {isActive(item.id) && (
               <span className="sidebar-active-indicator">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
               </span>
             )}
-          </Link>
+          </button>
         ))}
       </div>
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import HomeTab from '../components/HomeTab';
+import MainApp from '../components/MainApp';
 
 export const metadata = {
   title: 'Tetovo LMS - Home',
@@ -7,5 +7,5 @@ export const metadata = {
 };
 
 export default function HomePage() {
-  return <HomeTab />;
+  return <MainApp />;
 }

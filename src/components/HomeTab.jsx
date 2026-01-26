@@ -1,11 +1,9 @@
 "use client";
 import React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 
 export default function HomeTab() {
-  const router = useRouter();
   const {
     t,
     user,
@@ -53,7 +51,7 @@ export default function HomeTab() {
           </button>
           <button
             className="btn btn-outline"
-            onClick={() => router.push('/listings')}
+            onClick={() => setSelectedTab('explore')}
           >
             🔍 {t("homeSimpleCtaBrowse")}
           </button>
@@ -96,7 +94,7 @@ export default function HomeTab() {
                 className="discovery-chip"
                 onClick={() => {
                   setCatFilter(t(cat));
-                  router.push('/listings');
+                  setSelectedTab('explore');
                 }}
               >
                 <span className="chip-icon">{categoryIcons[cat]}</span>
@@ -118,7 +116,7 @@ export default function HomeTab() {
                 className="city-tile"
                 onClick={() => {
                   setLocFilter(city);
-                  setSelectedTab("allListings");
+                  setSelectedTab("explore");
                 }}
               >
                 <span className="city-icon">🏙️</span>

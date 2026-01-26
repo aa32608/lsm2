@@ -757,6 +757,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     handleStartExtendFlow,
     handleProceedExtend,
     handleOpenEdit,
+    saveEdit,
     handleSelectListing,
     myListingsRaw,
     verifiedListings,

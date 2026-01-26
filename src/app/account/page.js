@@ -1,10 +1,5 @@
-import React from 'react';
-import AccountTab from '../../components/AccountTab';
-
-export const metadata = {
-  title: 'Tetovo LMS - Account',
-};
+import { redirect } from 'next/navigation';
 
 export default function AccountPage() {
-  return <AccountTab />;
+  redirect('/');
 }

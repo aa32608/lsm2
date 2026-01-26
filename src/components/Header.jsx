@@ -1,31 +1,37 @@
 "use client";
 import React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
 const Header = ({ onMenuOpen }) => {
-  const { t, lang, setLang, user, onLogout, onLogin, verifiedListings, myListingsRaw, authLoading } = useApp();
+  const { t, lang, setLang, user, onLogout, onLogin, verifiedListings, myListingsRaw, authLoading, selectedTab, setSelectedTab } = useApp();
   const pathname = usePathname();
+  const router = useRouter();
 
   // Helper to check active state
-  const isActive = (path) => {
-    if (path === "/" && pathname === "/") return true;
-    if (path !== "/" && pathname?.startsWith(path)) return true;
+  const isActive = (id) => {
+    if (pathname === "/" && selectedTab === id) return true;
     return false;
   };
 
   const navItems = [
-    { id: "main", label: t("homepage"), icon: "🏠", path: "/" },
-    { id: "allListings", label: t("explore"), icon: "🧭", path: "/listings", badge: verifiedListings?.length || 0 },
+    { id: "home", label: t("homepage"), icon: "🏠" },
+    { id: "explore", label: t("explore"), icon: "🧭", badge: verifiedListings?.length || 0 },
     ...(user
       ? [
-          { id: "myListings", label: t("myListings"), icon: "📂", path: "/mylistings", badge: myListingsRaw?.length || 0 },
-          { id: "account", label: t("account"), icon: "👤", path: "/account" },
+          { id: "myListings", label: t("myListings"), icon: "📂", badge: myListingsRaw?.length || 0 },
+          { id: "account", label: t("account"), icon: "👤" },
         ]
       : []),
   ];
+
+  const handleNav = (id) => {
+    setSelectedTab(id);
+    if (pathname !== "/") {
+      router.push("/");
+    }
+  };
 
   return (
     <header className="header">
@@ -42,7 +48,11 @@ const Header = ({ onMenuOpen }) => {
           </svg>
         </button>
 
-        <Link href="/" className="brand">
+        <button
+          className="brand"
+          onClick={() => handleNav('home')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+        >
           <div className="brand-mark">
             <div className="brand-logo-wrap">
               <img
@@ -57,19 +67,19 @@ const Header = ({ onMenuOpen }) => {
             <h1 className="brand-title">{t("bizCall")}</h1>
             <p className="brand-tagline">{t("communityTagline")}</p>
           </div>
-        </Link>
+        </button>
 
         <nav className="header-nav desktop-nav" aria-label={t("primaryNav")}>
           {navItems.map((item) => (
-            <Link
+            <button
               key={item.id}
-              href={item.path}
-              className={`nav-chip ${isActive(item.path) ? "active" : ""}`}
+              className={`nav-chip ${isActive(item.id) ? "active" : ""}`}
+              onClick={() => handleNav(item.id)}
               style={{ color: "#000" }} // Preserving inline style from original
             >
               <span className="nav-chip-label">{item.icon} {item.label}</span>
               {item.badge !== undefined && item.badge > 0 && <span className="nav-chip-badge">{item.badge}</span>}
-            </Link>
+            </button>
           ))}
         </nav>
 

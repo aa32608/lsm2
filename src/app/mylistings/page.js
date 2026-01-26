@@ -1,10 +1,5 @@
-import React from 'react';
-import MyListingsTab from '../../components/MyListingsTab';
-
-export const metadata = {
-  title: 'Tetovo LMS - My Listings',
-};
+import { redirect } from 'next/navigation';
 
 export default function MyListingsPage() {
-  return <MyListingsTab />;
+  redirect('/');
 }
