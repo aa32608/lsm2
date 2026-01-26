@@ -228,12 +228,189 @@ export default function ListingDetailClient({ id, initialListing }) {
           aria-label={t("back") || "Back to listings"}
         >
           <span aria-hidden="true">←</span> {t("back") || "Back"}
-        </button>
+         </button>
       </div>
 
       <div className="detail-page-container">
-        {/* Left Column: Images */}
-        <section className="detail-images-section" aria-label="Listing images">
+        {/* Left Sidebar: Additional Info */}
+        <aside className="detail-sidebar" aria-label="Additional listing information">
+          <div className="detail-sidebar-content">
+            <h2 className="detail-sidebar-title">{t("additionalInfo") || "Additional Information"}</h2>
+            
+            <div className="detail-sidebar-section">
+              {listing.tags && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    {listing.tags.split(',').map((tag, idx) => (
+                      <span key={idx} className="detail-tag">{tag.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {listing.socialLink && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    <a 
+                      href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="detail-social-link"
+                    >
+                      {listing.socialLink}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {listing.locationCity && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🏙️</span> {t("city") || "City"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.locationCity}</div>
+                </div>
+              )}
+
+              {listing.locationExtra && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">📍</span> {t("locationDetails") || "Location Details"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.locationExtra}</div>
+                </div>
+              )}
+
+              {listing.createdAt && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">📅</span> {t("postedOn") || "Posted On"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    {formatDate(listing.createdAt)}
+                  </div>
+                </div>
+              )}
+
+              {listing.expiresAt && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">⏰</span> {t("expiresOn") || "Expires On"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    {formatDate(listing.expiresAt)}
+                    {listing.expiresAt > Date.now() && (
+                      <span className="detail-expiry-days">
+                        {' '}({getDaysUntilExpiry(listing.expiresAt)} {t("daysLeft") || "days left"})
+                      </span>
+                    )}
+                    {listing.expiresAt <= Date.now() && (
+                      <span className="detail-expiry-days" style={{ color: 'var(--danger)' }}>
+                        {' '}({t("expired") || "Expired"})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(listing.views || listing.views === 0) && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">👁️</span> {t("views") || "Views"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.views || 0}</div>
+                </div>
+              )}
+
+              {(listing.likes || listing.likes === 0) && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.likes || 0}</div>
+                </div>
+              )}
+
+              {listing.userEmail && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
+                      {listing.userEmail}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {listing.plan && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">💎</span> {t("plan") || "Plan"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.plan}</div>
+                </div>
+              )}
+
+              {listing.pricePaid && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">💰</span> {t("pricePaid") || "Price Paid"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.pricePaid}</div>
+                </div>
+              )}
+
+              {listing.status && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">📊</span> {t("status") || "Status"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    <span className={`detail-status-badge ${listing.status === "verified" ? "detail-status-verified" : "detail-status-pending"}`}>
+                      {listing.status === "verified" ? "✅ Verified" : "⏳ Pending"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {listing.category && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">{categoryIcons[listing.category] || "📂"}</span> {t("category") || "Category"}
+                  </div>
+                  <div className="detail-sidebar-value">{t(listing.category) || listing.category}</div>
+                </div>
+              )}
+
+              {listing.location && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🌍</span> {t("location") || "Location"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.location}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Ad in Sidebar */}
+            <div className="detail-sidebar-ad">
+              <GoogleAd style={{ minHeight: '250px' }} />
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content: Images and Details */}
+        <div className="detail-main-content">
+          {/* Images Section */}
+          <section className="detail-images-section" aria-label="Listing images">
           <div 
             className="detail-main-image-wrapper"
             onClick={() => setShowMaximize(true)}
@@ -279,7 +456,7 @@ export default function ListingDetailClient({ id, initialListing }) {
              ) : (
                <div className="detail-placeholder">
                  <span className="detail-placeholder-icon" aria-hidden="true">
-                   {categoryIcons[listing.category] || "🏷️"}
+                 {categoryIcons[listing.category] || "🏷️"}
                  </span>
                  <span className="detail-placeholder-text">No image available</span>
                </div>
@@ -300,7 +477,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                     src={img}
                     alt={`Thumbnail ${idx + 1}`}
                     loading="lazy"
-                  />
+                />
                 </button>
               ))}
             </div>
@@ -483,7 +660,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                            <span className="detail-feedback-rating" aria-label={`${fb.rating} out of 5 stars`}>
                              {'⭐'.repeat(Number(fb.rating))}
                            </span>
-                         </div>
+                     </div>
                          {fb.comment && (
                            <p className="detail-feedback-text">{fb.comment}</p>
                          )}
@@ -515,127 +692,9 @@ export default function ListingDetailClient({ id, initialListing }) {
             >
               <span aria-hidden="true">🚩</span> {t("reportListing") || "Report Listing"}
             </button>
-          </div>
-        </section>
-      </div>
-
-      {/* Additional Listing Information */}
-      <section className="detail-section detail-additional-info">
-        <h2 className="detail-section-title">{t("additionalInfo") || "Additional Information"}</h2>
-        <div className="detail-info-grid">
-          {listing.tags && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
-              </div>
-              <div className="detail-info-value">
-                {listing.tags.split(',').map((tag, idx) => (
-                  <span key={idx} className="detail-tag">{tag.trim()}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {listing.socialLink && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
-              </div>
-              <div className="detail-info-value">
-                <a 
-                  href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="detail-social-link"
-                >
-                  {listing.socialLink}
-                </a>
-              </div>
-            </div>
-          )}
-
-          {listing.locationCity && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">🏙️</span> {t("city") || "City"}
-              </div>
-              <div className="detail-info-value">{listing.locationCity}</div>
-            </div>
-          )}
-
-          {listing.locationExtra && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">📍</span> {t("locationDetails") || "Location Details"}
-              </div>
-              <div className="detail-info-value">{listing.locationExtra}</div>
-            </div>
-          )}
-
-          {listing.createdAt && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">📅</span> {t("postedOn") || "Posted On"}
-              </div>
-              <div className="detail-info-value">
-                {formatDate(listing.createdAt)}
-              </div>
-            </div>
-          )}
-
-          {listing.expiresAt && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">⏰</span> {t("expiresOn") || "Expires On"}
-              </div>
-              <div className="detail-info-value">
-                {formatDate(listing.expiresAt)}
-                {listing.expiresAt > Date.now() && (
-                  <span className="detail-expiry-days">
-                    {' '}({getDaysUntilExpiry(listing.expiresAt)} {t("daysLeft") || "days left"})
-                  </span>
-                )}
-                {listing.expiresAt <= Date.now() && (
-                  <span className="detail-expiry-days" style={{ color: 'var(--danger)' }}>
-                    {' '}({t("expired") || "Expired"})
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {(listing.views || listing.views === 0) && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">👁️</span> {t("views") || "Views"}
-              </div>
-              <div className="detail-info-value">{listing.views || 0}</div>
-            </div>
-          )}
-
-          {(listing.likes || listing.likes === 0) && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
-              </div>
-              <div className="detail-info-value">{listing.likes || 0}</div>
-            </div>
-          )}
-
-          {listing.userEmail && (
-            <div className="detail-info-item">
-              <div className="detail-info-label">
-                <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
-              </div>
-              <div className="detail-info-value">
-                <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
-                  {listing.userEmail}
-                </a>
-              </div>
-            </div>
-          )}
+          </section>
         </div>
-      </section>
+      </div>
 
       {/* Image Maximize Modal */}
       {showMaximize && (
