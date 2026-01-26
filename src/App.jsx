@@ -27,7 +27,6 @@ import {
 } from "firebase/auth";
 
 import { AnimatePresence, motion } from "framer-motion";
-import "./App.css";
 
 // Lazy loaded components - Client side only to avoid SSR Suspense issues
 const isClient = typeof window !== "undefined";

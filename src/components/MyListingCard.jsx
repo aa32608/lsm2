@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 const MyListingCard = React.memo(({
   listing: l,
@@ -8,13 +9,13 @@ const MyListingCard = React.memo(({
   getDaysUntilExpiry,
   getListingStats,
   getDescriptionPreview,
-  setSelectedListing,
   openEdit,
   startExtendFlow,
   showMessage,
   handleShareListing,
   confirmDelete,
 }) => {
+  const router = useRouter();
   const stats = getListingStats(l);
   const days = getDaysUntilExpiry(l.expiresAt);
   const isExpiringSoon = days !== null && days > 0 && days <= 7;
@@ -109,10 +110,7 @@ const MyListingCard = React.memo(({
           <button
             className="btn btn-primary small"
             onClick={() => {
-              setSelectedListing(l);
-              const url = new URL(window.location.href);
-              url.searchParams.set("listing", l.id);
-              window.history.replaceState({}, "", url.toString());
+              router.push(`/listings/${l.id}`);
             }}
           >
             👁️ {t("view")}

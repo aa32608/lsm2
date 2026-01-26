@@ -18,9 +18,15 @@ const LayoutContent = ({ children }) => {
   const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal } = useApp();
 
   return (
-    <div className={`app-container ${sidebarOpen ? "sidebar-open" : ""}`}>
+    <div className="app-container">
+      {/* Sidebar Overlay for Mobile */}
+      <div 
+        className={`sidebar-overlay ${sidebarOpen ? "visible" : ""}`} 
+        onClick={() => setSidebarOpen(false)}
+      />
+
       <Header onMenuOpen={() => setSidebarOpen(true)} />
-      <Sidebar onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="main-content">
          {children}
@@ -40,7 +46,12 @@ const LayoutContent = ({ children }) => {
       <CookieConsent t={t} />
 
       <footer className="footer">
-        <p>© 2024 {t("appName")} • {t("bizCall")}</p>
+        <div className="footer-links">
+          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms") || "Terms"}</button>
+          <span className="separator">•</span>
+          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy") || "Privacy"}</button>
+        </div>
+        <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
       </footer>
       <div id="recaptcha-signup" style={{ display: "none" }} />
       <div id="recaptcha-container" style={{ display: "none" }} />

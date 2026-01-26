@@ -240,7 +240,6 @@ const PostListingDrawer = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowPostForm(false)}
-            style={{ zIndex: 1000 }}
           >
             <motion.aside
               className="modal post-form-drawer"
@@ -261,8 +260,8 @@ const PostListingDrawer = () => {
                 </button>
               </div>
 
-              <div className="modal-body modal-body-scrollable">
-                <section className="card form-section">
+              <div className="modal-body">
+                <section className="form-section">
                     <h2 className="section-title">📝 {t("submitListing")}</h2>
                 
                     {/* Step indicators */}

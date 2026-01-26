@@ -274,7 +274,6 @@ export default function MyListingsTab() {
               getDaysUntilExpiry={getDaysUntilExpiry}
               getListingStats={getListingStats}
               getDescriptionPreview={getDescriptionPreview}
-              setSelectedListing={handleSelectListing}
               openEdit={handleOpenEdit}
               startExtendFlow={handleStartExtendFlow}
               showMessage={showMessage}

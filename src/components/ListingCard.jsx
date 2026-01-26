@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from "react";
-
-// import Link from "next/link";
+import Link from "next/link";
 
 const ListingCard = React.memo(({
   listing: l,
@@ -9,8 +8,6 @@ const ListingCard = React.memo(({
   categoryIcons,
   getDescriptionPreview,
   getListingStats,
-  onShare,
-  onSelect,
   className = "",
 }) => {
   const stats = getListingStats(l);
@@ -34,17 +31,10 @@ const ListingCard = React.memo(({
   };
 
   return (
-    <div
-      onClick={(e) => {
-        e.preventDefault();
-        if (onSelect) {
-          onSelect(l);
-          if (typeof window !== 'undefined') {
-             window.history.pushState({ listingId: l.id }, '', `/listings/${l.id}`);
-          }
-        }
-      }}
-      className={`listing-card explore-card-modern ${className}`}
+    <Link
+      href={`/listings/${l.id}`}
+      className={`card ${className}`}
+      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
     >
       <div className="listing-card-image-container">
         {images.length > 0 ? (
@@ -57,16 +47,14 @@ const ListingCard = React.memo(({
             />
             {images.length > 1 && (
               <>
-                <button className="carousel-btn prev" onClick={handlePrev}>‹</button>
-                <button className="carousel-btn next" onClick={handleNext}>›</button>
-                <div className="carousel-dots">
-                  {images.map((_, idx) => (
-                    <div 
-                      key={idx} 
-                      className={`carousel-dot ${idx === imgIndex ? 'active' : ''}`}
-                    />
-                  ))}
-                </div>
+                <button 
+                  className="carousel-btn prev" 
+                  onClick={handlePrev}
+                >‹</button>
+                <button 
+                  className="carousel-btn next" 
+                  onClick={handleNext}
+                >›</button>
               </>
             )}
           </>
@@ -80,75 +68,30 @@ const ListingCard = React.memo(({
            <div style={{ display: 'flex', gap: '6px' }}>
              {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
            </div>
-           <span className="badge verified">✓ {t("verified")}</span>
+           <span className="pill" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: '#000', fontWeight: 'bold' }}>✓ {t("verified")}</span>
         </div>
       </div>
 
-      <div className="listing-info-column">
-        <div className="listing-card-content">
-          <div style={{ marginBottom: '8px' }}>
-            <h3 className="listing-title">{l.name}</h3>
-            <div className="listing-meta pill-row-tight">
-               <span className="pill pill-category">{t(l.category) || l.category}</span>
-               <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
-            </div>
-          </div>
-
-          <p className="listing-description listing-description-preview">
-            {getDescriptionPreview(l.description, 30)}
-          </p>
-
-          <div className="listing-stats spaced">
-            <span className="stat-chip rating">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-            <span className="stat-chip">💬 {stats.feedbackCount}</span>
-            <span className="stat-chip subtle">🔥 {stats.engagement}</span>
+      <div className="listing-card-content">
+        <div style={{ marginBottom: '8px' }}>
+          <h3 className="listing-card-title">{l.name}</h3>
+          <div className="listing-card-meta">
+             <span className="pill pill-category">{t(l.category) || l.category}</span>
+             <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
           </div>
         </div>
 
-        <div className="listing-footer-row" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-          <div className="listing-footer-left">
-            {l.contact && (
-              <span className="pill pill-contact ghost-pill">
-                📞 {l.contact}
-              </span>
-            )}
-          </div>
+        <p className="listing-card-description">
+          {getDescriptionPreview(l.description, 30)}
+        </p>
 
-          <div className="listing-actions compact">
-            {l.contact && (
-              <button
-                className="icon-btn"
-                type="button"
-                onClick={() => window.open(`tel:${l.contact}`)}
-                aria-label={t("callAction")}
-              >
-                📞
-              </button>
-            )}
-            <button
-              className="icon-btn"
-              type="button"
-              onClick={() => window.open(
-                `mailto:${l.userEmail || ""}?subject=Regarding%20${encodeURIComponent(
-                  l.name || ""
-                )}`
-              )}
-              aria-label={t("emailAction")}
-            >
-              ✉️
-            </button>
-            <button
-              className="icon-btn"
-              type="button"
-              onClick={() => onShare && typeof onShare === 'function' && onShare(l)}
-              aria-label={t("share")}
-            >
-              🔗
-            </button>
-          </div>
+        <div className="listing-card-footer">
+          <span className="listing-stat highlight">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
+          <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>💬 {stats.feedbackCount}</span>
+          <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>🔥 {stats.engagement}</span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 });
 

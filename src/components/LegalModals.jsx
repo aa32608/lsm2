@@ -17,35 +17,35 @@ const ModalBackdrop = ({ children, onClose }) => (
 
 const ModalContent = ({ title, children, onClose, t }) => (
   <motion.div 
-    className="legal-modal"
+    className="modal"
     onClick={e => e.stopPropagation()}
     initial={{ y: 20, opacity: 0, scale: 0.95 }}
     animate={{ y: 0, opacity: 1, scale: 1 }}
     exit={{ y: 20, opacity: 0, scale: 0.95 }}
   >
-    <div className="legal-modal-header">
-       <h3 className="legal-modal-title">{title}</h3>
+    <div className="modal-header">
+       <h3 className="modal-title">{title}</h3>
        <button 
-         className="legal-modal-close-btn" 
+         className="icon-btn" 
          onClick={onClose}
          aria-label={typeof t === 'function' ? t("close") : "Close"}
        >
          ✕
        </button>
     </div>
-    <div className="legal-modal-body">
+    <div className="modal-body">
       {children}
     </div>
-    <div className="legal-modal-footer">
-       <button className="btn full-width" onClick={onClose} style={{ padding: '10px 20px' }}>{typeof t === 'function' ? t("close") : "Close"}</button>
+    <div className="modal-footer">
+       <button className="btn btn-secondary full-width" onClick={onClose}>{typeof t === 'function' ? t("close") : "Close"}</button>
     </div>
   </motion.div>
 );
 
 const Section = ({ title, children }) => (
-  <div className="legal-section">
-    <h4 className="legal-section-title">{title}</h4>
-    <div className="legal-text">
+  <div className="mb-lg">
+    <h4 className="text-h3">{title}</h4>
+    <div className="text-body">
       {children}
     </div>
   </div>
@@ -54,8 +54,8 @@ const Section = ({ title, children }) => (
 export const TermsModal = ({ onClose, t }) => (
   <ModalBackdrop onClose={onClose}>
     <ModalContent title={t("termsOfService") || "Terms of Service"} onClose={onClose} t={t}>
-      <div className="legal-content">
-        <p className="legal-last-updated">
+      <div>
+        <p className="text-sm text-muted mb-lg">
           {t("termsLastUpdated") || "Last Updated"}: {new Date().toLocaleDateString()}
         </p>
         
@@ -64,8 +64,8 @@ export const TermsModal = ({ onClose, t }) => (
         </Section>
 
         <Section title={t("terms2Title") || "2. User Responsibilities"}>
-          <p>{t("terms2Text") || "Users are responsible for the accuracy of their listings. You agree not to post content that is illegal, offensive, or fraudulent."}</p>
-          <ul className="legal-list">
+          <p className="mb-sm">{t("terms2Text") || "Users are responsible for the accuracy of their listings. You agree not to post content that is illegal, offensive, or fraudulent."}</p>
+          <ul className="list-disc pl-5">
             <li>{t("terms2List1") || "Maintain accurate contact information"}</li>
             <li>{t("terms2List2") || "Respect intellectual property rights"}</li>
             <li>{t("terms2List3") || "Do not engage in spam or harassment"}</li>
@@ -91,8 +91,8 @@ export const TermsModal = ({ onClose, t }) => (
 export const PrivacyModal = ({ onClose, t }) => (
   <ModalBackdrop onClose={onClose}>
     <ModalContent title={t("privacyPolicy") || "Privacy Policy"} onClose={onClose} t={t}>
-      <div className="legal-content">
-        <p className="legal-last-updated">
+      <div>
+        <p className="text-sm text-muted mb-lg">
           {t("privacyLastUpdated") || "Last Updated"}: {new Date().toLocaleDateString()}
         </p>
 

@@ -59,13 +59,12 @@ const ReportModal = () => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            style={{ maxWidth: '500px' }}
           >
             <div className="modal-header">
               <h3 className="modal-title">{t("reportListing")}</h3>
               <button className="icon-btn" onClick={() => setShowReportModal(false)}>✕</button>
             </div>
-            <div className="modal-body" style={{ padding: '20px' }}>
+            <div className="modal-body">
               <div className="field-group">
                 <label className="field-label">{t("reportReason")}</label>
                 <select
@@ -81,21 +80,21 @@ const ReportModal = () => {
               <div className="field-group">
                 <label className="field-label">{t("description")}</label>
                 <textarea
-                  className="input"
+                  className="textarea"
                   rows="4"
                   value={reportDescription}
                   onChange={(e) => setReportDescription(e.target.value)}
                   placeholder={t("reportReason")}
                 />
               </div>
-              <div className="modal-actions">
-                <button className="btn btn-ghost" onClick={() => setShowReportModal(false)}>
-                  {t("cancel")}
-                </button>
-                <button className="btn" onClick={handleReportSubmit}>
-                  {t("sendReport")}
-                </button>
-              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowReportModal(false)}>
+                {t("cancel")}
+              </button>
+              <button className="btn btn-primary" onClick={handleReportSubmit}>
+                {t("sendReport")}
+              </button>
             </div>
           </motion.div>
         </motion.div>

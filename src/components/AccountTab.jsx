@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import { 
   updateProfile, 
@@ -27,7 +28,6 @@ const AccountTab = () => {
     lang, 
     showMessage, 
     myListingsRaw, 
-    setSelectedTab, 
     setShowPostForm, 
     setShowTerms, 
     setShowPrivacy,
@@ -74,6 +74,8 @@ const AccountTab = () => {
   const [savingPassword, setSavingPassword] = useState(false);
   const [emailForm, setEmailForm] = useState({ newEmail: "", currentPassword: "" });
   const [savingEmail, setSavingEmail] = useState(false);
+
+  const router = useRouter();
 
   // Initialize state from user
   useEffect(() => {
@@ -226,7 +228,7 @@ const AccountTab = () => {
       
       await deleteUser(user);
       showMessage(t("accountDeleted"), "success");
-      setSelectedTab("main");
+      router.push("/");
     } catch (err) {
       console.error(err);
       showMessage(t("deleteAccountError") + ": " + err.message, "error");
@@ -476,7 +478,7 @@ const AccountTab = () => {
               </button>
               <button 
                 className="account-quick-link-item"
-                onClick={() => setSelectedTab("allListings")}
+                onClick={() => router.push("/listings")}
               >
                 <span className="quick-link-icon">🔍</span>
                 <div className="quick-link-content">

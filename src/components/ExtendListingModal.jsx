@@ -31,48 +31,40 @@ const ExtendListingModal = () => {
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
-            style={{ maxWidth: '500px' }}
           >
             <div className="modal-header">
               <h3 className="modal-title">{t("extendListing") || "Extend Listing"}</h3>
               <button className="icon-btn" onClick={() => setExtendModalOpen(false)}>✕</button>
             </div>
-            <div className="modal-body" style={{ padding: '24px' }}>
-              <p style={{ marginBottom: 16 }}>
+            <div className="modal-body">
+              <p className="text-body mb-lg">
                 {t("extendDescription") || "Choose a plan to extend your listing duration."}
               </p>
               
-              <div className="plan-selection-grid" style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+              <div className="plan-selection-grid">
                 {PLANS.map(plan => (
                   <div 
                     key={plan.id}
                     className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''}`}
                     onClick={() => setSelectedExtendPlan(plan.id)}
-                    style={{ 
-                      border: selectedExtendPlan === plan.id ? '2px solid var(--accent)' : '1px solid var(--border)',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      background: selectedExtendPlan === plan.id ? 'var(--bg-subtle)' : 'var(--bg-card)'
-                    }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 'bold' }}>{t(`month${plan.id}`)}</span>
-                      <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{plan.price}</span>
+                    <div className="flex justify-between items-center mb-xs">
+                      <span className="font-bold">{t(`month${plan.id}`)}</span>
+                      <span className="text-primary font-bold">{plan.price}</span>
                     </div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
+                    <div className="text-sm text-muted">{t(`days${plan.duration.split(' ')[0]}`)}</div>
                   </div>
                 ))}
               </div>
-
-              <div className="modal-actions">
-                <button className="btn btn-ghost" onClick={() => setExtendModalOpen(false)}>
-                  {t("cancel")}
-                </button>
-                <button className="btn btn-accent" onClick={handleProceedExtend}>
-                  {t("proceedToPayment") || "Proceed to Payment"}
-                </button>
-              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setExtendModalOpen(false)}>
+                {t("cancel")}
+              </button>
+              <button className="btn btn-primary" onClick={handleProceedExtend}>
+                {t("proceedToPayment") || "Proceed to Payment"}
+              </button>
             </div>
           </motion.div>
         </motion.div>

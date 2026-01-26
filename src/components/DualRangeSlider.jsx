@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import "./DualRangeSlider.css";
 
 const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
   // Local state for inputs to allow free typing

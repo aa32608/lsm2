@@ -198,7 +198,7 @@ const AuthModal = () => {
 
         {authMode === "login" && (
           <>
-            <div className="modal-body auth-body auth-body-card">
+            <div className="modal-body">
               <div className="auth-method-toggle" style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>
                  <button 
                    className={`btn btn-sm ${!isPhoneLogin ? 'btn-primary' : 'btn-outline'}`}
@@ -221,8 +221,8 @@ const AuthModal = () => {
               {!isPhoneLogin ? (
                 <>
                   {/* Email Login */}
-                  <div className="auth-field-group">
-                      <span className="field-label">{t("email")}</span>
+                  <div className="field-group">
+                      <label className="field-label">{t("email")}</label>
                       <input
                       className="input"
                       type="email"
@@ -232,8 +232,8 @@ const AuthModal = () => {
                       />
                   </div>
 
-                  <div className="auth-field-group">
-                      <span className="field-label">{t("password")}</span>
+                  <div className="field-group">
+                      <label className="field-label">{t("password")}</label>
                       <input
                       className="input"
                       type="password"
@@ -245,7 +245,8 @@ const AuthModal = () => {
 
                   <div className="auth-actions">
                       <button
-                      className="btn full-width"
+                      className="btn btn-primary full-width"
+                      style={{ width: '100%' }}
                       onClick={async () => {
                           if (!validateEmail(email))
                           return showMessage(t("enterValidEmail"), "error");
@@ -268,9 +269,9 @@ const AuthModal = () => {
                 <>
                   {/* Phone Login */}
                   {!verificationId ? (
-                    <div className="auth-field-group">
-                      <span className="field-label">{t("phoneNumber")}</span>
-                      <div className="phone-input-group">
+                    <div className="field-group">
+                      <label className="field-label">{t("phoneNumber")}</label>
+                      <div className="phone-input-group" style={{ display: 'flex', gap: '0.5rem' }}>
                         <input
                           className="input"
                           type="tel"
@@ -282,17 +283,17 @@ const AuthModal = () => {
                       <div id="recaptcha-container" style={{ marginTop: '10px' }}></div>
                       
                       <button 
-                        className="btn full-width" 
+                        className="btn btn-primary full-width" 
                         onClick={handleSendOtp}
                         disabled={phoneLoading}
-                        style={{ marginTop: '16px' }}
+                        style={{ marginTop: '16px', width: '100%' }}
                       >
                         {phoneLoading ? t("sending") : t("sendCode")}
                       </button>
                     </div>
                   ) : (
-                    <div className="auth-field-group">
-                      <span className="field-label">{t("verificationCode")}</span>
+                    <div className="field-group">
+                      <label className="field-label">{t("verificationCode")}</label>
                       <input
                         className="input"
                         type="text"
@@ -301,17 +302,17 @@ const AuthModal = () => {
                         onChange={(e) => setOtp(e.target.value)}
                       />
                       <button 
-                        className="btn full-width" 
+                        className="btn btn-primary full-width" 
                         onClick={handleVerifyOtp}
                         disabled={phoneLoading}
-                        style={{ marginTop: '16px' }}
+                        style={{ marginTop: '16px', width: '100%' }}
                       >
                         {phoneLoading ? t("verifying") : t("verifyAndLogin")}
                       </button>
                       <button 
                         className="btn btn-ghost full-width"
                         onClick={() => setVerificationId(null)}
-                        style={{ marginTop: '8px' }}
+                        style={{ marginTop: '8px', width: '100%' }}
                       >
                         {t("back")}
                       </button>
@@ -324,14 +325,14 @@ const AuthModal = () => {
         )}
 
         {authMode === "signup" && (
-            <div className="modal-body auth-body auth-body-card">
+            <div className="modal-body">
             <p className="auth-subtitle">
                 {t("signupSubtitle") ||
                 "Create a BizCall account to post and manage your listings."}
             </p>
         
-            <div className="auth-field-group">
-                <span className="field-label">{t("name")}</span>
+            <div className="field-group">
+                <label className="field-label">{t("name")}</label>
                 <input
                 className="input"
                 type="text"
@@ -341,8 +342,8 @@ const AuthModal = () => {
             </div>
         
             {/* EMAIL */}
-            <div className="auth-field-group">
-                <span className="field-label">{t("email")}</span>
+            <div className="field-group">
+                <label className="field-label">{t("email")}</label>
                 <input
                 className="input"
                 type="email"
@@ -352,8 +353,8 @@ const AuthModal = () => {
             </div>
         
             {/* PASSWORD */}
-            <div className="auth-field-group">
-                <span className="field-label">{t("password")}</span>
+            <div className="field-group">
+                <label className="field-label">{t("password")}</label>
                 <input
                 className="input"
                 type="password"
@@ -363,10 +364,10 @@ const AuthModal = () => {
             </div>
         
             {/* REPEAT PASSWORD */}
-            <div className="auth-field-group">
-                <span className="field-label">
+            <div className="field-group">
+                <label className="field-label">
                 {t("repeatNewPassword")}
-                </span>
+                </label>
                 <input
                 className="input"
                 type="password"
@@ -378,11 +379,12 @@ const AuthModal = () => {
             </div>
         
             {/* PHONE (MANDATORY) */}
-            <div className="auth-field-group">
-                <span className="field-label">{t("phoneNumber")}</span>
-                <div className="phone-input-group">
+            <div className="field-group">
+                <label className="field-label">{t("phoneNumber")}</label>
+                <div className="phone-input-group" style={{ display: 'flex', gap: '0.5rem' }}>
                 <select
                     className="select phone-country"
+                    style={{ width: '100px' }}
                     value={countryCode}
                     onChange={(e) => setCountryCode(e.target.value)}
                 >
@@ -394,6 +396,7 @@ const AuthModal = () => {
                 </select>
                 <input
                     className="input phone-number"
+                    style={{ flex: 1 }}
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) =>
@@ -406,18 +409,20 @@ const AuthModal = () => {
             </div>
         
             {/* Checkbox for Terms */}
-            <div className="auth-field-group checkbox-group">
+            <div className="field-group checkbox-group" style={{ display: 'flex', alignItems: 'flex-start' }}>
                 <input 
                 type="checkbox" 
                 id="agreeTerms" 
                 checked={agreedToTerms} 
                 onChange={(e) => setAgreedToTerms(e.target.checked)} 
                 className="auth-checkbox"
+                style={{ marginTop: '4px' }}
                 />
-                <label htmlFor="agreeTerms" className="auth-terms-label">
-                {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
+                <label htmlFor="agreeTerms" className="auth-terms-label text-sm text-muted">
+                {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("privacyPolicy")}</button>.
                 </label>
             </div>
+
 
             {/* STEP 1: SEND SMS */}
             {!confirmationResult && (

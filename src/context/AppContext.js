@@ -256,15 +256,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // We'll keep selectedTab for compatibility, but routing should handle page views.
   // However, sidebar uses it to highlight active item.
-  const [selectedTab, setSelectedTabState] = useState("home"); 
   const [viewMode, setViewMode] = useState("list");
   const [showPostForm, setShowPostForm] = useState(false);
-
-  const setSelectedTab = useCallback((tab) => {
-    setSelectedTabState(tab);
-    // In Next.js, we might want to navigate.
-    // We'll expose a wrapper in the component layer to handle navigation.
-  }, []);
 
   /* Editing */
   const [editingListing, setEditingListing] = useState(null);
@@ -683,7 +676,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     userListings,
     loading, setLoading,
     message, showMessage,
-    selectedListing, setSelectedListing,
     q, setQ,
     catFilter, setCatFilter,
     locFilter, setLocFilter,
@@ -744,7 +736,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     handleProceedExtend,
     handleOpenEdit,
     saveEdit,
-    handleSelectListing,
     myListingsRaw,
     verifiedListings,
     allLocations,
