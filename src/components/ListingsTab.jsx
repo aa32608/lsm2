@@ -146,14 +146,8 @@ export default function ListingsTab() {
                  categoryIcons={categoryIcons}
                  getDescriptionPreview={getDescriptionPreview}
                  getListingStats={getListingStats}
-                 onSelect={() => {
-                   setSelectedListing(l);
-                   const url = new URL(window.location.href);
-                   url.searchParams.set("listing", l.id);
-                   window.history.replaceState({}, "", url.toString());
-                 }}
-                 onShare={() => handleShareListing(l)}
-                 showMessage={showMessage}
+                onShare={() => handleShareListing(l)}
+                showMessage={showMessage}
                  toggleFav={toggleFav}
                  isFavorite={favorites.includes(l.id)}
                />

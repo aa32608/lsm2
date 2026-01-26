@@ -11,7 +11,7 @@ export const metadata = {
 
 async function getListings() {
   try {
-    const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { cache: 'no-store' });
+    const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { next: { revalidate: 60 } });
     if (!res.ok) throw new Error('Failed to fetch data');
     const data = await res.json();
     if (!data) return [];

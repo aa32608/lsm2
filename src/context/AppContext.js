@@ -476,6 +476,40 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return () => unsubscribe();
   }, []);
 
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+
+  const submitFeedback = async (listingId, rating, comment) => {
+    if (!user) {
+      setAuthMode("login");
+      setShowAuthModal(true);
+      return;
+    }
+    if (!rating) return;
+    
+    try {
+      setFeedbackSaving(true);
+      const feedbackRef = dbRef(db, "reviews");
+      const newReviewRef = push(feedbackRef);
+      await set(newReviewRef, {
+        listingId,
+        userId: user.uid,
+        userName: userProfile?.name || user.displayName || "Anonymous",
+        rating: Number(rating),
+        comment: stripDangerous(comment),
+        createdAt: Date.now()
+      });
+      
+      showMessage(t("feedbackSaved") || "Review submitted", "success");
+      return true;
+    } catch (err) {
+      console.error(err);
+      showMessage(t("feedbackSaveError") || "Could not save review", "error");
+      return false;
+    } finally {
+      setFeedbackSaving(false);
+    }
+  };
+
   // Load Reviews Logic
   useEffect(() => {
     const reviewsRef = dbRef(db, "reviews");
@@ -690,6 +724,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     onLogout, onLogin,
     favorites,
     feedbackAverages,
+    submitFeedback,
+    feedbackSaving,
     // Auth State
     email, setEmail,
     password, setPassword,

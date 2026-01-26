@@ -17,12 +17,21 @@ export default function ListingDetailPage() {
     showMessage,
     handleShareListing,
     formatOfferPrice,
-    categoryIcons
+    categoryIcons,
+    feedbackAverages,
+    submitFeedback,
+    feedbackSaving,
+    setReportingListingId,
+    setShowReportModal
   } = useApp();
 
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [imgIndex, setImgIndex] = useState(0);
+
+  // Feedback local state
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
 
   useEffect(() => {
     if (!id || !db) return;
@@ -62,6 +71,17 @@ export default function ListingDetailPage() {
   const handleNext = () => {
     setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
+
+  const handleFeedbackSubmit = async () => {
+    const success = await submitFeedback(listing.id, rating, comment);
+    if (success) {
+      setComment("");
+      setRating(5);
+    }
+  };
+
+  const feedbackStats = feedbackAverages[id] || {};
+  const hasFeedback = feedbackStats.count > 0;
 
   if (loading) {
     return (
@@ -152,10 +172,37 @@ export default function ListingDetailPage() {
             </div>
 
             <div className="detail-section description-section">
-              <h3 className="section-title">{t("description") || "About"}</h3>
+              <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                 <h3 className="section-title" style={{ margin: 0 }}>{t("description") || "About"}</h3>
+                 <span className="pill muted">{t("category")}: {t(listing.category) || listing.category}</span>
+              </div>
               <div className="description-text">
                 {listing.description}
               </div>
+
+              <div className="soft-grid" style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+                  <p className="highlight-label" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>{t("pricing") || "Pricing"}</p>
+                  <p className="highlight-value" style={{ fontWeight: 600 }}>{listing.offerprice || t("unspecified")}</p>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
+                  <p className="highlight-label" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>{t("contactEmail") || "Email"}</p>
+                  <p className="highlight-value" style={{ fontWeight: 600 }}>{listing.userEmail || t("unspecified")}</p>
+                </div>
+              </div>
+
+               <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                 <button 
+                   className="btn btn-ghost small"
+                   style={{ color: '#64748b', fontSize: '0.85rem' }}
+                   onClick={() => {
+                     setReportingListingId(listing.id);
+                     setShowReportModal(true);
+                   }}
+                 >
+                   🚩 {t("report") || "Report Listing"}
+                 </button>
+               </div>
             </div>
 
             {listing.tags && (
@@ -168,6 +215,80 @@ export default function ListingDetailPage() {
                 </div>
               </div>
             )}
+
+            {/* Feedback Section */}
+            <div className="detail-section feedback-section">
+              <div className="feedback-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div>
+                  <p className="eyebrow" style={{ fontSize: '0.85rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t("reputation") || "Reputation"}</p>
+                  <h4 style={{ fontSize: '1.25rem', margin: '4px 0' }}>{t("communityFeedback") || "Community Feedback"}</h4>
+                  <p className="small-muted" style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{t("cloudFeedbackNote") || "Ratings and comments are stored securely."}</p>
+                </div>
+                <div className="feedback-summary" style={{ textAlign: 'right' }}>
+                  <div className="score-circle" style={{ 
+                    width: '48px', height: '48px', borderRadius: '50%', background: '#0f172a', color: 'white', 
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 700, marginLeft: 'auto', marginBottom: '4px'
+                  }}>
+                    {feedbackStats.avg ?? "–"}
+                  </div>
+                  <div>
+                    <p className="summary-label" style={{ fontWeight: 600 }}>{feedbackStats.count || 0} {t("reviews") || "reviews"}</p>
+                    <p className="small-muted" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{t("averageRating") || "Average rating"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {hasFeedback ? (
+                <div className="feedback-grid" style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
+                  {feedbackStats.comments && feedbackStats.comments.map((review, i) => (
+                    <div key={i} className="review-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+                      <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span className="review-author" style={{ fontWeight: 600 }}>{review.userName || "User"}</span>
+                        <span className="review-rating">⭐ {review.rating}</span>
+                      </div>
+                      <p className="review-text" style={{ color: '#334155', lineHeight: 1.5 }}>{review.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                 <div className="empty-feedback" style={{ textAlign: 'center', padding: '32px', background: '#f8fafc', borderRadius: '12px', marginBottom: '24px', color: '#64748b' }}>
+                   {t("noFeedback") || "No feedback yet"}
+                 </div>
+              )}
+
+              {/* Add Review Form */}
+              <div className="add-review-box" style={{ borderTop: '1px solid #e2e8f0', paddingTop: '24px' }}>
+                <h5 style={{ fontSize: '1rem', marginBottom: '16px' }}>{t("addReview") || "Add your review"}</h5>
+                <div className="rating-select" style={{ marginBottom: '12px' }}>
+                  {[1, 2, 3, 4, 5].map((r) => (
+                    <button 
+                      key={r} 
+                      onClick={() => setRating(r)}
+                      style={{ 
+                        background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer',
+                        opacity: r <= rating ? 1 : 0.3, transition: 'opacity 0.2s'
+                      }}
+                    >
+                      ⭐
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  className="textarea"
+                  placeholder={t("writeReviewPlaceholder") || "Share your experience..."}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  style={{ width: '100%', minHeight: '80px', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '12px' }}
+                />
+                <button 
+                  className="btn btn-primary"
+                  onClick={handleFeedbackSubmit}
+                  disabled={feedbackSaving || !comment.trim()}
+                >
+                  {feedbackSaving ? (t("saving") || "Saving...") : (t("submitReview") || "Submit Review")}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Right Column: Sticky Sidebar */}
@@ -228,6 +349,11 @@ export default function ListingDetailPage() {
 
               <div className="safety-tip">
                 🛡️ <strong>Safety Tip:</strong> Never transfer money before meeting or seeing the service.
+              </div>
+
+              <div className="sidebar-card muted-card" style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '12px' }}>
+                <p className="sidebar-title" style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px' }}>{t("cloudFeedbackNote") || "Trusted Reviews"}</p>
+                <p className="small-muted" style={{ fontSize: '0.8rem', color: '#64748b' }}>{t("feedbackSidebarBlurb") || "Ratings help everyone find the best services."}</p>
               </div>
             </div>
           </div>

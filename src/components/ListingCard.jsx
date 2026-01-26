@@ -131,7 +131,7 @@ const ListingCard = React.memo(({
           <button
             className="icon-btn"
             type="button"
-            onClick={() => onShare(l)}
+            onClick={() => onShare && onShare(l)}
             aria-label={t("share")}
           >
             🔗
