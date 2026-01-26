@@ -680,9 +680,9 @@ export default function ListingDetailClient({ id, initialListing }) {
                )}
              </div>
           </section>
-          
+
           <div className="detail-footer">
-            <button 
+            <button
               className="detail-report-btn"
               onClick={() => {
                 setReportingListingId(listing.id);
@@ -692,7 +692,8 @@ export default function ListingDetailClient({ id, initialListing }) {
             >
               <span aria-hidden="true">🚩</span> {t("reportListing") || "Report Listing"}
             </button>
-          </section>
+          </div>
+        </section>
         </div>
       </div>
 
