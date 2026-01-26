@@ -5748,7 +5748,6 @@ img {
 
 .feedback-items::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
-}
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
