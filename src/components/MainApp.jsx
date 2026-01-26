@@ -5,9 +5,10 @@ import HomeTab from './HomeTab';
 import ListingsTab from './ListingsTab';
 import MyListingsTab from './MyListingsTab';
 import AccountTab from './AccountTab';
+import ListingDetailView from './ListingDetailView';
 
 export default function MainApp() {
-  const { selectedTab, setSelectedTab } = useApp();
+  const { selectedTab, setSelectedTab, selectedListing, setSelectedListing } = useApp();
 
   // Scroll to top when tab changes, if desired. 
   // For "instant" feel, maybe we don't want to scroll to top if user was there?
