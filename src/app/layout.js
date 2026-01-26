@@ -1,5 +1,6 @@
 import React from 'react';
 import LayoutWrapper from '../components/LayoutWrapper';
+import '../App.css';
 import './globals.css';
 
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,9 @@ export default async function RootLayout({ children }) {
     <html lang="sq">
       <head>
         <link rel="icon" href="/logo.png" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>
         <LayoutWrapper initialListings={allListings} initialPublicListings={publicListings}>

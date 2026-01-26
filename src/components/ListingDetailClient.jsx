@@ -717,7 +717,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               <span aria-hidden="true">🚩</span> {t("reportListing") || "Report Listing"}
             </button>
           </div>
-        </section>
+          </div>
         </div>
       </div>
 
