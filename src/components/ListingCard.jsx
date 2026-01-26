@@ -59,9 +59,25 @@ const ListingCard = React.memo(({
         ? l.description.substring(0, 100) + "..." 
         : l.description || "");
 
+  // Ensure ID is valid
+  if (!l) {
+    return null;
+  }
+
+  // Get ID from listing object (could be l.id or the key from Firebase)
+  const listingId = l.id || l.key || null;
+  
+  if (!listingId) {
+    console.warn("ListingCard: Missing listing ID", l);
+    return null;
+  }
+
+  // Ensure ID is a string and encode it for URL
+  const listingUrl = `/listings/${encodeURIComponent(String(listingId))}`;
+
   return (
     <Link
-      href={`/listings/${l.id}`}
+      href={listingUrl}
       className={`listing-card ${className}`}
       aria-label={`View ${l.name} listing`}
     >

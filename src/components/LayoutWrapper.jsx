@@ -29,8 +29,19 @@ const LayoutContent = ({ children }) => {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="main-content">
-         {children}
+        <div className="main-content-wrapper">
+          {children}
+        </div>
       </main>
+
+      <footer className="footer">
+        <div className="footer-links">
+          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms") || "Terms"}</button>
+          <span className="separator">•</span>
+          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy") || "Privacy"}</button>
+        </div>
+        <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
+      </footer>
 
       <AnimatePresence>
         {showAuthModal && <AuthModal />}
@@ -44,15 +55,7 @@ const LayoutContent = ({ children }) => {
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} t={t} />}
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} t={t} />}
       <CookieConsent t={t} />
-
-      <footer className="footer">
-        <div className="footer-links">
-          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms") || "Terms"}</button>
-          <span className="separator">•</span>
-          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy") || "Privacy"}</button>
-        </div>
-        <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
-      </footer>
+      
       <div id="recaptcha-signup" style={{ display: "none" }} />
       <div id="recaptcha-container" style={{ display: "none" }} />
     </div>

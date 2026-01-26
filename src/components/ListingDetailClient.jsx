@@ -36,14 +36,20 @@ export default function ListingDetailClient({ id, initialListing }) {
 
   // First try to find listing in context
   useEffect(() => {
+    // Decode ID if it's URL encoded
+    const decodedId = id ? decodeURIComponent(id) : null;
+    
     if (initialListing) {
       setListing(initialListing);
       setLoading(false);
       return;
     }
 
-    if (allListings && allListings.length > 0 && id) {
-      const foundListing = allListings.find(l => l.id === id);
+    if (allListings && allListings.length > 0 && decodedId) {
+      const foundListing = allListings.find(l => {
+        // Try both encoded and decoded ID
+        return l.id === decodedId || l.id === id || String(l.id) === String(decodedId) || String(l.id) === String(id);
+      });
       if (foundListing) {
         setListing(foundListing);
         setLoading(false);
@@ -52,11 +58,13 @@ export default function ListingDetailClient({ id, initialListing }) {
     }
 
     // If not found in context, fetch from Firebase
-    if (!id) {
+    if (!decodedId && !id) {
       setListing(null);
       setLoading(false);
       return;
     }
+
+    const listingId = decodedId || id;
 
     if (!db) {
       // Wait a bit for db to initialize
@@ -72,10 +80,14 @@ export default function ListingDetailClient({ id, initialListing }) {
     const fetchListing = async () => {
       try {
         setLoading(true);
-        const snapshot = await get(dbRef(db, `listings/${id}`));
+        // Try both with and without encoding
+        const snapshot = await get(dbRef(db, `listings/${listingId}`));
         if (snapshot.exists()) {
-          setListing({ id, ...snapshot.val() });
+          const data = snapshot.val();
+          setListing({ id: listingId, ...data });
         } else {
+          // Try alternative ID formats
+          console.warn(`Listing ${listingId} not found, trying alternative formats`);
           setListing(null);
         }
       } catch (error) {
