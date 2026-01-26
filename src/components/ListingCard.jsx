@@ -9,8 +9,12 @@ const ListingCard = React.memo(({
   getDescriptionPreview,
   getListingStats,
   className = "",
+  onShare,
+  showMessage,
+  toggleFav,
+  isFavorite,
 }) => {
-  const stats = getListingStats(l);
+  const stats = getListingStats ? getListingStats(l) : { avgRating: 0, feedbackCount: 0, engagement: 0 };
   const [imgIndex, setImgIndex] = useState(0);
 
   // Determine images to display
@@ -30,12 +34,36 @@ const ListingCard = React.memo(({
     setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  const handleFavoriteClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (toggleFav) {
+      toggleFav(l.id);
+    }
+  };
+
+  const handleShareClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onShare) {
+      onShare();
+    }
+  };
+
   const isHorizontal = className.includes('horizontal');
+
+  // Get description preview
+  const descriptionPreview = getDescriptionPreview 
+    ? getDescriptionPreview(l.description || "")
+    : (l.description && l.description.length > 100 
+        ? l.description.substring(0, 100) + "..." 
+        : l.description || "");
 
   return (
     <Link
       href={`/listings/${l.id}`}
       className={`listing-card ${className}`}
+      aria-label={`View ${l.name} listing`}
     >
       <div className="listing-card-image-container">
         {images.length > 0 ? (
@@ -69,8 +97,8 @@ const ListingCard = React.memo(({
            <div style={{ display: 'flex', gap: '6px' }}>
              {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
-           {l.isVerified && (
-             <span className="pill" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--success)', fontWeight: 'bold' }}>✓ {t("verified")}</span>
+           {l.status === "verified" && (
+             <span className="pill pill-verified" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--success)', fontWeight: 'bold' }}>✓ {t("verified")}</span>
            )}
         </div>
       </div>
@@ -85,13 +113,38 @@ const ListingCard = React.memo(({
         </div>
 
         <p className="listing-card-description">
-          {getDescriptionPreview(l.description, isHorizontal ? 60 : 30)}
+          {descriptionPreview}
         </p>
 
         <div className="listing-card-footer">
-          <span className="listing-stat highlight" style={{ color: 'var(--accent)' }}>⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
-          <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>💬 {stats.feedbackCount}</span>
-          <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>🔥 {stats.engagement}</span>
+          <div className="listing-stats">
+            {stats.avgRating > 0 && (
+              <span className="listing-stat highlight" style={{ color: 'var(--accent)' }}>
+                ⭐ {Number(stats.avgRating || 0).toFixed(1)}
+              </span>
+            )}
+            <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>
+              💬 {stats.feedbackCount || 0}
+            </span>
+          </div>
+          <div className="listing-card-actions">
+            <button
+              className="listing-action-btn"
+              onClick={handleFavoriteClick}
+              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              title={isFavorite ? t("removeFavorite") || "Remove favorite" : t("addFavorite") || "Add favorite"}
+            >
+              {isFavorite ? "❤️" : "🤍"}
+            </button>
+            <button
+              className="listing-action-btn"
+              onClick={handleShareClick}
+              aria-label={t("share") || "Share listing"}
+              title={t("share") || "Share"}
+            >
+              🔗
+            </button>
+          </div>
         </div>
       </div>
     </Link>

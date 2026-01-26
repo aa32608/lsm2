@@ -125,167 +125,299 @@ export default function ListingDetailClient({ id, initialListing }) {
   return (
     <article className="listing-detail-page">
       {/* Back Button */}
-      <div className="container" style={{ paddingTop: '1rem' }}>
-         <button className="btn btn-ghost" onClick={() => router.push("/listings")}>
-           ← {t("back") || "Back"}
-         </button>
+      <div className="detail-page-header">
+        <button 
+          className="detail-back-btn" 
+          onClick={() => router.push("/listings")}
+          aria-label={t("back") || "Back to listings"}
+        >
+          <span aria-hidden="true">←</span> {t("back") || "Back"}
+        </button>
       </div>
 
-      <div className="container listing-detail-container">
+      <div className="detail-page-container">
         {/* Left Column: Images */}
-        <section className="listing-detail-images">
-          <div className="main-image-frame" onClick={() => setShowMaximize(true)}>
+        <section className="detail-images-section" aria-label="Listing images">
+          <div 
+            className="detail-main-image-wrapper"
+            onClick={() => setShowMaximize(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowMaximize(true);
+              }
+            }}
+            aria-label="Click to view full size image"
+          >
              {images.length > 0 ? (
                <>
-                 <img src={images[imgIndex]} alt={listing.name} className="detail-main-img" />
+                 <img 
+                   src={images[imgIndex]} 
+                   alt={`${listing.name} - Image ${imgIndex + 1} of ${images.length}`}
+                   className="detail-main-img" 
+                 />
                  {images.length > 1 && (
                    <>
-                     <button className="carousel-btn prev" onClick={(e) => { e.stopPropagation(); handlePrev(); }}>‹</button>
-                     <button className="carousel-btn next" onClick={(e) => { e.stopPropagation(); handleNext(); }}>›</button>
+                     <button 
+                       className="detail-carousel-btn detail-carousel-prev" 
+                       onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+                       aria-label="Previous image"
+                     >
+                       ‹
+                     </button>
+                     <button 
+                       className="detail-carousel-btn detail-carousel-next" 
+                       onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                       aria-label="Next image"
+                     >
+                       ›
+                     </button>
                    </>
                  )}
-                 <div className="maximize-icon">🔍</div>
+                 <div className="detail-maximize-hint" aria-hidden="true">
+                   <span>🔍</span> Click to enlarge
+                 </div>
                </>
              ) : (
                <div className="detail-placeholder">
-                 {categoryIcons[listing.category] || "🏷️"}
+                 <span className="detail-placeholder-icon" aria-hidden="true">
+                   {categoryIcons[listing.category] || "🏷️"}
+                 </span>
+                 <span className="detail-placeholder-text">No image available</span>
                </div>
              )}
           </div>
           {images.length > 1 && (
-            <div className="thumbnail-row">
+            <div className="detail-thumbnails" role="tablist" aria-label="Image thumbnails">
               {images.map((img, idx) => (
-                <img 
+                <button
                   key={idx}
-                  src={img}
-                  alt="thumb"
+                  role="tab"
+                  aria-selected={idx === imgIndex}
+                  aria-label={`View image ${idx + 1}`}
                   className={`detail-thumb ${idx === imgIndex ? 'active' : ''}`}
                   onClick={() => setImgIndex(idx)}
-                />
+                >
+                  <img 
+                    src={img}
+                    alt={`Thumbnail ${idx + 1}`}
+                    loading="lazy"
+                  />
+                </button>
               ))}
             </div>
           )}
         </section>
 
         {/* Right Column: Info */}
-        <section className="listing-detail-info">
+        <section className="detail-info-section">
           <header className="detail-header">
-             <div className="detail-badges" style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-               <span className="pill" style={{ backgroundColor: '#ecfdf5', color: '#10b981' }}>✓ {t("verified")}</span>
-               {listing.offerprice && <span className="pill pill-price">{listing.offerprice}</span>}
+             <div className="detail-badges" role="list" aria-label="Listing badges">
+               {listing.status === "verified" && (
+                 <span className="pill pill-verified" role="listitem">
+                   <span aria-hidden="true">✓</span> {t("verified")}
+                 </span>
+               )}
+               {listing.offerprice && (
+                 <span className="pill pill-price" role="listitem">
+                   {listing.offerprice}
+                 </span>
+               )}
              </div>
              <h1 className="detail-title">{listing.name}</h1>
              <div className="detail-meta-row">
-               <span className="pill pill-category">{t(listing.category) || listing.category}</span>
-               <span className="pill pill-location">📍 {listing.location || t("unspecified")}</span>
+               <span className="pill pill-category">
+                 {categoryIcons[listing.category] && <span aria-hidden="true">{categoryIcons[listing.category]}</span>}
+                 {t(listing.category) || listing.category}
+               </span>
+               <span className="pill pill-location">
+                 <span aria-hidden="true">📍</span> {listing.location || t("unspecified")}
+               </span>
              </div>
              {hasRating && (
-               <div className="detail-rating-row" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 <span className="stars">{'⭐'.repeat(Math.round(localFeedbackStats.avg))}</span>
-                 <span className="rating-num" style={{ fontWeight: '600' }}>{localFeedbackStats.avg} ({localFeedbackStats.count})</span>
+               <div className="detail-rating-row" aria-label={`Rating: ${localFeedbackStats.avg} out of 5 stars based on ${localFeedbackStats.count} reviews`}>
+                 <span className="detail-stars" aria-hidden="true">
+                   {'⭐'.repeat(Math.round(localFeedbackStats.avg))}
+                 </span>
+                 <span className="detail-rating-num">
+                   <strong>{localFeedbackStats.avg}</strong> ({localFeedbackStats.count} {t("reviews") || "reviews"})
+                 </span>
                </div>
              )}
           </header>
 
-          <div className="detail-actions-bar">
+          <div className="detail-actions-bar" role="group" aria-label="Contact and action buttons">
              {listing.contact && (
                <>
-                 <a href={`tel:${listing.contact}`} className="btn btn-primary action-btn">
-                   📞 {t("callAction") || "Call"}
+                 <a 
+                   href={`tel:${listing.contact}`} 
+                   className="detail-action-btn detail-action-call"
+                   aria-label={`Call ${listing.contact}`}
+                 >
+                   <span aria-hidden="true">📞</span> {t("callAction") || "Call"}
                  </a>
-                 <a href={`https://wa.me/${listing.contact.replace(/[^0-9]/g, '')}`} className="btn btn-success action-btn" target="_blank" rel="noreferrer" style={{ backgroundColor: '#25D366', color: 'white', borderColor: '#25D366' }}>
-                   💬 WhatsApp
+                 <a 
+                   href={`https://wa.me/${listing.contact.replace(/[^0-9]/g, '')}`} 
+                   className="detail-action-btn detail-action-whatsapp"
+                   target="_blank" 
+                   rel="noreferrer noopener"
+                   aria-label="Open WhatsApp chat"
+                 >
+                   <span aria-hidden="true">💬</span> WhatsApp
                  </a>
                </>
              )}
-             <a href={`mailto:${listing.userEmail || ""}`} className="btn btn-secondary action-btn">
-               ✉️ {t("emailAction") || "Email"}
-             </a>
-             <button className="btn btn-secondary" style={{ width: 'auto' }} onClick={() => handleShareListing(listing)}>
-               🔗
+             {listing.userEmail && (
+               <a 
+                 href={`mailto:${listing.userEmail}`} 
+                 className="detail-action-btn detail-action-email"
+                 aria-label={`Send email to ${listing.userEmail}`}
+               >
+                 <span aria-hidden="true">✉️</span> {t("emailAction") || "Email"}
+               </a>
+             )}
+             <button 
+               className="detail-action-btn detail-action-share"
+               onClick={() => handleShareListing(listing)}
+               aria-label={t("share") || "Share listing"}
+             >
+               <span aria-hidden="true">🔗</span>
              </button>
-             <button className="btn btn-secondary" style={{ width: 'auto' }} onClick={() => toggleFav(listing.id)}>
-               {favorites.includes(listing.id) ? "❤️" : "🤍"}
+             <button 
+               className="detail-action-btn detail-action-favorite"
+               onClick={() => toggleFav(listing.id)}
+               aria-label={favorites.includes(listing.id) ? t("removeFavorite") || "Remove from favorites" : t("addFavorite") || "Add to favorites"}
+               aria-pressed={favorites.includes(listing.id)}
+             >
+               <span aria-hidden="true">{favorites.includes(listing.id) ? "❤️" : "🤍"}</span>
              </button>
           </div>
 
-          <section className="detail-section">
-            <h3>{t("description") || "Description"}</h3>
-            <p className="detail-description">{listing.description}</p>
+          <section className="detail-section detail-description-section">
+            <h2 className="detail-section-title">{t("description") || "Description"}</h2>
+            <div className="detail-description">
+              {listing.description ? (
+                <p style={{ whiteSpace: 'pre-line', lineHeight: '1.7' }}>{listing.description}</p>
+              ) : (
+                <p className="text-muted">{t("noDescription") || "No description provided."}</p>
+              )}
+            </div>
           </section>
 
           {/* AdSense Unit */}
-          <div style={{ margin: '1rem 0' }}>
+          <div className="detail-ad-section">
             <GoogleAd style={{ minHeight: '120px' }} />
           </div>
 
           {/* Feedback Section */}
-          <div className="detail-section feedback-section">
-             <h3>{t("feedback") || "Feedback"}</h3>
+          <section className="detail-section detail-feedback-section">
+             <h2 className="detail-section-title">{t("feedback") || "Feedback"}</h2>
              
              {/* Feedback Form */}
              {user ? (
-               <div className="feedback-form">
-                 <div className="rating-select">
+               <div className="detail-feedback-form">
+                 <label className="feedback-rating-label">
+                   {t("yourRating") || "Your Rating"}
+                 </label>
+                 <div className="detail-rating-select" role="radiogroup" aria-label="Select rating">
                    {[1,2,3,4,5].map(r => (
-                     <span 
+                     <button
                        key={r} 
-                       className={`star-select ${r <= rating ? 'selected' : ''}`}
+                       type="button"
+                       role="radio"
+                       aria-checked={r === rating}
+                       aria-label={`${r} star${r > 1 ? 's' : ''}`}
+                       className={`detail-star-select ${r <= rating ? 'selected' : ''}`}
                        onClick={() => setRating(r)}
                      >
                        ★
-                     </span>
+                     </button>
                    ))}
                  </div>
+                 <label className="feedback-comment-label" htmlFor="feedback-comment">
+                   {t("yourReview") || "Your Review"}
+                 </label>
                  <textarea
-                  className="textarea"
+                  id="feedback-comment"
+                  className="detail-textarea"
                   placeholder={t("writeFeedback") || "Write a review..."}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  rows={4}
+                  aria-label="Review comment"
                 />
                  <button 
-                   className="btn btn-primary"
-                   disabled={feedbackSaving}
-                   onClick={() => submitFeedback(listing.id, rating, comment, () => { setComment(""); setRating(5); })}
+                   className="detail-feedback-submit-btn"
+                   disabled={feedbackSaving || !comment.trim()}
+                   onClick={async () => {
+                     const success = await submitFeedback(listing.id, rating, comment);
+                     if (success) {
+                       setComment("");
+                       setRating(5);
+                     }
+                   }}
                  >
-                   {feedbackSaving ? "..." : (t("submit") || "Submit")}
+                   {feedbackSaving ? t("submitting") || "Submitting..." : (t("submit") || "Submit Review")}
                  </button>
                </div>
              ) : (
-               <p className="login-hint text-muted">
-                 <Link href="/" style={{ textDecoration: 'underline' }}>{t("loginToReview") || "Login to leave a review"}</Link>
-               </p>
+               <div className="detail-login-prompt">
+                 <p className="detail-login-text">
+                   <Link href="/" className="detail-login-link">
+                     {t("loginToReview") || "Login to leave a review"}
+                   </Link>
+                 </p>
+               </div>
              )}
 
              {/* Feedback List */}
-             <div className="feedback-list" style={{ marginTop: '1.5rem' }}>
+             <div className="detail-feedback-list">
                {localFeedbackStats.comments.length > 0 ? (
-                 localFeedbackStats.comments.map((fb, i) => (
-                   <div key={i} className="feedback-item">
-                     <div className="feedback-header">
-                       <span className="feedback-author">{fb.userDisplayName || "User"}</span>
-                       <span className="feedback-rating">{'⭐'.repeat(Number(fb.rating))}</span>
-                     </div>
-                     <p className="feedback-text">{fb.comment}</p>
-                     <span className="feedback-date">{new Date(fb.createdAt).toLocaleDateString()}</span>
+                 <>
+                   <h3 className="feedback-list-title">
+                     {t("reviews") || "Reviews"} ({localFeedbackStats.comments.length})
+                   </h3>
+                   <div className="feedback-items" role="list">
+                     {localFeedbackStats.comments.map((fb, i) => (
+                       <article key={i} className="detail-feedback-item" role="listitem">
+                         <div className="detail-feedback-header">
+                           <span className="detail-feedback-author">{fb.userName || fb.userDisplayName || "Anonymous"}</span>
+                           <span className="detail-feedback-rating" aria-label={`${fb.rating} out of 5 stars`}>
+                             {'⭐'.repeat(Number(fb.rating))}
+                           </span>
+                         </div>
+                         {fb.comment && (
+                           <p className="detail-feedback-text">{fb.comment}</p>
+                         )}
+                         <time className="detail-feedback-date" dateTime={new Date(fb.createdAt).toISOString()}>
+                           {new Date(fb.createdAt).toLocaleDateString(undefined, { 
+                             year: 'numeric', 
+                             month: 'long', 
+                             day: 'numeric' 
+                           })}
+                         </time>
+                       </article>
+                     ))}
                    </div>
-                 ))
+                 </>
                ) : (
-                 <p className="no-feedback text-muted">{t("noFeedbackYet") || "No feedback yet."}</p>
+                 <p className="detail-no-feedback">{t("noFeedbackYet") || "No feedback yet. Be the first to review!"}</p>
                )}
              </div>
-          </div>
+          </section>
           
           <div className="detail-footer">
             <button 
-              className="btn btn-ghost"
-              style={{ color: 'var(--danger)' }}
+              className="detail-report-btn"
               onClick={() => {
                 setReportingListingId(listing.id);
                 setShowReportModal(true);
               }}
+              aria-label={t("reportListing") || "Report this listing"}
             >
-              🚩 {t("reportListing") || "Report Listing"}
+              <span aria-hidden="true">🚩</span> {t("reportListing") || "Report Listing"}
             </button>
           </div>
         </section>
@@ -293,9 +425,26 @@ export default function ListingDetailClient({ id, initialListing }) {
 
       {/* Image Maximize Modal */}
       {showMaximize && (
-        <div className="maximize-modal" onClick={() => setShowMaximize(false)}>
-          <button className="close-max">✕</button>
-          <img src={images[imgIndex]} alt="Maximized" className="maximized-img" onClick={(e) => e.stopPropagation()} />
+        <div 
+          className="detail-maximize-modal" 
+          onClick={() => setShowMaximize(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full size image viewer"
+        >
+          <button 
+            className="detail-close-max"
+            onClick={() => setShowMaximize(false)}
+            aria-label="Close image viewer"
+          >
+            ✕
+          </button>
+          <img 
+            src={images[imgIndex]} 
+            alt={`${listing.name} - Full size`}
+            className="detail-maximized-img" 
+            onClick={(e) => e.stopPropagation()} 
+          />
         </div>
       )}
     </article>

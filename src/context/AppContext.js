@@ -169,8 +169,14 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [feedbackAverages, setFeedbackAverages] = useState({});
 
-  // Derived filtered listings
-  const verifiedListings = useMemo(() => listings.filter(l => l.status === "verified"), [listings]);
+  // Derived filtered listings - only verified, active, and not expired
+  const verifiedListings = useMemo(() => {
+    const now = Date.now();
+    return listings.filter(l => 
+      l.status === "verified" && 
+      (!l.expiresAt || l.expiresAt > now)
+    );
+  }, [listings]);
 
   const filtered = useMemo(() => {
     let arr = [...verifiedListings];
@@ -536,6 +542,43 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return () => unsub();
   }, []);
 
+  // Load Feedback Averages (Effect)
+  useEffect(() => {
+    if (!db) return;
+    const feedbackRef = dbRef(db, "feedback");
+    
+    const unsub = onValue(feedbackRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const averages = {};
+        
+        // Calculate averages per listing
+        Object.keys(data).forEach(listingId => {
+          const feedbacks = data[listingId];
+          if (feedbacks && typeof feedbacks === 'object') {
+            const values = Object.values(feedbacks);
+            const ratings = values.map(f => Number(f.rating) || 0).filter(r => r > 0);
+            if (ratings.length > 0) {
+              const sum = ratings.reduce((acc, r) => acc + r, 0);
+              averages[listingId] = {
+                avg: parseFloat((sum / ratings.length).toFixed(1)),
+                count: ratings.length
+              };
+            } else {
+              averages[listingId] = { avg: null, count: 0 };
+            }
+          }
+        });
+        
+        setFeedbackAverages(averages);
+      } else {
+        setFeedbackAverages({});
+      }
+    });
+    
+    return () => unsub();
+  }, [db]);
+
   // Filter user listings
   useEffect(() => {
     if (user && listings.length > 0) {
@@ -552,13 +595,21 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const getListingStats = (listing) => {
-    if (!listing) return { views: 0, likes: 0 };
+  const getListingStats = useCallback((listing) => {
+    if (!listing) return { views: 0, likes: 0, avgRating: 0, feedbackCount: 0, engagement: 0 };
+    const stats = feedbackAverages[listing.id] || {};
+    const feedbackCount = listing.feedbackCount ?? stats.count ?? 0;
+    const avgRating = listing.avgRating ?? stats.avg ?? 0;
+    const engagement = feedbackCount + (favorites.includes(listing.id) ? 1 : 0);
+    
     return {
       views: listing.views || 0,
-      likes: listing.likes || 0
+      likes: listing.likes || 0,
+      avgRating,
+      feedbackCount,
+      engagement
     };
-  };
+  }, [feedbackAverages, favorites]);
 
   const getDescriptionPreview = (desc) => {
     if (!desc) return "";
