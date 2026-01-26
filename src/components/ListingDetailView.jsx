@@ -1,13 +1,9 @@
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useApp } from "../../../context/AppContext";
+import { useApp } from "../context/AppContext";
 import { ref as dbRef, get, onValue } from "firebase/database";
-import Link from "next/link";
 
-export default function ListingDetailPage() {
-  const { id } = useParams();
-  const router = useRouter();
+export default function ListingDetailView({ listingId, initialListing, onClose }) {
   const { 
     t, 
     db, 
@@ -24,8 +20,8 @@ export default function ListingDetailPage() {
     setShowReportModal
   } = useApp();
 
-  const [listing, setListing] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [listing, setListing] = useState(initialListing || null);
+  const [loading, setLoading] = useState(!initialListing);
   const [imgIndex, setImgIndex] = useState(0);
   const [showMaximize, setShowMaximize] = useState(false);
 
@@ -35,14 +31,20 @@ export default function ListingDetailPage() {
   const [localFeedbackStats, setLocalFeedbackStats] = useState({ avg: null, count: 0, comments: [] });
 
   useEffect(() => {
-    if (!id || !db) return;
+    if (initialListing) {
+      setListing(initialListing);
+      setLoading(false);
+      return;
+    }
+
+    if (!listingId || !db) return;
 
     const fetchListing = async () => {
       try {
         setLoading(true);
-        const snapshot = await get(dbRef(db, `listings/${id}`));
+        const snapshot = await get(dbRef(db, `listings/${listingId}`));
         if (snapshot.exists()) {
-          setListing({ id, ...snapshot.val() });
+          setListing({ id: listingId, ...snapshot.val() });
         } else {
           setListing(null);
         }
@@ -55,12 +57,13 @@ export default function ListingDetailPage() {
     };
 
     fetchListing();
-  }, [id, db]);
+  }, [listingId, db, initialListing]);
 
   // Load Feedback for this listing
   useEffect(() => {
-    if (!id || !db) return;
-    const feedbackRef = dbRef(db, `feedback/${id}`);
+    const targetId = listing?.id || listingId;
+    if (!targetId || !db) return;
+    const feedbackRef = dbRef(db, `feedback/${targetId}`);
     
     const unsubscribe = onValue(feedbackRef, (snapshot) => {
       const data = snapshot.val();
@@ -82,7 +85,7 @@ export default function ListingDetailPage() {
     });
 
     return () => unsubscribe();
-  }, [id, db]);
+  }, [listing, listingId, db]);
 
   // Determine images to display
   const images = useMemo(() => {
@@ -115,7 +118,7 @@ export default function ListingDetailPage() {
 
   if (loading) {
     return (
-      <div className="listing-detail-page container">
+      <div className="listing-detail-page container" style={{ paddingTop: '80px' }}>
         <div className="skeleton-loader" style={{ height: '400px', borderRadius: '16px', marginBottom: '24px' }}></div>
         <div className="skeleton-loader" style={{ height: '40px', width: '60%', marginBottom: '16px' }}></div>
         <div className="skeleton-loader" style={{ height: '20px', width: '40%', marginBottom: '32px' }}></div>
@@ -126,11 +129,11 @@ export default function ListingDetailPage() {
 
   if (!listing) {
     return (
-      <div className="listing-detail-page container error-state">
+      <div className="listing-detail-page container error-state" style={{ paddingTop: '80px' }}>
         <h2>{t("listingNotFound") || "Listing Not Found"}</h2>
-        <Link href="/listings" className="btn btn-primary">
+        <button onClick={onClose} className="btn btn-primary">
           {t("explore") || "Back to Explore"}
-        </Link>
+        </button>
       </div>
     );
   }
@@ -138,13 +141,30 @@ export default function ListingDetailPage() {
   const isFav = favorites.includes(listing.id);
 
   return (
-    <div className="listing-detail-page">
-      <div className="listing-detail-header">
-        <div className="container">
+    <div className="listing-detail-view" style={{ 
+      position: 'fixed', 
+      top: 0, left: 0, right: 0, bottom: 0, 
+      background: '#fff', 
+      zIndex: 5000, 
+      overflowY: 'auto',
+      paddingTop: '60px' // Space for header if needed, or we can overlay header
+    }}>
+      {/* Header for Back Button */}
+      <div className="listing-detail-header-overlay" style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: '60px',
+        background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)',
+        zIndex: 5001, display: 'flex', alignItems: 'center', padding: '0 16px',
+        borderBottom: '1px solid #e2e8f0'
+      }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <button 
-            onClick={() => router.back()} 
+            onClick={onClose} 
             className="back-link"
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}
+            style={{ 
+              background: 'none', border: 'none', padding: '8px', 
+              cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px',
+              fontWeight: 600, color: '#334155'
+            }}
           >
             ← {t("back") || "Back"}
           </button>
@@ -155,7 +175,7 @@ export default function ListingDetailPage() {
         <div 
           style={{ 
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 99999, 
+            backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 99999, 
             display: 'flex', alignItems: 'center', justifyContent: 'center' 
           }}
           onClick={() => setShowMaximize(false)}
@@ -168,7 +188,7 @@ export default function ListingDetailPage() {
           <button 
             style={{ 
               position: 'absolute', top: '20px', right: '20px', 
-              background: 'white', border: 'none', borderRadius: '50%', 
+              background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', color: 'white',
               width: '40px', height: '40px', fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}
             onClick={() => setShowMaximize(false)}
@@ -202,7 +222,7 @@ export default function ListingDetailPage() {
         </div>
       )}
 
-      <div className="container listing-detail-content">
+      <div className="container listing-detail-content" style={{ marginTop: '20px' }}>
         <div className="detail-grid">
           {/* Left Column: Images & Key Info */}
           <div className="detail-main">

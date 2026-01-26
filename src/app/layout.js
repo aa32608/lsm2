@@ -5,7 +5,7 @@ import './globals.css';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: 'Tetovo LMS',
+  title: 'BizCall MK',
   description: 'Listing Management System',
 };
 

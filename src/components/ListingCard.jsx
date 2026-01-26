@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
-import Link from "next/link";
+// import Link from "next/link";
 
 const ListingCard = React.memo(({
   listing: l,
@@ -10,6 +10,7 @@ const ListingCard = React.memo(({
   getDescriptionPreview,
   getListingStats,
   onShare,
+  onSelect,
   className = "",
 }) => {
   const stats = getListingStats(l);
@@ -33,12 +34,21 @@ const ListingCard = React.memo(({
   };
 
   return (
-    <Link
-      href={`/listings/${l.id}`}
+    <div
+      onClick={(e) => {
+        e.preventDefault();
+        if (onSelect) {
+          onSelect(l);
+          // Update URL without navigation
+          if (typeof window !== 'undefined') {
+             window.history.pushState({ listingId: l.id }, '', `/listings/${l.id}`);
+          }
+        }
+      }}
       className={`listing-card explore-card-modern ${className}`}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block', cursor: 'pointer', width: '300px', flexShrink: 0 }}
     >
-      <div className="listing-card-image-container">
+      <div className="listing-card-image-container" style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
         {images.length > 0 ? (
           <>
             <img 
@@ -46,6 +56,7 @@ const ListingCard = React.memo(({
               alt={`${l.name}`} 
               className="listing-card-image"
               loading="lazy"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
             {images.length > 1 && (
               <>
@@ -63,7 +74,7 @@ const ListingCard = React.memo(({
             )}
           </>
         ) : (
-          <div className="listing-card-placeholder">
+          <div className="listing-card-placeholder" style={{ width: '100%', height: '100%' }}>
             {categoryIcons[l.category] || "🏷️"}
           </div>
         )}
@@ -131,14 +142,14 @@ const ListingCard = React.memo(({
           <button
             className="icon-btn"
             type="button"
-            onClick={() => onShare && onShare(l)}
+            onClick={() => onShare && typeof onShare === 'function' && onShare(l)}
             aria-label={t("share")}
           >
             🔗
           </button>
         </div>
       </div>
-    </Link>
+    </div>
   );
 });
 

@@ -140,17 +140,18 @@ export default function ListingsTab() {
            <div className={`listing-grid-${viewMode}`}>
              {pagedFiltered.map((l) => (
                <ListingCard
-                 key={l.id}
-                 listing={l}
-                 t={t}
-                 categoryIcons={categoryIcons}
-                 getDescriptionPreview={getDescriptionPreview}
-                 getListingStats={getListingStats}
+                key={l.id}
+                listing={l}
+                t={t}
+                categoryIcons={categoryIcons}
+                getDescriptionPreview={getDescriptionPreview}
+                getListingStats={getListingStats}
                 onShare={() => handleShareListing(l)}
+                onSelect={setSelectedListing}
                 showMessage={showMessage}
-                 toggleFav={toggleFav}
-                 isFavorite={favorites.includes(l.id)}
-               />
+                toggleFav={toggleFav}
+                isFavorite={favorites.includes(l.id)}
+              />
              ))}
            </div>
 

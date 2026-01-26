@@ -34,6 +34,18 @@ export default function MainApp() {
       <div style={{ display: selectedTab === 'account' ? 'block' : 'none' }}>
         <AccountTab />
       </div>
+      
+      {selectedListing && (
+        <ListingDetailView 
+          initialListing={selectedListing} 
+          onClose={() => {
+            setSelectedListing(null);
+            if (typeof window !== 'undefined' && window.location.pathname.includes('/listings/')) {
+               window.history.back();
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }
