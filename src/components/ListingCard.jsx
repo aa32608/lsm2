@@ -75,11 +75,19 @@ const ListingCard = React.memo(({
   // Ensure ID is a string and encode it for URL
   const listingUrl = `/listings/${encodeURIComponent(String(listingId))}`;
 
+  const handleCardClick = () => {
+    // Save current scroll position before navigating
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('listingsScrollPosition', String(window.scrollY || window.pageYOffset));
+    }
+  };
+
   return (
     <Link
       href={listingUrl}
       className={`listing-card ${className}`}
       aria-label={`View ${l.name} listing`}
+      onClick={handleCardClick}
     >
       <div className="listing-card-image-container">
         {images.length > 0 ? (

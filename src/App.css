@@ -5882,44 +5882,61 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  backdrop-filter: blur(10px) saturate(120%);
-  background-color: rgba(9, 9, 11, 0.45);
+  backdrop-filter: blur(12px) saturate(150%);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: var(--spacing-md);
+  animation: fadeIn 0.2s ease;
 }
 
 .modal {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #ffffff 100%);
-  border-radius: 1.25rem;
-  max-width: 960px;
-  width: min(960px, 96vw);
-  max-height: 92vh;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  animation: fadeIn 0.3s ease;
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  max-width: 600px;
+  width: min(600px, 96vw);
+  max-height: 90vh;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid var(--border);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 10000;
+  z-index: 10001;
   margin: auto;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: linear-gradient(120deg, #eef2ff, #fff);
+  padding: var(--spacing-xl);
+  border-bottom: 2px solid var(--border);
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--surface) 100%);
 }
 
 .modal-title {
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .dashboard-topbar {
@@ -5989,15 +6006,20 @@ body {
 }
 
 .modal-body {
-  padding: 1.5rem;
-  color: #333;
-  line-height: 1.6;
+  padding: var(--spacing-xl);
+  color: var(--text-main);
+  line-height: 1.7;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   flex: 1;
   min-height: 0;
+  background: var(--background);
+}
+
+.modal-body-scrollable {
+  max-height: calc(90vh - 200px);
 }
 
 .modal-body.listing-details-body {
@@ -6026,9 +6048,28 @@ body {
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 1.1rem;
-  padding: 0.25rem;
-  color: #060606;
+  font-size: 1.25rem;
+  padding: var(--spacing-sm);
+  color: var(--text-main);
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.icon-btn:hover,
+.icon-btn:focus {
+  background: var(--surface-hover);
+  color: var(--primary);
+  transform: scale(1.1);
+  outline: none;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
 }
 
 /* Map modal */
@@ -8904,20 +8945,31 @@ input:checked + .toggle-slider:before {
   top: 0;
   right: 0;
   height: 100vh;
-  max-width: 600px;
+  max-width: 700px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  box-shadow: -20px 0 50px rgba(15, 23, 42, 0.2);
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
-  z-index: 10000;
-  border-left: 1px solid rgba(255, 255, 255, 0.5);
+  z-index: 10001;
+  border-left: 2px solid var(--border);
+  animation: drawerSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @media (max-width: 768px) {
   .post-form-drawer {
     max-width: 100%;
+    border-left: none;
   }
 }
 

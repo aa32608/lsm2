@@ -39,10 +39,10 @@ const AccountTab = () => {
 
   if (!user) {
     return (
-      <div className="section" style={{ textAlign: "center", padding: "4rem 1rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👤</div>
-        <h2>{t("loginToSeeMore") || "Please Login"}</h2>
-        <p style={{ color: "#64748b", marginBottom: "2rem" }}>
+      <div className="account-auth-prompt">
+        <div className="account-auth-icon" aria-hidden="true">👤</div>
+        <h2 className="account-auth-title">{t("loginToSeeMore") || "Please Login"}</h2>
+        <p className="account-auth-description">
           {t("accountLoginDescription") || "Login to manage your profile and account settings."}
         </p>
         <button 
@@ -51,6 +51,7 @@ const AccountTab = () => {
             setAuthMode("login");
             setShowAuthModal(true);
           }}
+          aria-label={t("login") || "Login"}
         >
           {t("login") || "Login"}
         </button>
@@ -279,39 +280,56 @@ const AccountTab = () => {
   ];
 
   return (
-    <div className="account-layout">
-      {/* Sidebar / Stats */}
-      <div className="account-sidebar">
-        <div className="account-user-profile">
-          <div className="account-avatar">
-            {user.photoURL ? (
-              <img src={user.photoURL} alt="avatar" />
-            ) : (
-              <div className="avatar-placeholder">{user.email?.[0]?.toUpperCase() || "U"}</div>
-            )}
-          </div>
-          <h2 className="account-name">{user.displayName || user.email?.split("@")[0]}</h2>
-          <p className="account-email-sub">{user.email}</p>
-          <button className="account-btn outline small full-width mt-md" onClick={handleLogout}>
-            🚪 {t("logout")}
-          </button>
-        </div>
-
-        <div className="home-hero__stats" style={{ marginBottom: '2rem' }}>
-          {stats.map((stat) => (
-            <div key={stat.label} className="stat-block">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                <span style={{ fontSize: '1.2rem' }}>{stat.icon}</span>
-                <p className="stat-label" style={{ margin: 0 }}>{stat.label}</p>
-              </div>
-              <p className="stat-value">{stat.value}</p>
-              {stat.hint && <p className="stat-note">{stat.hint}</p>}
-            </div>
-          ))}
+    <div className="account-page">
+      <div className="account-page-header">
+        <div className="account-page-header-content">
+          <h1 className="account-page-title">
+            <span className="account-page-icon" aria-hidden="true">👤</span>
+            {t("account") || "My Account"}
+          </h1>
+          <p className="account-page-subtitle">
+            {t("accountSubtitle") || "Manage your profile, settings, and preferences"}
+          </p>
         </div>
       </div>
 
-      <div className="account-main">
+      <div className="account-layout">
+        {/* Sidebar / Stats */}
+        <aside className="account-sidebar">
+          <div className="account-user-profile">
+            <div className="account-avatar">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt="User avatar" />
+              ) : (
+                <div className="avatar-placeholder">{user.email?.[0]?.toUpperCase() || "U"}</div>
+              )}
+            </div>
+            <h2 className="account-name">{user.displayName || user.email?.split("@")[0]}</h2>
+            <p className="account-email-sub">{user.email}</p>
+            <button 
+              className="account-btn account-btn-outline account-btn-sm account-btn-full-width" 
+              onClick={handleLogout}
+              aria-label={t("logout") || "Logout"}
+            >
+              <span aria-hidden="true">🚪</span> {t("logout")}
+            </button>
+          </div>
+
+          <div className="account-stats-grid">
+            {stats.map((stat) => (
+              <div key={stat.label} className="account-stat-card">
+                <div className="account-stat-header">
+                  <span className="account-stat-icon" aria-hidden="true">{stat.icon}</span>
+                  <p className="account-stat-label">{stat.label}</p>
+                </div>
+                <p className="account-stat-value">{stat.value}</p>
+                {stat.hint && <p className="account-stat-note">{stat.hint}</p>}
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <main className="account-main">
         {/* Profile Information Card */}
         <div className="account-card">
           <div className="account-card-header">

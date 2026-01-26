@@ -40,6 +40,18 @@ export default function ListingsTab() {
 
   const hasActiveFilters = catFilter || locFilter || q;
 
+  // Restore scroll position when component mounts
+  useEffect(() => {
+    const scrollPosition = sessionStorage.getItem('listingsScrollPosition');
+    if (scrollPosition) {
+      // Wait for page to render
+      setTimeout(() => {
+        window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
+        sessionStorage.removeItem('listingsScrollPosition');
+      }, 100);
+    }
+  }, []);
+
   return (
     <div className="listings-page">
       <div className="listings-header">

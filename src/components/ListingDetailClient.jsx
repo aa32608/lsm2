@@ -224,7 +224,22 @@ export default function ListingDetailClient({ id, initialListing }) {
       <div className="detail-page-header">
         <button 
           className="detail-back-btn" 
-          onClick={() => router.push("/listings")}
+          onClick={() => {
+            router.push("/listings");
+            // Restore scroll position after navigation
+            const scrollPosition = sessionStorage.getItem('listingsScrollPosition');
+            if (scrollPosition) {
+              // Wait for navigation to complete
+              setTimeout(() => {
+                window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
+                // Try again after a short delay in case page is still loading
+                setTimeout(() => {
+                  window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
+                  sessionStorage.removeItem('listingsScrollPosition');
+                }, 200);
+              }, 50);
+            }
+          }}
           aria-label={t("back") || "Back to listings"}
         >
           <span aria-hidden="true">←</span> {t("back") || "Back"}
