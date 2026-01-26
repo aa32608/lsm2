@@ -238,7 +238,7 @@ const AccountTab = () => {
   const handleLogout = async () => {
     await signOut(auth);
     showMessage(t("signedOut"), "success");
-    setSelectedTab("main");
+    router.push("/");
   };
 
   if (!user) {
