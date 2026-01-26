@@ -28,6 +28,8 @@ export default function ListingDetailClient({ id, initialListing }) {
   const [loading, setLoading] = useState(!initialListing);
   const [imgIndex, setImgIndex] = useState(0);
   const [showMaximize, setShowMaximize] = useState(false);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
 
   // Feedback local state
   const [rating, setRating] = useState(5);
@@ -153,6 +155,27 @@ export default function ListingDetailClient({ id, initialListing }) {
     setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  // Keyboard navigation for expanded modal
+  useEffect(() => {
+    if (!showMaximize || images.length === 0) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setImgIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowMaximize(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showMaximize, images.length]);
+
   if (loading) {
     return (
       <div className="detail-loading-container">
@@ -175,6 +198,25 @@ export default function ListingDetailClient({ id, initialListing }) {
 
   // Stats
   const hasRating = localFeedbackStats.avg !== null;
+
+  // Helper to format dates
+  const formatDate = (timestamp) => {
+    if (!timestamp) return null;
+    return new Date(timestamp).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  // Calculate days until expiry
+  const getDaysUntilExpiry = (expiresAt) => {
+    if (!expiresAt) return null;
+    const now = Date.now();
+    const diff = expiresAt - now;
+    if (diff <= 0) return 0;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
 
   return (
     <article className="listing-detail-page">
@@ -477,6 +519,124 @@ export default function ListingDetailClient({ id, initialListing }) {
         </section>
       </div>
 
+      {/* Additional Listing Information */}
+      <section className="detail-section detail-additional-info">
+        <h2 className="detail-section-title">{t("additionalInfo") || "Additional Information"}</h2>
+        <div className="detail-info-grid">
+          {listing.tags && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
+              </div>
+              <div className="detail-info-value">
+                {listing.tags.split(',').map((tag, idx) => (
+                  <span key={idx} className="detail-tag">{tag.trim()}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {listing.socialLink && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
+              </div>
+              <div className="detail-info-value">
+                <a 
+                  href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="detail-social-link"
+                >
+                  {listing.socialLink}
+                </a>
+              </div>
+            </div>
+          )}
+
+          {listing.locationCity && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">🏙️</span> {t("city") || "City"}
+              </div>
+              <div className="detail-info-value">{listing.locationCity}</div>
+            </div>
+          )}
+
+          {listing.locationExtra && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">📍</span> {t("locationDetails") || "Location Details"}
+              </div>
+              <div className="detail-info-value">{listing.locationExtra}</div>
+            </div>
+          )}
+
+          {listing.createdAt && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">📅</span> {t("postedOn") || "Posted On"}
+              </div>
+              <div className="detail-info-value">
+                {formatDate(listing.createdAt)}
+              </div>
+            </div>
+          )}
+
+          {listing.expiresAt && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">⏰</span> {t("expiresOn") || "Expires On"}
+              </div>
+              <div className="detail-info-value">
+                {formatDate(listing.expiresAt)}
+                {listing.expiresAt > Date.now() && (
+                  <span className="detail-expiry-days">
+                    {' '}({getDaysUntilExpiry(listing.expiresAt)} {t("daysLeft") || "days left"})
+                  </span>
+                )}
+                {listing.expiresAt <= Date.now() && (
+                  <span className="detail-expiry-days" style={{ color: 'var(--danger)' }}>
+                    {' '}({t("expired") || "Expired"})
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(listing.views || listing.views === 0) && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">👁️</span> {t("views") || "Views"}
+              </div>
+              <div className="detail-info-value">{listing.views || 0}</div>
+            </div>
+          )}
+
+          {(listing.likes || listing.likes === 0) && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
+              </div>
+              <div className="detail-info-value">{listing.likes || 0}</div>
+            </div>
+          )}
+
+          {listing.userEmail && (
+            <div className="detail-info-item">
+              <div className="detail-info-label">
+                <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
+              </div>
+              <div className="detail-info-value">
+                <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
+                  {listing.userEmail}
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Image Maximize Modal */}
       {showMaximize && (
         <div 
@@ -493,11 +653,56 @@ export default function ListingDetailClient({ id, initialListing }) {
           >
             ✕
           </button>
+          
+          {images.length > 1 && (
+            <>
+              <button
+                className="detail-modal-nav detail-modal-prev"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrev();
+                }}
+                aria-label="Previous image"
+              >
+                ‹
+              </button>
+              <button
+                className="detail-modal-nav detail-modal-next"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNext();
+                }}
+                aria-label="Next image"
+              >
+                ›
+              </button>
+              <div className="detail-modal-counter" aria-live="polite">
+                {imgIndex + 1} / {images.length}
+              </div>
+            </>
+          )}
+          
           <img 
             src={images[imgIndex]} 
-            alt={`${listing.name} - Full size`}
+            alt={`${listing.name} - Full size (${imgIndex + 1} of ${images.length})`}
             className="detail-maximized-img" 
-            onClick={(e) => e.stopPropagation()} 
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+            onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+            onTouchEnd={() => {
+              if (!touchStart || !touchEnd) return;
+              const distance = touchStart - touchEnd;
+              const isLeftSwipe = distance > 50;
+              const isRightSwipe = distance < -50;
+              if (isLeftSwipe && images.length > 1) {
+                handleNext();
+              }
+              if (isRightSwipe && images.length > 1) {
+                handlePrev();
+              }
+              setTouchStart(null);
+              setTouchEnd(null);
+            }}
           />
         </div>
       )}
