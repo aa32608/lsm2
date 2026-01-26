@@ -504,7 +504,24 @@ export const TRANSLATIONS = {
     passwordIncorrect: "Incorrect password. Please try again.",
     browseListings: "Browse Listings",
     createListing: "Create Listing",
-    reviewRestrictedSignin: "⚠️ Reviewing is restricted. You must be signed in to leave feedback.",
+
+    // Phone Login
+    loginPhoneSubtitle: "Login with your phone number for quick access.",
+    otpSent: "OTP sent to your phone number.",
+    otpError: "Failed to send OTP",
+    enterOtp: "Please enter the OTP sent to your phone.",
+    otpVerifyError: "Invalid OTP. Please try again.",
+    sendCode: "Send OTP Code",
+    verifyAndLogin: "Verify OTP and Login",
+    
+    // Listing Details & Feedback
+    onlinePresence: "Online Presence",
+    writeReviewPlaceholder: "Share your experience with this listing...",
+    submitReview: "Submit Review",
+     whatsapp: "WhatsApp",
+     sending: "Sending...",
+     phone: "Phone",
+     reviewRestrictedSignin: "⚠️ Reviewing is restricted. You must be signed in to leave feedback.",
     reviewRestrictedVerified: "⚠️ Only verified users who haven't reviewed this listing yet can leave feedback.",
     communityTagline: "Trusted local services",
     browseListingsHint: "Browse all listings",

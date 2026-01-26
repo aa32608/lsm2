@@ -488,7 +488,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     
     try {
       setFeedbackSaving(true);
-      const feedbackRef = dbRef(db, "reviews");
+      const feedbackRef = dbRef(db, `feedback/${listingId}`);
       const newReviewRef = push(feedbackRef);
       await set(newReviewRef, {
         listingId,
@@ -498,6 +498,9 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         comment: stripDangerous(comment),
         createdAt: Date.now()
       });
+      
+      // Also update the listing's feedback count/avg if possible, but cloud functions usually handle this.
+      // We will trust the onValue listener to pick up the new feedback.
       
       showMessage(t("feedbackSaved") || "Review submitted", "success");
       return true;
@@ -510,30 +513,13 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   };
 
-  // Load Reviews Logic
+  // Load Reviews Logic - REMOVED (We load per listing now)
+  /*
   useEffect(() => {
     const reviewsRef = dbRef(db, "reviews");
-    const unsub = onValue(reviewsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const avgs = {};
-        Object.values(data).forEach((r) => {
-          if (!r.listingId) return;
-          if (!avgs[r.listingId]) avgs[r.listingId] = { sum: 0, count: 0, comments: [] };
-          avgs[r.listingId].sum += Number(r.rating) || 0;
-          avgs[r.listingId].count += 1;
-          if (r.comment) avgs[r.listingId].comments.push(r);
-        });
-        Object.keys(avgs).forEach((id) => {
-          avgs[id].avg = parseFloat((avgs[id].sum / avgs[id].count).toFixed(1));
-        });
-        setFeedbackAverages(avgs);
-      } else {
-        setFeedbackAverages({});
-      }
-    });
-    return () => unsub();
+    // ...
   }, []);
+  */
 
   // Load Listings Logic (Effect)
   useEffect(() => {

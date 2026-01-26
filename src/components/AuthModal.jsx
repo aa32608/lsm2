@@ -104,6 +104,47 @@ const AuthModal = () => {
     return window.recaptchaVerifier;
   };
 
+  const [isPhoneLogin, setIsPhoneLogin] = useState(false);
+  const [verificationId, setVerificationId] = useState(null);
+  const [otp, setOtp] = useState("");
+
+  // Phone Login Logic
+  const handleSendOtp = async () => {
+    if (!phoneNumber) return showMessage(t("enterPhone"), "error");
+    try {
+      setPhoneLoading(true);
+      const appVerifier = createRecaptcha("recaptcha-container");
+      const formattedPhone = normalizePhoneForStorage(phoneNumber);
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
+      setVerificationId(confirmation);
+      showMessage(t("otpSent"), "success");
+    } catch (err) {
+      console.error(err);
+      showMessage(t("otpError") + ": " + err.message, "error");
+      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otp) return showMessage(t("enterOtp"), "error");
+    try {
+      setPhoneLoading(true);
+      await verificationId.confirm(otp);
+      showMessage(t("signedIn"), "success");
+      setShowAuthModal(false);
+      setOtp("");
+      setVerificationId(null);
+      setPhoneNumber("");
+    } catch (err) {
+      console.error(err);
+      showMessage(t("otpVerifyError"), "error");
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
   // Prevent background scroll
   useEffect(() => {
     if (showAuthModal) {
@@ -157,65 +198,128 @@ const AuthModal = () => {
 
         {authMode === "login" && (
           <>
-            {/* LOGIN FORM */}
             <div className="modal-body auth-body auth-body-card">
-                <p className="auth-subtitle">
-                    {t("loginSubtitle")}
-                </p>
+              <div className="auth-method-toggle" style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>
+                 <button 
+                   className={`btn btn-sm ${!isPhoneLogin ? 'btn-primary' : 'btn-outline'}`}
+                   onClick={() => setIsPhoneLogin(false)}
+                 >
+                   📧 {t("email")}
+                 </button>
+                 <button 
+                   className={`btn btn-sm ${isPhoneLogin ? 'btn-primary' : 'btn-outline'}`}
+                   onClick={() => setIsPhoneLogin(true)}
+                 >
+                   📱 {t("phone")}
+                 </button>
+              </div>
 
-                {/* Email */}
-                <div className="auth-field-group">
-                    <span className="field-label">{t("email")}</span>
-                    <input
-                    className="input"
-                    type="email"
-                    placeholder={t("email")}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
+              <p className="auth-subtitle">
+                  {isPhoneLogin ? t("loginPhoneSubtitle") : t("loginSubtitle")}
+              </p>
 
-                {/* Password */}
-                <div className="auth-field-group">
-                    <span className="field-label">{t("password")}</span>
-                    <input
-                    className="input"
-                    type="password"
-                    placeholder={t("password")}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    />
-                </div>
+              {!isPhoneLogin ? (
+                <>
+                  {/* Email Login */}
+                  <div className="auth-field-group">
+                      <span className="field-label">{t("email")}</span>
+                      <input
+                      className="input"
+                      type="email"
+                      placeholder={t("email")}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      />
+                  </div>
 
-                <div className="auth-actions">
-                    <button
-                    className="btn full-width"
-                    onClick={async () => {
-                        if (!validateEmail(email))
-                        return showMessage(t("enterValidEmail"), "error");
-                        try {
-                        await signInWithEmailAndPassword(auth, email, password);
-                        showMessage(t("signedIn"), "success");
-                        setShowAuthModal(false);
-                        setEmail("");
-                        setPassword("");
-                        } catch (e) {
-                        showMessage(e.message, "error");
-                        }
-                    }}
-                    >
-                    {t("login")}
-                    </button>
-                </div>
+                  <div className="auth-field-group">
+                      <span className="field-label">{t("password")}</span>
+                      <input
+                      className="input"
+                      type="password"
+                      placeholder={t("password")}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      />
+                  </div>
+
+                  <div className="auth-actions">
+                      <button
+                      className="btn full-width"
+                      onClick={async () => {
+                          if (!validateEmail(email))
+                          return showMessage(t("enterValidEmail"), "error");
+                          try {
+                          await signInWithEmailAndPassword(auth, email, password);
+                          showMessage(t("signedIn"), "success");
+                          setShowAuthModal(false);
+                          setEmail("");
+                          setPassword("");
+                          } catch (e) {
+                          showMessage(e.message, "error");
+                          }
+                      }}
+                      >
+                      {t("login")}
+                      </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Phone Login */}
+                  {!verificationId ? (
+                    <div className="auth-field-group">
+                      <span className="field-label">{t("phoneNumber")}</span>
+                      <div className="phone-input-group">
+                        <input
+                          className="input"
+                          type="tel"
+                          placeholder="+389 70 123 456"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                        />
+                      </div>
+                      <div id="recaptcha-container" style={{ marginTop: '10px' }}></div>
+                      
+                      <button 
+                        className="btn full-width" 
+                        onClick={handleSendOtp}
+                        disabled={phoneLoading}
+                        style={{ marginTop: '16px' }}
+                      >
+                        {phoneLoading ? t("sending") : t("sendCode")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="auth-field-group">
+                      <span className="field-label">{t("verificationCode")}</span>
+                      <input
+                        className="input"
+                        type="text"
+                        placeholder="123456"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                      />
+                      <button 
+                        className="btn full-width" 
+                        onClick={handleVerifyOtp}
+                        disabled={phoneLoading}
+                        style={{ marginTop: '16px' }}
+                      >
+                        {phoneLoading ? t("verifying") : t("verifyAndLogin")}
+                      </button>
+                      <button 
+                        className="btn btn-ghost full-width"
+                        onClick={() => setVerificationId(null)}
+                        style={{ marginTop: '8px' }}
+                      >
+                        {t("back")}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            {/* Phone Login Option could be here but stripped for brevity/focus as per App.jsx logic splitting */}
-            {/* Actually App.jsx has toggle for phone/email login inside Login mode? 
-                Let's check App.jsx again. It has authTab state.
-                I need to include authTab in Context or Local State.
-                It was in App.jsx state: const [authTab, setAuthTab] = useState("email");
-                I missed adding it to AppContext.
-                I will use local state here as it's UI only.
-            */}
           </>
         )}
 

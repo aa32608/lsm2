@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "../../../context/AppContext";
-import { ref as dbRef, get } from "firebase/database";
+import { ref as dbRef, get, onValue } from "firebase/database";
 import Link from "next/link";
 
 export default function ListingDetailPage() {
@@ -18,7 +18,6 @@ export default function ListingDetailPage() {
     handleShareListing,
     formatOfferPrice,
     categoryIcons,
-    feedbackAverages,
     submitFeedback,
     feedbackSaving,
     setReportingListingId,
@@ -32,6 +31,7 @@ export default function ListingDetailPage() {
   // Feedback local state
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [localFeedbackStats, setLocalFeedbackStats] = useState({ avg: null, count: 0, comments: [] });
 
   useEffect(() => {
     if (!id || !db) return;
@@ -54,6 +54,33 @@ export default function ListingDetailPage() {
     };
 
     fetchListing();
+  }, [id, db]);
+
+  // Load Feedback for this listing
+  useEffect(() => {
+    if (!id || !db) return;
+    const feedbackRef = dbRef(db, `feedback/${id}`);
+    
+    const unsubscribe = onValue(feedbackRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const values = Object.values(data);
+        const sum = values.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0);
+        const count = values.length;
+        const avg = count > 0 ? parseFloat((sum / count).toFixed(1)) : null;
+        
+        // Sort comments by date desc
+        const comments = values
+          .filter(v => v.comment)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        setLocalFeedbackStats({ avg, count, comments });
+      } else {
+        setLocalFeedbackStats({ avg: null, count: 0, comments: [] });
+      }
+    });
+
+    return () => unsubscribe();
   }, [id, db]);
 
   // Determine images to display
@@ -80,8 +107,10 @@ export default function ListingDetailPage() {
     }
   };
 
-  const feedbackStats = feedbackAverages[id] || {};
-  const hasFeedback = feedbackStats.count > 0;
+  const cleanPhone = (p) => {
+    if (!p) return "";
+    return p.replace(/\D/g, "");
+  };
 
   if (loading) {
     return (
@@ -186,10 +215,25 @@ export default function ListingDetailPage() {
                   <p className="highlight-value" style={{ fontWeight: 600 }}>{listing.offerprice || t("unspecified")}</p>
                 </div>
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
-                  <p className="highlight-label" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>{t("contactEmail") || "Email"}</p>
-                  <p className="highlight-value" style={{ fontWeight: 600 }}>{listing.userEmail || t("unspecified")}</p>
+                  <p className="highlight-label" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>{t("location") || "Location"}</p>
+                  <p className="highlight-value" style={{ fontWeight: 600 }}>{listing.locationCity || t("unspecified")}</p>
+                  {listing.locationExtra && <p style={{ fontSize: '0.85rem', color: '#64748b' }}>{listing.locationExtra}</p>}
                 </div>
               </div>
+              
+              {/* Extra Details (Website, Socials) */}
+              {(listing.socialLink || listing.website) && (
+                 <div className="extra-links" style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <p className="highlight-label" style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>{t("onlinePresence") || "Online"}</p>
+                    {listing.socialLink && (
+                      <div style={{ marginBottom: '4px' }}>
+                        <a href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 500 }}>
+                          🔗 {listing.socialLink}
+                        </a>
+                      </div>
+                    )}
+                 </div>
+              )}
 
                <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                  <button 
@@ -229,18 +273,18 @@ export default function ListingDetailPage() {
                     width: '48px', height: '48px', borderRadius: '50%', background: '#0f172a', color: 'white', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 700, marginLeft: 'auto', marginBottom: '4px'
                   }}>
-                    {feedbackStats.avg ?? "–"}
+                    {localFeedbackStats.avg ?? "–"}
                   </div>
                   <div>
-                    <p className="summary-label" style={{ fontWeight: 600 }}>{feedbackStats.count || 0} {t("reviews") || "reviews"}</p>
+                    <p className="summary-label" style={{ fontWeight: 600 }}>{localFeedbackStats.count || 0} {t("reviews") || "reviews"}</p>
                     <p className="small-muted" style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{t("averageRating") || "Average rating"}</p>
                   </div>
                 </div>
               </div>
 
-              {hasFeedback ? (
+              {localFeedbackStats.count > 0 ? (
                 <div className="feedback-grid" style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
-                  {feedbackStats.comments && feedbackStats.comments.map((review, i) => (
+                  {localFeedbackStats.comments && localFeedbackStats.comments.map((review, i) => (
                     <div key={i} className="review-card" style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
                       <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                         <span className="review-author" style={{ fontWeight: 600 }}>{review.userName || "User"}</span>
@@ -299,61 +343,54 @@ export default function ListingDetailPage() {
                   <span className="pill pill-category">{t(listing.category) || listing.category}</span>
                   {listing.verified && <span className="pill pill-verified">✓ {t("verified") || "Verified"}</span>}
                 </div>
-                <h1 className="detail-title">{listing.name}</h1>
+                <h2 className="sidebar-title">{listing.name}</h2>
                 <div className="detail-location">
                   📍 {listing.location || listing.locationCity || t("unspecified")}
                 </div>
               </div>
+              
+              <div className="sidebar-actions" style={{ marginTop: '24px' }}>
+                 {/* Contact Actions */}
+                 <div className="contact-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {listing.contact && (
+                      <a href={`tel:${listing.contact}`} className="btn btn-primary full-width">
+                        📞 {t("call") || "Call"} {listing.contact}
+                      </a>
+                    )}
+                    
+                    {listing.contact && (
+                      <a 
+                        href={`https://wa.me/${cleanPhone(listing.contact)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="btn full-width"
+                        style={{ background: '#25D366', borderColor: '#25D366', color: 'white' }}
+                      >
+                        💬 {t("whatsapp") || "WhatsApp"}
+                      </a>
+                    )}
+                    
+                    {listing.userEmail && (
+            <a href={`mailto:${listing.userEmail}`} className="btn btn-outline full-width">
+              ✉️ {t("emailAction") || "Email"}
+            </a>
+          )}
+                 </div>
 
-              <div className="detail-price-box">
-                {listing.offerprice ? (
-                  <div className="price-display">
-                    <span className="price-label">{t("price") || "Price"}</span>
-                    <span className="price-value">{listing.offerprice}</span>
-                  </div>
-                ) : (
-                   <div className="price-display">
-                    <span className="price-value free">{t("contactForPrice") || "Contact for Price"}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="detail-actions">
-                {listing.contact && (
-                  <a href={`tel:${listing.contact}`} className="btn btn-primary btn-full">
-                    📞 {t("call") || "Call"} {listing.contact}
-                  </a>
-                )}
-                
-                {listing.socialLink && (
-                  <a href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`} target="_blank" rel="noopener noreferrer" className="btn btn-outline btn-full">
-                    🌐 {t("visitWebsite") || "Visit Website"}
-                  </a>
-                )}
-
-                <div className="action-row">
-                  <button 
-                    className={`btn btn-ghost flex-1 ${isFav ? 'active-fav' : ''}`}
-                    onClick={() => toggleFav(listing.id)}
-                  >
-                    {isFav ? "❤️ Saved" : "🤍 Save"}
-                  </button>
-                  <button 
-                    className="btn btn-ghost flex-1"
-                    onClick={() => handleShareListing(listing)}
-                  >
-                    📤 Share
-                  </button>
-                </div>
-              </div>
-
-              <div className="safety-tip">
-                🛡️ <strong>Safety Tip:</strong> Never transfer money before meeting or seeing the service.
-              </div>
-
-              <div className="sidebar-card muted-card" style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', borderRadius: '12px' }}>
-                <p className="sidebar-title" style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '4px' }}>{t("cloudFeedbackNote") || "Trusted Reviews"}</p>
-                <p className="small-muted" style={{ fontSize: '0.8rem', color: '#64748b' }}>{t("feedbackSidebarBlurb") || "Ratings help everyone find the best services."}</p>
+                 <div className="sidebar-secondary-actions" style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+                   <button 
+                     className={`btn btn-ghost full-width ${isFav ? 'active' : ''}`}
+                     onClick={() => toggleFav(listing.id)}
+                   >
+                     {isFav ? "❤️ Saved" : "🤍 Save"}
+                   </button>
+                   <button 
+                     className="btn btn-ghost full-width"
+                     onClick={() => handleShareListing(listing)}
+                   >
+                     🔗 Share
+                   </button>
+                 </div>
               </div>
             </div>
           </div>
