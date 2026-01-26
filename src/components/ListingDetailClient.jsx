@@ -36,8 +36,21 @@ export default function ListingDetailClient({ id, initialListing }) {
 
   // First try to find listing in context
   useEffect(() => {
+    // Validate ID first
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('ListingDetailClient: Invalid or missing ID', id);
+      setListing(null);
+      setLoading(false);
+      return;
+    }
+
     // Decode ID if it's URL encoded
-    const decodedId = id ? decodeURIComponent(id) : null;
+    let decodedId;
+    try {
+      decodedId = id ? decodeURIComponent(String(id)) : null;
+    } catch (e) {
+      decodedId = String(id);
+    }
     
     if (initialListing) {
       setListing(initialListing);
@@ -45,10 +58,13 @@ export default function ListingDetailClient({ id, initialListing }) {
       return;
     }
 
-    if (allListings && allListings.length > 0 && decodedId) {
+    const listingId = decodedId || String(id);
+
+    // Try to find in context listings first
+    if (allListings && allListings.length > 0 && listingId) {
       const foundListing = allListings.find(l => {
-        // Try both encoded and decoded ID
-        return l.id === decodedId || l.id === id || String(l.id) === String(decodedId) || String(l.id) === String(id);
+        const listingIdStr = String(l.id || '');
+        return listingIdStr === listingId || listingIdStr === String(id);
       });
       if (foundListing) {
         setListing(foundListing);
@@ -58,36 +74,28 @@ export default function ListingDetailClient({ id, initialListing }) {
     }
 
     // If not found in context, fetch from Firebase
-    if (!decodedId && !id) {
-      setListing(null);
-      setLoading(false);
-      return;
-    }
-
-    const listingId = decodedId || id;
-
     if (!db) {
       // Wait a bit for db to initialize
       const timer = setTimeout(() => {
         if (!db) {
+          console.warn('ListingDetailClient: Firebase db not initialized');
           setLoading(false);
           setListing(null);
         }
-      }, 1000);
+      }, 2000);
       return () => clearTimeout(timer);
     }
 
     const fetchListing = async () => {
       try {
         setLoading(true);
-        // Try both with and without encoding
+        console.log('Fetching listing from Firebase:', listingId);
         const snapshot = await get(dbRef(db, `listings/${listingId}`));
         if (snapshot.exists()) {
           const data = snapshot.val();
           setListing({ id: listingId, ...data });
         } else {
-          // Try alternative ID formats
-          console.warn(`Listing ${listingId} not found, trying alternative formats`);
+          console.warn(`Listing ${listingId} not found in Firebase`);
           setListing(null);
         }
       } catch (error) {
