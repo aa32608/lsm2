@@ -2068,6 +2068,13 @@ img {
   max-width: 100%;
 }
 
+@media (max-width: 768px) {
+  .my-listings-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+}
+
 /* Listing Card - Horizontal Layout */
 .my-listing-card {
   display: flex;
@@ -2081,6 +2088,13 @@ img {
   width: 100%;
   max-width: 100%;
   min-height: 280px;
+}
+
+@media (max-width: 768px) {
+  .my-listing-card {
+    flex-direction: column;
+    min-height: auto;
+  }
 }
 
 .my-listing-card:hover,
@@ -2115,6 +2129,16 @@ img {
   gap: var(--spacing-sm);
   overflow: visible;
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .my-listing-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
 }
 
 /* Card Header - Horizontal */
@@ -4071,23 +4095,56 @@ img {
   max-width: 1600px;
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-md);
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-xl);
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
 }
 
+/* Top Section: Photo (Left) + Key Info (Right) */
+.detail-top-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-xl);
+}
+
 @media (min-width: 1024px) {
-  .detail-page-container {
+  .detail-top-section {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xxl);
+  }
+}
+
+.detail-photo-section {
+  width: 100%;
+}
+
+.detail-key-info-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Bottom Section: Sidebar + Main Content */
+.detail-bottom-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-xl);
+}
+
+@media (min-width: 1024px) {
+  .detail-bottom-section {
     grid-template-columns: 360px 1fr;
     gap: var(--spacing-xxl);
   }
 }
 
 @media (min-width: 1280px) {
-  .detail-page-container {
+  .detail-bottom-section {
     grid-template-columns: 400px 1fr;
   }
 }
@@ -4995,6 +5052,33 @@ img {
   .listing-detail-page {
     padding-bottom: var(--spacing-md);
     overflow-x: hidden;
+  }
+
+  .detail-top-section {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .detail-photo-section {
+    order: 1;
+  }
+
+  .detail-key-info-section {
+    order: 2;
+  }
+
+  .detail-bottom-section {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
+
+  .detail-sidebar {
+    position: static;
+    order: 2;
+  }
+
+  .detail-main-content {
+    order: 1;
   }
 
   .detail-page-container {

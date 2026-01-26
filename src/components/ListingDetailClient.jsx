@@ -247,12 +247,179 @@ export default function ListingDetailClient({ id, initialListing }) {
       </div>
 
       <div className="detail-page-container">
-        {/* Left Sidebar: Additional Info */}
-        <aside className="detail-sidebar" aria-label="Additional listing information">
-          <div className="detail-sidebar-content">
-            <h2 className="detail-sidebar-title">{t("additionalInfo") || "Additional Information"}</h2>
-            
-            <div className="detail-sidebar-section">
+        {/* Top Section: Photo (Left) + Key Info (Right) */}
+        <div className="detail-top-section">
+          {/* Left: Photo */}
+          <div className="detail-photo-section">
+            <section className="detail-images-section" aria-label="Listing images">
+            <div 
+              className="detail-main-image-wrapper"
+              onClick={() => setShowMaximize(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setShowMaximize(true);
+                }
+              }}
+              aria-label="Click to view full size image"
+            >
+               {images.length > 0 ? (
+                 <>
+                   <img 
+                     src={images[imgIndex]} 
+                     alt={`${listing.name} - Image ${imgIndex + 1} of ${images.length}`}
+                     className="detail-main-img" 
+                   />
+                   {images.length > 1 && (
+                     <>
+                       <button 
+                         className="detail-carousel-btn detail-carousel-prev" 
+                         onClick={(e) => { e.stopPropagation(); handlePrev(); }}
+                         aria-label="Previous image"
+                       >
+                         ‹
+                       </button>
+                       <button 
+                         className="detail-carousel-btn detail-carousel-next" 
+                         onClick={(e) => { e.stopPropagation(); handleNext(); }}
+                         aria-label="Next image"
+                       >
+                         ›
+                       </button>
+                     </>
+                   )}
+                   <div className="detail-maximize-hint" aria-hidden="true">
+                     <span>🔍</span> Click to enlarge
+                   </div>
+                 </>
+               ) : (
+                 <div className="detail-placeholder">
+                   <span className="detail-placeholder-icon" aria-hidden="true">
+                   {categoryIcons[listing.category] || "🏷️"}
+                   </span>
+                   <span className="detail-placeholder-text">No image available</span>
+                 </div>
+               )}
+            </div>
+            {images.length > 1 && (
+              <div className="detail-thumbnails" role="tablist" aria-label="Image thumbnails">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    role="tab"
+                    aria-selected={idx === imgIndex}
+                    aria-label={`View image ${idx + 1}`}
+                    className={`detail-thumb ${idx === imgIndex ? 'active' : ''}`}
+                    onClick={() => setImgIndex(idx)}
+                  >
+                    <img 
+                      src={img}
+                      alt={`Thumbnail ${idx + 1}`}
+                      loading="lazy"
+                  />
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+          </div>
+
+          {/* Right: Key Info */}
+          <div className="detail-key-info-section">
+            <header className="detail-header">
+               <div className="detail-badges" role="list" aria-label="Listing badges">
+                 {listing.status === "verified" && (
+                   <span className="pill pill-verified" role="listitem">
+                     <span aria-hidden="true">✓</span> {t("verified")}
+                   </span>
+                 )}
+                 {listing.offerprice && (
+                   <span className="pill pill-price" role="listitem">
+                     {listing.offerprice}
+                   </span>
+                 )}
+               </div>
+               <h1 className="detail-title">{listing.name}</h1>
+               <div className="detail-meta-row">
+                 <span className="pill pill-category">
+                   {categoryIcons[listing.category] && <span aria-hidden="true">{categoryIcons[listing.category]}</span>}
+                   {t(listing.category) || listing.category}
+                 </span>
+                 <span className="pill pill-location">
+                   <span aria-hidden="true">📍</span> {listing.location || t("unspecified")}
+                 </span>
+               </div>
+               {hasRating && (
+                 <div className="detail-rating-row" aria-label={`Rating: ${localFeedbackStats.avg} out of 5 stars based on ${localFeedbackStats.count} reviews`}>
+                   <span className="detail-stars" aria-hidden="true">
+                     {'⭐'.repeat(Math.round(localFeedbackStats.avg))}
+                   </span>
+                   <span className="detail-rating-num">
+                     <strong>{localFeedbackStats.avg}</strong> ({localFeedbackStats.count} {t("reviews") || "reviews"})
+                   </span>
+                 </div>
+               )}
+            </header>
+
+            <div className="detail-actions-bar" role="group" aria-label="Contact and action buttons">
+               {listing.contact && (
+                 <>
+                   <a 
+                     href={`tel:${listing.contact}`} 
+                     className="detail-action-btn detail-action-call"
+                     aria-label={`Call ${listing.contact}`}
+                   >
+                     <span aria-hidden="true">📞</span> {t("callAction") || "Call"}
+                   </a>
+                   <a 
+                     href={`https://wa.me/${listing.contact.replace(/[^0-9]/g, '')}`} 
+                     className="detail-action-btn detail-action-whatsapp"
+                     target="_blank" 
+                     rel="noreferrer noopener"
+                     aria-label="Open WhatsApp chat"
+                   >
+                     <span aria-hidden="true">💬</span> WhatsApp
+                   </a>
+                 </>
+               )}
+               {listing.userEmail && (
+                 <a 
+                   href={`mailto:${listing.userEmail}`} 
+                   className="detail-action-btn detail-action-email"
+                   aria-label={`Send email to ${listing.userEmail}`}
+                 >
+                   <span aria-hidden="true">✉️</span> {t("emailAction") || "Email"}
+                 </a>
+               )}
+               <button 
+                 className="detail-action-btn detail-action-share"
+                 onClick={() => handleShareListing(listing)}
+                 aria-label={t("share") || "Share listing"}
+               >
+                 <span aria-hidden="true">🔗</span>
+               </button>
+               <button 
+                 className="detail-action-btn detail-action-favorite"
+                 onClick={() => toggleFav(listing.id)}
+                 aria-label={favorites.includes(listing.id) ? t("removeFavorite") || "Remove from favorites" : t("addFavorite") || "Add to favorites"}
+                 aria-pressed={favorites.includes(listing.id)}
+               >
+                 <span aria-hidden="true">{favorites.includes(listing.id) ? "❤️" : "🤍"}</span>
+               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Additional Info Sidebar + Main Content */}
+        <div className="detail-bottom-section">
+          {/* Left Sidebar: Additional Info */}
+          <aside className="detail-sidebar" aria-label="Additional listing information">
+            <div className="detail-sidebar-content">
+              <h2 className="detail-sidebar-title">{t("additionalInfo") || "Additional Information"}</h2>
+              
+              <div className="detail-sidebar-section">
               {listing.tags && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
@@ -422,166 +589,8 @@ export default function ListingDetailClient({ id, initialListing }) {
           </div>
         </aside>
 
-        {/* Main Content: Images and Details */}
-        <div className="detail-main-content">
-          {/* Images Section */}
-          <section className="detail-images-section" aria-label="Listing images">
-          <div 
-            className="detail-main-image-wrapper"
-            onClick={() => setShowMaximize(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setShowMaximize(true);
-              }
-            }}
-            aria-label="Click to view full size image"
-          >
-             {images.length > 0 ? (
-               <>
-                 <img 
-                   src={images[imgIndex]} 
-                   alt={`${listing.name} - Image ${imgIndex + 1} of ${images.length}`}
-                   className="detail-main-img" 
-                 />
-                 {images.length > 1 && (
-                   <>
-                     <button 
-                       className="detail-carousel-btn detail-carousel-prev" 
-                       onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-                       aria-label="Previous image"
-                     >
-                       ‹
-                     </button>
-                     <button 
-                       className="detail-carousel-btn detail-carousel-next" 
-                       onClick={(e) => { e.stopPropagation(); handleNext(); }}
-                       aria-label="Next image"
-                     >
-                       ›
-                     </button>
-                   </>
-                 )}
-                 <div className="detail-maximize-hint" aria-hidden="true">
-                   <span>🔍</span> Click to enlarge
-                 </div>
-               </>
-             ) : (
-               <div className="detail-placeholder">
-                 <span className="detail-placeholder-icon" aria-hidden="true">
-                 {categoryIcons[listing.category] || "🏷️"}
-                 </span>
-                 <span className="detail-placeholder-text">No image available</span>
-               </div>
-             )}
-          </div>
-          {images.length > 1 && (
-            <div className="detail-thumbnails" role="tablist" aria-label="Image thumbnails">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  role="tab"
-                  aria-selected={idx === imgIndex}
-                  aria-label={`View image ${idx + 1}`}
-                  className={`detail-thumb ${idx === imgIndex ? 'active' : ''}`}
-                  onClick={() => setImgIndex(idx)}
-                >
-                  <img 
-                    src={img}
-                    alt={`Thumbnail ${idx + 1}`}
-                    loading="lazy"
-                />
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Right Column: Info */}
-        <section className="detail-info-section">
-          <header className="detail-header">
-             <div className="detail-badges" role="list" aria-label="Listing badges">
-               {listing.status === "verified" && (
-                 <span className="pill pill-verified" role="listitem">
-                   <span aria-hidden="true">✓</span> {t("verified")}
-                 </span>
-               )}
-               {listing.offerprice && (
-                 <span className="pill pill-price" role="listitem">
-                   {listing.offerprice}
-                 </span>
-               )}
-             </div>
-             <h1 className="detail-title">{listing.name}</h1>
-             <div className="detail-meta-row">
-               <span className="pill pill-category">
-                 {categoryIcons[listing.category] && <span aria-hidden="true">{categoryIcons[listing.category]}</span>}
-                 {t(listing.category) || listing.category}
-               </span>
-               <span className="pill pill-location">
-                 <span aria-hidden="true">📍</span> {listing.location || t("unspecified")}
-               </span>
-             </div>
-             {hasRating && (
-               <div className="detail-rating-row" aria-label={`Rating: ${localFeedbackStats.avg} out of 5 stars based on ${localFeedbackStats.count} reviews`}>
-                 <span className="detail-stars" aria-hidden="true">
-                   {'⭐'.repeat(Math.round(localFeedbackStats.avg))}
-                 </span>
-                 <span className="detail-rating-num">
-                   <strong>{localFeedbackStats.avg}</strong> ({localFeedbackStats.count} {t("reviews") || "reviews"})
-                 </span>
-               </div>
-             )}
-          </header>
-
-          <div className="detail-actions-bar" role="group" aria-label="Contact and action buttons">
-             {listing.contact && (
-               <>
-                 <a 
-                   href={`tel:${listing.contact}`} 
-                   className="detail-action-btn detail-action-call"
-                   aria-label={`Call ${listing.contact}`}
-                 >
-                   <span aria-hidden="true">📞</span> {t("callAction") || "Call"}
-                 </a>
-                 <a 
-                   href={`https://wa.me/${listing.contact.replace(/[^0-9]/g, '')}`} 
-                   className="detail-action-btn detail-action-whatsapp"
-                   target="_blank" 
-                   rel="noreferrer noopener"
-                   aria-label="Open WhatsApp chat"
-                 >
-                   <span aria-hidden="true">💬</span> WhatsApp
-                 </a>
-               </>
-             )}
-             {listing.userEmail && (
-               <a 
-                 href={`mailto:${listing.userEmail}`} 
-                 className="detail-action-btn detail-action-email"
-                 aria-label={`Send email to ${listing.userEmail}`}
-               >
-                 <span aria-hidden="true">✉️</span> {t("emailAction") || "Email"}
-               </a>
-             )}
-             <button 
-               className="detail-action-btn detail-action-share"
-               onClick={() => handleShareListing(listing)}
-               aria-label={t("share") || "Share listing"}
-             >
-               <span aria-hidden="true">🔗</span>
-             </button>
-             <button 
-               className="detail-action-btn detail-action-favorite"
-               onClick={() => toggleFav(listing.id)}
-               aria-label={favorites.includes(listing.id) ? t("removeFavorite") || "Remove from favorites" : t("addFavorite") || "Add to favorites"}
-               aria-pressed={favorites.includes(listing.id)}
-             >
-               <span aria-hidden="true">{favorites.includes(listing.id) ? "❤️" : "🤍"}</span>
-             </button>
-          </div>
+          {/* Main Content: Description and Feedback */}
+          <div className="detail-main-content">
 
           <section className="detail-section detail-description-section">
             <h2 className="detail-section-title">{t("description") || "Description"}</h2>

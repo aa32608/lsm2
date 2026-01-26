@@ -124,7 +124,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, [lang, user]);
 
-  /* Core state */
+  /* Core state - Initialize with server-side data */
   const [form, setForm] = useState({
     step: 1,
     name: "",
@@ -149,6 +149,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [publicListings, setPublicListings] = useState(initialPublicListings);
   const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [listingsLoaded, setListingsLoaded] = useState(initialListings.length > 0);
   const [message, setMessage] = useState({ text: "", type: "info" });
   
   const showMessage = useCallback((text, type = "info") => {
@@ -518,10 +519,31 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   }, []);
   */
 
-  // Load Listings Logic (Effect)
+  // Session-based cache key for fresh data on each session
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const sessionKey = `firebase_session_${Date.now()}`;
+      const lastSession = sessionStorage.getItem("firebase_last_session");
+      
+      // If new session, clear cache and mark for refresh
+      if (!lastSession || lastSession !== sessionKey) {
+        sessionStorage.setItem("firebase_last_session", sessionKey);
+        // Clear old cache to force fresh load
+        localStorage.removeItem("cached_listings");
+      }
+    }
+  }, []);
+
+  // Load Listings Logic (Effect) - Only update via real-time listeners
+  // Use server-side data initially, then sync with Firebase
+  useEffect(() => {
+    // If we already have initial data, mark as loaded
+    if (initialListings.length > 0 && !listingsLoaded) {
+      setListingsLoaded(true);
+    }
+
     const listingsRef = dbRef(db, "listings");
-    // We listen to all listings for now as per original App.jsx
+    // Real-time listener for updates (won't trigger on initial load if we have server data)
     const unsub = onValue(listingsRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -534,13 +556,17 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         const now = Date.now();
         const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
         setPublicListings(pub);
+        setListingsLoaded(true);
       } else {
-        setListings([]);
-        setPublicListings([]);
+        // Only clear if we don't have initial data
+        if (initialListings.length === 0) {
+          setListings([]);
+          setPublicListings([]);
+        }
       }
     });
     return () => unsub();
-  }, []);
+  }, [initialListings.length, listingsLoaded]);
 
   // Load Feedback Averages (Effect)
   useEffect(() => {
