@@ -136,9 +136,21 @@ const ListingCard = React.memo(({
           </div>
         </div>
 
-        <p className="listing-card-description">
-          {descriptionPreview}
-        </p>
+        {/* Show description in list view */}
+        {isHorizontal && (
+          <p className="listing-card-description">
+            {descriptionPreview}
+          </p>
+        )}
+
+        {/* Show price in list view */}
+        {isHorizontal && l.offerprice && (
+          <div className="listing-card-price" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+            <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white', fontWeight: '600' }}>
+              {l.offerprice}
+            </span>
+          </div>
+        )}
 
         <div className="listing-card-footer">
           <div className="listing-stats">

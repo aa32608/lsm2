@@ -138,12 +138,68 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
     return null;
   });
-  const [firebaseReady, setFirebaseReady] = useState(false);
+  // Initialize Firebase ready state immediately if auth is available
+  const [firebaseReady, setFirebaseReady] = useState(() => {
+    if (typeof window !== "undefined" && auth && auth.currentUser !== undefined) {
+      // Auth state is already known (from cache or initial load)
+      return true;
+    }
+    return false;
+  });
 
   const t = useCallback(
     (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
     [lang]
   );
+
+  // Preload Firebase immediately on mount
+  useEffect(() => {
+    if (typeof window === "undefined" || !auth || !db) return;
+
+    // Force auth state check immediately
+    const checkAuthState = () => {
+      try {
+        // Access auth.currentUser to trigger state initialization
+        const currentUser = auth.currentUser;
+        if (currentUser !== undefined) {
+          setFirebaseReady(true);
+        }
+      } catch (e) {
+        console.warn("Firebase auth check failed:", e);
+      }
+    };
+
+    // Check immediately
+    checkAuthState();
+
+    // Also set up listener for auth state changes
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setFirebaseReady(true);
+      if (user) {
+        setUser(user);
+        // Cache user immediately
+        try {
+          localStorage.setItem('firebase_auth_cache', JSON.stringify({
+            user: {
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName,
+              phoneNumber: user.phoneNumber,
+              emailVerified: user.emailVerified
+            },
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          // Ignore cache errors
+        }
+      } else {
+        setUser(null);
+        localStorage.removeItem('firebase_auth_cache');
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("lang", lang);
@@ -293,7 +349,32 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [viewMode, setViewMode] = useState("list");
+  // Set view mode based on screen size - list for mobile, grid for desktop
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      // Default to list view on mobile, grid on desktop
+      return window.innerWidth < 768 ? "list" : "grid";
+    }
+    return "grid";
+  });
+
+  // Update view mode when window resizes
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile && viewMode !== "list") {
+        setViewMode("list");
+      } else if (!isMobile && viewMode === "list" && !localStorage.getItem("viewModePreference")) {
+        // Only auto-switch to grid if user hasn't manually set a preference
+        setViewMode("grid");
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [viewMode]);
   const [showPostForm, setShowPostForm] = useState(false);
 
   /* Editing */
@@ -502,8 +583,23 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       console.warn("Error reading cached auth:", e);
     }
 
+    // CRITICAL: Check auth state immediately (Firebase v9+ LOCAL persistence)
+    // This ensures we have user state before the async listener fires
+    try {
+      const immediateUser = auth.currentUser;
+      if (immediateUser) {
+        setUser(immediateUser);
+        setFirebaseReady(true);
+      } else {
+        setFirebaseReady(true); // Firebase is ready even without user
+      }
+    } catch (e) {
+      setFirebaseReady(true); // Don't block UI
+    }
+
     // Use auth state persistence - Firebase will verify cached state
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setFirebaseReady(true); // Always mark as ready
       setUser(currentUser);
       if (currentUser) {
         // Cache auth state for next load
