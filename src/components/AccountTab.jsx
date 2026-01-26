@@ -480,74 +480,74 @@ const AccountTab = () => {
               </div>
             )}
           </div>
+        </div>
 
-          {/* Quick Links Card */}
-          <div className="card account-card account-quick-links">
-            <div className="account-card-header">
-              <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
-            </div>
-            <div className="hero-action-grid" style={{ padding: '1rem' }}>
-              <button 
-                className="action-tile"
-                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                onClick={() => router.push("/mylistings")}
-              >
-                <span className="action-icon">📁</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="action-title">{t("myListings")}</p>
-                  <p className="action-desc">{myListingsRaw.length} {t("listingsLabel")}</p>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </button>
-              <button 
-                className="action-tile"
-                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                onClick={() => router.push("/listings")}
-              >
-                <span className="action-icon">🔍</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="action-title">{t("explore")}</p>
-                  <p className="action-desc">{t("browseListingsHint")}</p>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </button>
-              <button 
-                className="action-tile"
-                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                onClick={() => setShowPostForm(true)}
-              >
-                <span className="action-icon">➕</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="action-title">{t("submitListing")}</p>
-                  <p className="action-desc">{t("createListingHint")}</p>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </button>
-              <button 
-                className="action-tile"
-                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                onClick={() => setShowTerms(true)}
-              >
-                <span className="action-icon">📜</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="action-title">{t("termsOfService")}</p>
-                  <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </button>
-              <button 
-                className="action-tile"
-                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                onClick={() => setShowPrivacy(true)}
-              >
-                <span className="action-icon">🔒</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p className="action-title">{t("privacyPolicy")}</p>
-                  <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
-                </div>
-                <span className="quick-link-arrow">→</span>
-              </button>
-            </div>
+        {/* Quick Links Card */}
+        <div className="card account-card account-quick-links">
+          <div className="account-card-header">
+            <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
+          </div>
+          <div className="hero-action-grid" style={{ padding: '1rem' }}>
+            <button 
+              className="action-tile"
+              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+              onClick={() => router.push("/mylistings")}
+            >
+              <span className="action-icon">📁</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="action-title">{t("myListings")}</p>
+                <p className="action-desc">{myListingsRaw.length} {t("listingsLabel")}</p>
+              </div>
+              <span className="quick-link-arrow">→</span>
+            </button>
+            <button 
+              className="action-tile"
+              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+              onClick={() => router.push("/listings")}
+            >
+              <span className="action-icon">🔍</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="action-title">{t("explore")}</p>
+                <p className="action-desc">{t("browseListingsHint")}</p>
+              </div>
+              <span className="quick-link-arrow">→</span>
+            </button>
+            <button 
+              className="action-tile"
+              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+              onClick={() => setShowPostForm(true)}
+            >
+              <span className="action-icon">➕</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="action-title">{t("submitListing")}</p>
+                <p className="action-desc">{t("createListingHint")}</p>
+              </div>
+              <span className="quick-link-arrow">→</span>
+            </button>
+            <button 
+              className="action-tile"
+              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+              onClick={() => setShowTerms(true)}
+            >
+              <span className="action-icon">📜</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="action-title">{t("termsOfService")}</p>
+                <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
+              </div>
+              <span className="quick-link-arrow">→</span>
+            </button>
+            <button 
+              className="action-tile"
+              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+              onClick={() => setShowPrivacy(true)}
+            >
+              <span className="action-icon">🔒</span>
+              <div style={{ textAlign: 'left' }}>
+                <p className="action-title">{t("privacyPolicy")}</p>
+                <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
+              </div>
+              <span className="quick-link-arrow">→</span>
+            </button>
           </div>
         </div>
 
