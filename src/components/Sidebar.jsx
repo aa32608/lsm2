@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 
 const Sidebar = ({ onClose, isOpen }) => {
-  const { t, user, myListingsRaw, onLogout } = useApp();
+  const { t, user, myListingsRaw, onLogout, setShowPostForm, setShowAuthModal, setAuthMode, setForm } = useApp();
   const pathname = usePathname();
 
   const userStats = useMemo(() => {
@@ -56,6 +56,35 @@ const Sidebar = ({ onClose, isOpen }) => {
             <span className="nav-item-label">{item.label}</span>
           </Link>
         ))}
+        
+        {/* Submit Listing Button */}
+        {user && user.emailVerified ? (
+          <button
+            className="nav-item nav-item-button"
+            onClick={() => {
+              setShowPostForm(true);
+              setForm((f) => ({ ...f, step: 1 }));
+              onClose();
+            }}
+            aria-label={t("submitListing") || "Submit new listing"}
+          >
+            <span className="nav-item-icon">➕</span>
+            <span className="nav-item-label">{t("submitListing") || "Submit Listing"}</span>
+          </button>
+        ) : (
+          <button
+            className="nav-item nav-item-button"
+            onClick={() => {
+              setAuthMode("login");
+              setShowAuthModal(true);
+              onClose();
+            }}
+            aria-label={t("login") || "Login to submit listing"}
+          >
+            <span className="nav-item-icon">🔐</span>
+            <span className="nav-item-label">{t("submitListing") || "Submit Listing"}</span>
+          </button>
+        )}
       </nav>
 
       <div className="sidebar-footer">

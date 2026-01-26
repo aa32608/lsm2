@@ -100,18 +100,6 @@ const Header = ({ onMenuOpen }) => {
       </div>
 
       <div className="header-actions">
-        {user && user.emailVerified && (
-          <button
-            className="btn btn-primary submit-listing-header-btn"
-            onClick={() => setShowPostForm(true)}
-            aria-label={t("submitListing") || "Submit new listing"}
-            title={t("submitListing") || "Submit Listing"}
-          >
-            <span aria-hidden="true">➕</span>
-            <span className="btn-text desktop-only">{t("submitListing") || "Submit Listing"}</span>
-          </button>
-        )}
-        
         <select className="select" style={{ width: 'auto', paddingRight: '2rem' }} value={lang} onChange={(e) => setLang(e.target.value)}>
           <option value="sq">🇦🇱 SQ</option>
           <option value="mk">🇲🇰 MK</option>
