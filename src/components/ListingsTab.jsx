@@ -4,6 +4,7 @@ import ListingCard from "./ListingCard";
 import Filtersheet from "./Filtersheet";
 import { useApp } from "../context/AppContext";
 import GoogleAd from "./GoogleAd";
+import ListingsSkeleton from "./ListingsSkeleton";
 
 export default function ListingsTab() {
   const {
@@ -35,7 +36,8 @@ export default function ListingsTab() {
     handleShareListing,
     showMessage,
     toggleFav,
-    favorites
+    favorites,
+    listingsLoaded
   } = useApp();
 
   const hasActiveFilters = catFilter || locFilter || q;
@@ -161,7 +163,9 @@ export default function ListingsTab() {
            )}
 
            {/* LISTINGS GRID/LIST */}
-           {pagedFiltered.length > 0 ? (
+           {!listingsLoaded ? (
+             <ListingsSkeleton count={pageSize} viewMode={viewMode} />
+           ) : pagedFiltered.length > 0 ? (
              <>
                <div className={`listings-container listings-${viewMode}`} role="list" aria-label="Listings">
                  {pagedFiltered.map((l) => (

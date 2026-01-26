@@ -107,8 +107,37 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
+  // Initialize user from cache immediately (before Firebase loads)
+  const [user, setUser] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = localStorage.getItem('firebase_auth_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.user && parsed.timestamp && Date.now() - parsed.timestamp < 3600000) {
+          return parsed.user;
+        }
+      }
+    } catch (e) {
+      // Ignore cache errors
+    }
+    return null;
+  });
+  const [userProfile, setUserProfile] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const cached = localStorage.getItem('firebase_auth_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.profile && parsed.timestamp && Date.now() - parsed.timestamp < 3600000) {
+          return parsed.profile;
+        }
+      }
+    } catch (e) {
+      // Ignore cache errors
+    }
+    return null;
+  });
   const [firebaseReady, setFirebaseReady] = useState(false);
 
   const t = useCallback(
@@ -146,11 +175,13 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     plan: "1",
   });
 
+  // Use server-side data immediately - no waiting for Firebase
   const [listings, setListings] = useState(initialListings);
   const [publicListings, setPublicListings] = useState(initialPublicListings);
   const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [listingsLoaded, setListingsLoaded] = useState(initialListings.length > 0);
+  // Mark as loaded immediately if we have server data
+  const [listingsLoaded, setListingsLoaded] = useState(initialListings.length > 0 || initialPublicListings.length > 0);
   const [message, setMessage] = useState({ text: "", type: "info" });
   
   const showMessage = useCallback((text, type = "info") => {
@@ -445,25 +476,61 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  // Initialize Firebase Auth immediately - this runs first
+  // Initialize Firebase Auth immediately - check cached state first
   useEffect(() => {
-    // Wait for auth to be ready
     if (typeof window === "undefined") {
       setFirebaseReady(true);
       setAuthLoading(false);
       return;
     }
 
-    // Use auth state persistence to wait for initial auth check
+    // Check for cached auth state immediately (before Firebase loads)
+    try {
+      const cachedAuth = localStorage.getItem('firebase_auth_cache');
+      if (cachedAuth) {
+        const parsed = JSON.parse(cachedAuth);
+        if (parsed.user && parsed.timestamp && Date.now() - parsed.timestamp < 3600000) { // 1 hour cache
+          // Set user immediately from cache
+          setUser(parsed.user);
+          setUserProfile(parsed.profile || null);
+          setFavorites(parsed.favorites || []);
+          if (parsed.profile?.language) setLang(parsed.profile.language);
+          // Still mark as loading to verify with Firebase, but UI shows immediately
+        }
+      }
+    } catch (e) {
+      console.warn("Error reading cached auth:", e);
+    }
+
+    // Use auth state persistence - Firebase will verify cached state
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Cache auth state for next load
+        try {
+          localStorage.setItem('firebase_auth_cache', JSON.stringify({
+            user: currentUser,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.warn("Error caching auth:", e);
+        }
+
         const userRef = dbRef(db, `users/${currentUser.uid}`);
         const unsubUser = onValue(userRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
             setUserProfile(data);
             if (data.language) setLang(data.language);
+            // Update cache with profile
+            try {
+              const cached = localStorage.getItem('firebase_auth_cache');
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                parsed.profile = data;
+                localStorage.setItem('firebase_auth_cache', JSON.stringify(parsed));
+              }
+            } catch (e) {}
           }
           setAuthLoading(false);
           setFirebaseReady(true);
@@ -477,9 +544,23 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         const favRef = dbRef(db, `users/${currentUser.uid}/favorites`);
         onValue(favRef, (snapshot) => {
           const data = snapshot.val();
-          setFavorites(data ? Object.keys(data) : []);
+          const favs = data ? Object.keys(data) : [];
+          setFavorites(favs);
+          // Update cache with favorites
+          try {
+            const cached = localStorage.getItem('firebase_auth_cache');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              parsed.favorites = favs;
+              localStorage.setItem('firebase_auth_cache', JSON.stringify(parsed));
+            }
+          } catch (e) {}
         });
       } else {
+        // Clear cache on logout
+        try {
+          localStorage.removeItem('firebase_auth_cache');
+        } catch (e) {}
         setUserProfile(null);
         setFavorites([]);
         setAuthLoading(false);
@@ -554,39 +635,53 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Load Listings Logic (Effect) - Only update via real-time listeners
-  // Use server-side data initially, then sync with Firebase
+  // Load Listings Logic (Effect) - Use server data immediately, sync with Firebase in background
   useEffect(() => {
-    // If we already have initial data, mark as loaded
-    if (initialListings.length > 0 && !listingsLoaded) {
+    // Server data is already set in state, mark as loaded immediately
+    if ((initialListings.length > 0 || initialPublicListings.length > 0) && !listingsLoaded) {
       setListingsLoaded(true);
     }
 
+    // Set up Firebase listener for real-time updates (runs in background)
+    // This won't cause layout shifts since we already have server data
     const listingsRef = dbRef(db, "listings");
-    // Real-time listener for updates (won't trigger on initial load if we have server data)
     const unsub = onValue(listingsRef, (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
         // Sort by date desc
         arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setListings(arr);
+        
+        // Only update if data actually changed (prevent unnecessary re-renders)
+        setListings(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
+          return arr;
+        });
         
         // Public listings (verified and not expired)
         const now = Date.now();
         const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
-        setPublicListings(pub);
+        setPublicListings(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(pub)) return prev;
+          return pub;
+        });
         setListingsLoaded(true);
       } else {
         // Only clear if we don't have initial data
-        if (initialListings.length === 0) {
+        if (initialListings.length === 0 && initialPublicListings.length === 0) {
           setListings([]);
           setPublicListings([]);
         }
       }
+    }, (error) => {
+      console.error("Listings listener error:", error);
+      // Don't fail if we have server data
+      if (initialListings.length === 0 && initialPublicListings.length === 0) {
+        setListingsLoaded(false);
+      }
     });
     return () => unsub();
-  }, [initialListings.length, listingsLoaded]);
+  }, [initialListings.length, initialPublicListings.length, listingsLoaded]);
 
   // Load Feedback Averages (Effect)
   useEffect(() => {
@@ -811,6 +906,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     passwordForm, setPasswordForm,
     authLoading,
     firebaseReady,
+    listingsLoaded,
     // Constants
     categories: ["food", "car", "electronics", "homeRepair", "health", "education", "clothing", "pets", "services", "tech", "entertainment", "events", "other"],
     categoryIcons,

@@ -29,9 +29,13 @@ const Header = ({ onMenuOpen }) => {
     return false;
   };
 
+  // Show nav items immediately based on user state (even if Firebase is still loading)
+  // This prevents layout shifts when Firebase finishes loading
   const navItems = [
     { path: "/", label: t("homepage"), icon: "🏠" },
     { path: "/listings", label: t("explore"), icon: "🧭", badge: verifiedListings?.length || 0 },
+    // Show user nav items immediately if user exists (from cache or Firebase)
+    // This prevents the buttons from appearing mid-page load
     ...(user
       ? [
           { path: "/mylistings", label: t("myListings"), icon: "📂", badge: myListingsRaw?.length || 0 },
