@@ -1,0 +1,6 @@
+User-Agent: *
+Allow: /
+Disallow: /account/
+Disallow: /mylistings/
+
+Sitemap: https://bizcall.mk/sitemap.xml

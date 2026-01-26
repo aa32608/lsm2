@@ -1,6 +1,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import ListingDetailClient from '../../components/ListingDetailClient';
+import ListingDetailClient from '../../../components/ListingDetailClient';
 
 // Helper to fetch listing data for metadata
 async function getListing(id) {
