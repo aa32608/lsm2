@@ -254,8 +254,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // We'll keep selectedTab for compatibility, but routing should handle page views.
-  // However, sidebar uses it to highlight active item.
   const [viewMode, setViewMode] = useState("list");
   const [showPostForm, setShowPostForm] = useState(false);
 
@@ -687,7 +685,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     filtersOpen, setFiltersOpen,
     allLocations,
     sidebarOpen, setSidebarOpen,
-    selectedTab, setSelectedTab,
     viewMode, setViewMode,
     showPostForm, setShowPostForm,
     editingListing, setEditingListing,
