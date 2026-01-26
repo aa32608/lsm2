@@ -9,6 +9,12 @@ export const metadata = {
   description: 'Listing Management System',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};
+
 async function getListings() {
   try {
     const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { next: { revalidate: 60 } });

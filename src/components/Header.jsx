@@ -6,7 +6,18 @@ import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
 const Header = ({ onMenuOpen }) => {
-  const { t, lang, setLang, user, onLogout, verifiedListings, myListingsRaw, authLoading } = useApp();
+  const { 
+    t, 
+    lang, 
+    setLang, 
+    user, 
+    onLogout, 
+    verifiedListings, 
+    myListingsRaw, 
+    authLoading,
+    setAuthMode,
+    setShowAuthModal
+  } = useApp();
   const pathname = usePathname();
 
   // Helper to check active state

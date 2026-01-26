@@ -39,9 +39,8 @@ export async function generateMetadata({ params }) {
 export default async function ListingPage({ params }) {
   const listing = await getListing(params.id);
 
-  if (!listing) {
-    notFound();
-  }
-
+  // If server fetch fails, we pass null to client component
+  // to attempt client-side fetch or handle the error gracefully
+  // instead of showing a hard 404 page immediately.
   return <ListingDetailClient id={params.id} initialListing={listing} />;
 }

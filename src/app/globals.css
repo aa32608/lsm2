@@ -841,6 +841,8 @@ img {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-lg);
+  width: 100%;
+  min-width: 0; /* Prevent grid blowout */
 }
 
 @media (min-width: 1024px) {

@@ -297,15 +297,15 @@ const AccountTab = () => {
           </button>
         </div>
 
-        <div className="account-stats-grid">
+        <div className="home-hero__stats" style={{ marginBottom: '2rem' }}>
           {stats.map((stat) => (
-            <div key={stat.label} className="account-stat-item">
-              <div className="stat-icon">{stat.icon}</div>
-              <div className="stat-content">
-                <p className="stat-label">{stat.label}</p>
-                <p className="stat-value">{stat.value}</p>
-                {stat.hint && <p className="stat-note">{stat.hint}</p>}
+            <div key={stat.label} className="stat-block">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>{stat.icon}</span>
+                <p className="stat-label" style={{ margin: 0 }}>{stat.label}</p>
               </div>
+              <p className="stat-value">{stat.value}</p>
+              {stat.hint && <p className="stat-note">{stat.hint}</p>}
             </div>
           ))}
         </div>
@@ -468,59 +468,64 @@ const AccountTab = () => {
             <div className="account-card-header">
               <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
             </div>
-            <div className="account-quick-links-list">
+            <div className="hero-action-grid" style={{ padding: '1rem' }}>
               <button 
-                className="account-quick-link-item"
+                className="action-tile"
+                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
                 onClick={() => router.push("/mylistings")}
               >
-                <span className="quick-link-icon">📁</span>
-                <div className="quick-link-content">
-                  <p className="quick-link-title">{t("myListings")}</p>
-                  <p className="quick-link-subtitle">{myListingsRaw.length} {t("listingsLabel")}</p>
+                <span className="action-icon">📁</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="action-title">{t("myListings")}</p>
+                  <p className="action-desc">{myListingsRaw.length} {t("listingsLabel")}</p>
                 </div>
                 <span className="quick-link-arrow">→</span>
               </button>
               <button 
-                className="account-quick-link-item"
+                className="action-tile"
+                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
                 onClick={() => router.push("/listings")}
               >
-                <span className="quick-link-icon">🔍</span>
-                <div className="quick-link-content">
-                  <p className="quick-link-title">{t("explore")}</p>
-                  <p className="quick-link-subtitle">{t("browseListingsHint")}</p>
+                <span className="action-icon">🔍</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="action-title">{t("explore")}</p>
+                  <p className="action-desc">{t("browseListingsHint")}</p>
                 </div>
                 <span className="quick-link-arrow">→</span>
               </button>
               <button 
-                className="account-quick-link-item"
+                className="action-tile"
+                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
                 onClick={() => setShowPostForm(true)}
               >
-                <span className="quick-link-icon">➕</span>
-                <div className="quick-link-content">
-                  <p className="quick-link-title">{t("submitListing")}</p>
-                  <p className="quick-link-subtitle">{t("createListingHint")}</p>
+                <span className="action-icon">➕</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="action-title">{t("submitListing")}</p>
+                  <p className="action-desc">{t("createListingHint")}</p>
                 </div>
                 <span className="quick-link-arrow">→</span>
               </button>
               <button 
-                className="account-quick-link-item"
+                className="action-tile"
+                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
                 onClick={() => setShowTerms(true)}
               >
-                <span className="quick-link-icon">📜</span>
-                <div className="quick-link-content">
-                  <p className="quick-link-title">{t("termsOfService")}</p>
-                  <p className="quick-link-subtitle">{t("readTerms") || "Read our terms"}</p>
+                <span className="action-icon">📜</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="action-title">{t("termsOfService")}</p>
+                  <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
                 </div>
                 <span className="quick-link-arrow">→</span>
               </button>
               <button 
-                className="account-quick-link-item"
+                className="action-tile"
+                style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
                 onClick={() => setShowPrivacy(true)}
               >
-                <span className="quick-link-icon">🔒</span>
-                <div className="quick-link-content">
-                  <p className="quick-link-title">{t("privacyPolicy")}</p>
-                  <p className="quick-link-subtitle">{t("readPrivacy") || "Read our privacy policy"}</p>
+                <span className="action-icon">🔒</span>
+                <div style={{ textAlign: 'left' }}>
+                  <p className="action-title">{t("privacyPolicy")}</p>
+                  <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
                 </div>
                 <span className="quick-link-arrow">→</span>
               </button>
