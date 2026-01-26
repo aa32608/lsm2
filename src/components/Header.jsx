@@ -15,6 +15,7 @@ const Header = ({ onMenuOpen }) => {
     verifiedListings, 
     myListingsRaw, 
     authLoading,
+    firebaseReady,
     setAuthMode,
     setShowAuthModal,
     setShowPostForm
@@ -113,8 +114,15 @@ const Header = ({ onMenuOpen }) => {
           <option value="en">🇬🇧 EN</option>
         </select>
 
-        {authLoading ? (
-           <div style={{ width: '80px', height: '36px', background: '#f1f5f9', borderRadius: '0.375rem' }}></div>
+        {authLoading || !firebaseReady ? (
+          <div className="header-loading-placeholder" style={{ 
+            width: '80px', 
+            height: '36px', 
+            background: 'linear-gradient(90deg, var(--border) 25%, var(--surface-hover) 50%, var(--border) 75%)',
+            backgroundSize: '200% 100%',
+            borderRadius: 'var(--radius-md)',
+            animation: 'shimmer 1.5s infinite'
+          }}></div>
         ) : user ? (
           <button className="btn btn-ghost desktop-only" onClick={onLogout}>
             {t("logout")}

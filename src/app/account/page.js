@@ -1,15 +1,12 @@
+"use client";
 import React from 'react';
 import AccountTab from '../../components/AccountTab';
-
-export const metadata = {
-  title: 'My Account | BizCall MK',
-  description: 'Manage your profile and account settings.',
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+import ProtectedPage from '../../components/ProtectedPage';
 
 export default function AccountPage() {
-  return <AccountTab />;
+  return (
+    <ProtectedPage>
+      <AccountTab />
+    </ProtectedPage>
+  );
 }

@@ -17,27 +17,29 @@ let app;
 let auth;
 let db;
 
-try {
-  if (!firebaseConfig.apiKey && typeof window === "undefined") {
-    // SSR environment without keys - mock it
-    console.warn("Firebase API key missing in SSR. Using mock.");
-    app = {}; 
+// Initialize Firebase immediately when module loads (client-side only)
+if (typeof window !== "undefined") {
+  try {
+    if (!firebaseConfig.apiKey) {
+      console.warn("Firebase API key missing. Using mock.");
+      app = {}; 
+      auth = {};
+      db = {};
+    } else {
+      app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      db = getDatabase(app);
+      // Firebase v9+ uses LOCAL persistence by default, so auth state is available immediately
+    }
+  } catch (e) {
+    console.warn("Firebase initialization failed:", e);
+    app = {};
     auth = {};
     db = {};
-  } else {
-    app = initializeApp(firebaseConfig);
-    if (typeof window !== "undefined") {
-      auth = getAuth(app);
-      db = getDatabase(app);
-    } else {
-      // SSR with keys
-      auth = getAuth(app);
-      db = getDatabase(app);
-    }
   }
-} catch (e) {
-  console.warn("Firebase initialization failed:", e);
-  app = {};
+} else {
+  // SSR environment - create mock objects
+  app = {}; 
   auth = {};
   db = {};
 }

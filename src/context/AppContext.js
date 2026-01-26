@@ -109,6 +109,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [firebaseReady, setFirebaseReady] = useState(false);
 
   const t = useCallback(
     (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
@@ -444,19 +445,32 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
-  // Load User Logic (Effect)
+  // Initialize Firebase Auth immediately - this runs first
   useEffect(() => {
+    // Wait for auth to be ready
+    if (typeof window === "undefined") {
+      setFirebaseReady(true);
+      setAuthLoading(false);
+      return;
+    }
+
+    // Use auth state persistence to wait for initial auth check
     const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const userRef = dbRef(db, `users/${currentUser.uid}`);
-        onValue(userRef, (snapshot) => {
+        const unsubUser = onValue(userRef, (snapshot) => {
           const data = snapshot.val();
           if (data) {
             setUserProfile(data);
             if (data.language) setLang(data.language);
           }
           setAuthLoading(false);
+          setFirebaseReady(true);
+        }, (error) => {
+          console.error("Error loading user profile:", error);
+          setAuthLoading(false);
+          setFirebaseReady(true);
         });
         
         // Load Favorites
@@ -469,8 +483,14 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         setUserProfile(null);
         setFavorites([]);
         setAuthLoading(false);
+        setFirebaseReady(true);
       }
+    }, (error) => {
+      console.error("Auth state error:", error);
+      setAuthLoading(false);
+      setFirebaseReady(true);
     });
+    
     return () => unsubscribe();
   }, []);
 
@@ -790,6 +810,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     agreedToTerms, setAgreedToTerms,
     passwordForm, setPasswordForm,
     authLoading,
+    firebaseReady,
     // Constants
     categories: ["food", "car", "electronics", "homeRepair", "health", "education", "clothing", "pets", "services", "tech", "entertainment", "events", "other"],
     categoryIcons,
