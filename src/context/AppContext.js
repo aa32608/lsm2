@@ -152,32 +152,35 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     [lang]
   );
 
-  // Preload Firebase immediately on mount
+  // CRITICAL: Preload Firebase immediately and synchronously
   useEffect(() => {
-    if (typeof window === "undefined" || !auth || !db) return;
+    if (typeof window === "undefined" || !auth || !db) {
+      // If Firebase isn't ready, mark as ready anyway to prevent blocking
+      setTimeout(() => setFirebaseReady(true), 100);
+      return;
+    }
 
-    // Force auth state check immediately
-    const checkAuthState = () => {
-      try {
-        // Access auth.currentUser to trigger state initialization
-        const currentUser = auth.currentUser;
-        if (currentUser !== undefined) {
-          setFirebaseReady(true);
-        }
-      } catch (e) {
-        console.warn("Firebase auth check failed:", e);
+    // IMMEDIATE synchronous check (Firebase v9+ LOCAL persistence)
+    try {
+      const immediateUser = auth.currentUser;
+      if (immediateUser) {
+        setUser(immediateUser);
+        setFirebaseReady(true);
+      } else {
+        // Even without user, Firebase is ready
+        setFirebaseReady(true);
       }
-    };
+    } catch (e) {
+      console.warn("Firebase immediate check failed:", e);
+      setFirebaseReady(true); // Don't block UI
+    }
 
-    // Check immediately
-    checkAuthState();
-
-    // Also set up listener for auth state changes
+    // Set up listener for auth state changes (async, but we already have initial state)
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      setFirebaseReady(true);
+      setFirebaseReady(true); // Always mark as ready
       if (user) {
         setUser(user);
-        // Cache user immediately
+        // Cache user immediately for next load
         try {
           localStorage.setItem('firebase_auth_cache', JSON.stringify({
             user: {
@@ -349,31 +352,23 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Set view mode based on screen size - list for mobile, grid for desktop
+  // Set view mode based on screen size - grid for mobile, list for desktop
   const [viewMode, setViewMode] = useState(() => {
     if (typeof window !== "undefined") {
-      // Default to list view on mobile, grid on desktop
-      return window.innerWidth < 768 ? "list" : "grid";
+      // Check for user preference first
+      const saved = localStorage.getItem("viewModePreference");
+      if (saved) return saved;
+      // Default to grid view on mobile, list view on desktop
+      return window.innerWidth < 768 ? "grid" : "list";
     }
-    return "grid";
+    return "list"; // Default for SSR
   });
 
-  // Update view mode when window resizes
+  // Save view mode preference when user changes it
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 768;
-      if (isMobile && viewMode !== "list") {
-        setViewMode("list");
-      } else if (!isMobile && viewMode === "list" && !localStorage.getItem("viewModePreference")) {
-        // Only auto-switch to grid if user hasn't manually set a preference
-        setViewMode("grid");
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    if (typeof window !== "undefined" && viewMode) {
+      localStorage.setItem("viewModePreference", viewMode);
+    }
   }, [viewMode]);
   const [showPostForm, setShowPostForm] = useState(false);
 

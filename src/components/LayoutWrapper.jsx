@@ -11,6 +11,7 @@ import ReportModal from "./ReportModal";
 import Toast from "./Toast";
 import { TermsModal, PrivacyModal } from "./LegalModals";
 import CookieConsent from "./CookieConsent";
+import FirebaseLoader from "./FirebaseLoader";
 import { AnimatePresence } from "framer-motion";
 
 // Helper component to consume context
@@ -64,9 +65,11 @@ const LayoutContent = ({ children }) => {
 
 const LayoutWrapper = ({ children, initialListings = [], initialPublicListings = [] }) => {
   return (
-    <AppProvider initialListings={initialListings} initialPublicListings={initialPublicListings}>
-      <LayoutContent>{children}</LayoutContent>
-    </AppProvider>
+    <FirebaseLoader>
+      <AppProvider initialListings={initialListings} initialPublicListings={initialPublicListings}>
+        <LayoutContent>{children}</LayoutContent>
+      </AppProvider>
+    </FirebaseLoader>
   );
 };
 
