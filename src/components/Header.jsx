@@ -57,6 +57,29 @@ const Header = ({ onMenuOpen }) => {
           </div>
           <span>{t("bizCall")}</span>
         </Link>
+
+        {/* Desktop Nav */}
+        <nav className="desktop-nav">
+          {navItems.map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`desktop-nav-item ${isActive(item.path) ? "active" : ""}`}
+            >
+              <span className="text-lg">{item.icon}</span>
+              <span>{item.label}</span>
+              {item.badge > 0 && (
+                <span className="badge-count" style={{ 
+                  background: 'var(--primary)', 
+                  color: 'white', 
+                  fontSize: '0.7rem', 
+                  padding: '2px 6px', 
+                  borderRadius: '10px' 
+                }}>{item.badge}</span>
+              )}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div className="header-actions">

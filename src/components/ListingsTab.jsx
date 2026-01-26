@@ -125,6 +125,7 @@ export default function ListingsTab() {
                 showMessage={showMessage}
                 toggleFav={toggleFav}
                 isFavorite={favorites.includes(l.id)}
+                className={viewMode === "list" ? "horizontal" : ""}
               />
              ))}
            </div>

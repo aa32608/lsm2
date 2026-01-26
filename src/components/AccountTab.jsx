@@ -279,7 +279,7 @@ const AccountTab = () => {
   ];
 
   return (
-    <div className="account-grid">
+    <div className="account-layout">
       {/* Sidebar / Stats */}
       <div className="account-sidebar">
         <div className="account-user-profile">
@@ -292,66 +292,69 @@ const AccountTab = () => {
           </div>
           <h2 className="account-name">{user.displayName || user.email?.split("@")[0]}</h2>
           <p className="account-email-sub">{user.email}</p>
-          <button className="btn btn-ghost btn-sm mt-sm" onClick={handleLogout}>
+          <button className="account-btn outline small full-width mt-md" onClick={handleLogout}>
             🚪 {t("logout")}
           </button>
         </div>
 
-        {stats.map((stat) => (
-          <div key={stat.label} className={`account-stat-card-enhanced stat-${stat.color}`}>
-            <div className="stat-icon">{stat.icon}</div>
-            <div className="stat-content">
-              <p className="stat-label">{stat.label}</p>
-              <p className="stat-value">{stat.value}</p>
-              {stat.hint && <p className="stat-note">{stat.hint}</p>}
+        <div className="account-stats-grid">
+          {stats.map((stat) => (
+            <div key={stat.label} className="account-stat-item">
+              <div className="stat-icon">{stat.icon}</div>
+              <div className="stat-content">
+                <p className="stat-label">{stat.label}</p>
+                <p className="stat-value">{stat.value}</p>
+                {stat.hint && <p className="stat-note">{stat.hint}</p>}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div className="account-panels">
-        <div className="account-column">
-          {/* Profile Information Card */}
-          <div className="card account-card-enhanced">
-            <div className="account-card-header">
-              <h3 className="account-card-title">📋 {t("profileInfo")}</h3>
-              <p className="account-card-subtitle">{t("accountDetails")}</p>
-            </div>
-            
+      <div className="account-main">
+        {/* Profile Information Card */}
+        <div className="account-card">
+          <div className="account-card-header">
+            <h3>📋 {t("profileInfo")}</h3>
+            <p>{t("accountDetails")}</p>
+          </div>
+          
+          <div className="account-card-body">
             <div className="account-info-list">
               <div className="account-info-item">
-                <div className="account-info-item-icon">✉️</div>
-                <div className="account-info-item-content">
-                  <p className="account-info-label">{t("emailLabel")}</p>
-                  <p className="account-info-value">{user?.email || t("unspecified")}</p>
+                <div className="info-icon">✉️</div>
+                <div className="info-content">
+                  <p className="info-label">{t("emailLabel")}</p>
+                  <p className="info-value">{user?.email || t("unspecified")}</p>
                   {user?.emailVerified ? (
-                    <span className="account-info-badge verified">✅ {t("verified")}</span>
+                    <span className="account-badge success">✅ {t("verified")}</span>
                   ) : (
-                    <span className="account-info-badge not-verified">⏳ {t("pendingVerification")}</span>
+                    <span className="account-badge warning">⏳ {t("pendingVerification")}</span>
                   )}
                 </div>
               </div>
               
               <div className="account-info-item">
-                <div className="account-info-item-icon">📞</div>
-                <div className="account-info-item-content">
-                  <p className="account-info-label">{t("phoneNumber")}</p>
+                <div className="info-icon">📞</div>
+                <div className="info-content">
+                  <p className="info-label">{t("phoneNumber")}</p>
                   {!phoneEditing ? (
-                    <>
-                      <p className="account-info-value">
+                    <div className="flex-row-between">
+                      <p className="info-value">
                         {accountPhone || (
-                          <span className="account-info-placeholder">{t("addPhoneNumber")}</span>
+                          <span className="text-muted">{t("addPhoneNumber")}</span>
                         )}
                       </p>
-                      <button className="btn btn-ghost btn-sm ml-auto" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
-                    </>
+                      <button className="account-btn ghost small" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
+                    </div>
                   ) : !phoneConfirmationResult ? (
-                    <form className="account-form-enhanced" onSubmit={handleChangePhone}>
-                      <div className="phone-input-group">
+                    <form className="account-form-group" onSubmit={handleChangePhone}>
+                      <div className="flex-row gap-sm">
                         <select
                           value={phoneCountryCode}
                           onChange={(e) => setPhoneCountryCode(e.target.value)}
-                          className="phone-country"
+                          className="account-input"
+                          style={{ width: '80px' }}
                         >
                           {countryCodes.map((c) => (
                             <option key={c.code} value={c.code}>
@@ -361,30 +364,31 @@ const AccountTab = () => {
                         </select>
                         <input
                           type="tel"
-                          className="phone-number"
+                          className="account-input"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
                           placeholder={t("phoneNumber")}
                         />
                       </div>
+
                       <div className="account-form-actions">
-                        <button type="button" className="btn btn-ghost small" onClick={() => {
+                        <button type="button" className="account-btn ghost small" onClick={() => {
                           setPhoneEditing(false);
                           setPhoneConfirmationResult(null);
                         }}>{t("cancel")}</button>
-                        <button type="submit" className="btn small" disabled={savingPhone}>
+                        <button type="submit" className="account-btn primary small" disabled={savingPhone}>
                           {savingPhone ? t("sendingCode") : t("savePhone")}
                         </button>
                       </div>
                       <div id="recaptcha-container-account"></div>
                     </form>
                   ) : (
-                    <form className="account-form-enhanced" onSubmit={handleVerifyPhoneCode}>
+                    <form className="account-form-group" onSubmit={handleVerifyPhoneCode}>
                       <div className="account-form-field">
                         <label className="account-form-label">{t("enterCode")}</label>
                         <input
                           type="text"
-                          className="input account-form-input"
+                          className="account-form-input"
                           value={phoneVerificationCode}
                           onChange={(e) => setPhoneVerificationCode(e.target.value.replace(/\D/g, ""))}
                           placeholder={t("enterCode")}
@@ -392,11 +396,11 @@ const AccountTab = () => {
                         />
                       </div>
                       <div className="account-form-actions">
-                        <button type="button" className="btn btn-ghost small" onClick={() => {
+                        <button type="button" className="account-btn ghost small" onClick={() => {
                           setPhoneConfirmationResult(null);
                           setPhoneVerificationCode("");
                         }}>{t("back")}</button>
-                        <button type="submit" className="btn small" disabled={savingPhone}>
+                        <button type="submit" className="account-btn primary small" disabled={savingPhone}>
                           {savingPhone ? t("verifying") : t("verifyCode")}
                         </button>
                       </div>
@@ -406,10 +410,10 @@ const AccountTab = () => {
               </div>
               
               <div className="account-info-item">
-                <div className="account-info-item-icon">📅</div>
-                <div className="account-info-item-content">
-                  <p className="account-info-label">{t("accountSince")}</p>
-                  <p className="account-info-value">
+                <div className="info-icon">📅</div>
+                <div className="info-content">
+                  <p className="info-label">{t("accountSince")}</p>
+                  <p className="info-value">
                     {user?.metadata?.creationTime
                       ? new Date(user.metadata.creationTime).toLocaleDateString(lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US', { 
                           year: 'numeric', 
@@ -423,14 +427,14 @@ const AccountTab = () => {
             </div>
 
             {!user?.emailVerified && (
-              <div className="account-alert-enhanced">
+              <div className="account-alert">
                 <div className="account-alert-icon">⚠️</div>
                 <div className="account-alert-content">
                   <p className="account-alert-title">{t("verifyYourEmail")}</p>
                   <p className="account-alert-sub">{t("verifyEmailHint")}</p>
                   <div className="account-alert-actions">
                     <button
-                      className="btn btn-ghost small"
+                      className="account-btn ghost small"
                       onClick={async () => {
                         try {
                           if (user) {
@@ -445,7 +449,7 @@ const AccountTab = () => {
                       {t("resendVerificationEmail")}
                     </button>
                     <button
-                      className="btn small"
+                      className="account-btn primary small"
                       onClick={() => {
                         setAuthMode("verify");
                         setShowAuthModal(true);
@@ -460,7 +464,7 @@ const AccountTab = () => {
           </div>
 
           {/* Quick Links Card */}
-          <div className="card account-card-enhanced account-quick-links">
+          <div className="card account-card account-quick-links">
             <div className="account-card-header">
               <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
             </div>
@@ -526,24 +530,24 @@ const AccountTab = () => {
 
         <div className="account-column">
           {/* Edit Profile Card */}
-          <div className="card account-card-enhanced account-profile-section">
+          <div className="card account-card account-profile-section">
             <div className="account-card-header">
               <h3 className="account-card-title">👤 {t("editProfile")}</h3>
               <p className="account-card-subtitle">{t("updateProfileDesc") || "Update your public profile information"}</p>
             </div>
-            <form className="account-form-enhanced" onSubmit={handleUpdateProfile}>
+            <form className="account-form-group" onSubmit={handleUpdateProfile}>
               <div className="account-form-field">
                 <label className="account-form-label">{t("displayName")}</label>
                 <input
                   type="text"
-                  className="input account-form-input"
+                  className="account-form-input"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder={t("displayNamePlaceholder") || "Enter your display name"}
                 />
               </div>
               <div className="account-form-actions">
-                <button type="submit" className="btn small" disabled={loading}>
+                <button type="submit" className="account-btn primary small" disabled={loading}>
                   {loading ? t("saving") : t("updateProfile")}
                 </button>
               </div>
@@ -551,7 +555,7 @@ const AccountTab = () => {
           </div>
 
           {/* Security Settings Card */}
-          <div className="card account-card-enhanced account-security-section">
+          <div className="card account-card account-security-section">
             <div className="account-card-header">
               <h3 className="account-card-title">🔒 {t("securitySettings")}</h3>
               <p className="account-card-subtitle">{t("securitySettingsText")}</p>
@@ -563,12 +567,12 @@ const AccountTab = () => {
                 <h4 className="account-form-section-title">✉️ {t("changeEmail")}</h4>
                 <p className="account-form-section-desc">{t("updateEmailDesc")}</p>
               </div>
-              <form className="account-form-enhanced" onSubmit={handleChangeEmail}>
+              <form className="account-form-group" onSubmit={handleChangeEmail}>
                 <div className="account-form-field">
                   <label className="account-form-label">{t("newEmail")}</label>
                   <input
                     type="email"
-                    className="input account-form-input"
+                    className="account-form-input"
                     value={emailForm.newEmail}
                     onChange={(e) => setEmailForm((f) => ({ ...f, newEmail: e.target.value }))}
                     placeholder={t("newEmailPlaceholder")}
@@ -578,14 +582,14 @@ const AccountTab = () => {
                   <label className="account-form-label">{t("currentPassword")}</label>
                   <input
                     type="password"
-                    className="input account-form-input"
+                    className="account-form-input"
                     value={emailForm.currentPassword}
                     onChange={(e) => setEmailForm((f) => ({ ...f, currentPassword: e.target.value }))}
                     placeholder={t("currentPasswordPlaceholder")}
                   />
                 </div>
                 <div className="account-form-actions">
-                  <button type="submit" className="btn small" disabled={savingEmail}>
+                  <button type="submit" className="account-btn primary small" disabled={savingEmail}>
                     {savingEmail ? t("saving") : t("saveEmail")}
                   </button>
                 </div>
@@ -601,12 +605,12 @@ const AccountTab = () => {
                 <h4 className="account-form-section-title">🔑 {t("changePassword")}</h4>
                 <p className="account-form-section-desc">{t("securitySettings")}</p>
               </div>
-              <form className="account-form-enhanced" onSubmit={handleChangePassword}>
+              <form className="account-form-group" onSubmit={handleChangePassword}>
                 <div className="account-form-field">
                   <label className="account-form-label">{t("currentPassword")}</label>
                   <input
                     type="password"
-                    className="input account-form-input"
+                    className="account-form-input"
                     value={passwordForm.currentPassword}
                     onChange={(e) =>
                       setPasswordForm((f) => ({ ...f, currentPassword: e.target.value }))
@@ -618,7 +622,7 @@ const AccountTab = () => {
                   <label className="account-form-label">{t("newPassword")}</label>
                   <input
                     type="password"
-                    className="input account-form-input"
+                    className="account-form-input"
                     value={passwordForm.newPassword}
                     onChange={(e) =>
                       setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))
@@ -630,7 +634,7 @@ const AccountTab = () => {
                   <label className="account-form-label">{t("repeatNewPassword")}</label>
                   <input
                     type="password"
-                    className="input account-form-input"
+                    className="account-form-input"
                     value={passwordForm.repeatNewPassword}
                     onChange={(e) =>
                       setPasswordForm((f) => ({ ...f, repeatNewPassword: e.target.value }))
@@ -639,7 +643,7 @@ const AccountTab = () => {
                   />
                 </div>
                 <div className="account-form-actions">
-                  <button type="submit" className="btn small" disabled={savingPassword}>
+                  <button type="submit" className="account-btn primary small" disabled={savingPassword}>
                     {savingPassword ? t("saving") : t("savePassword")}
                   </button>
                 </div>
@@ -676,19 +680,18 @@ const AccountTab = () => {
           </div>
 
           {/* Danger Zone */}
-          <div className="card account-card-enhanced account-danger-zone" style={{ marginTop: '20px', borderColor: '#fee2e2' }}>
+          <div className="card account-card account-danger-zone">
             <div className="account-card-header">
-              <h3 className="account-card-title" style={{ color: '#ef4444' }}>⚠️ {t("dangerZone")}</h3>
+              <h3 className="account-card-title text-danger">⚠️ {t("dangerZone")}</h3>
               <p className="account-card-subtitle">{t("dangerZoneDesc") || "Irreversible account actions"}</p>
             </div>
             <div className="account-form-section">
-              <p className="account-form-section-desc" style={{ marginBottom: '16px' }}>
+              <p className="account-form-section-desc mb-md">
                 {t("deleteAccountWarning") || "Once you delete your account, there is no going back. Please be certain."}
               </p>
               <button 
-                className="btn btn-danger full-width"
+                className="account-btn danger full-width"
                 onClick={handleDeleteAccount}
-                style={{ backgroundColor: '#ef4444', color: 'white' }}
               >
                 {t("deleteAccount")}
               </button>

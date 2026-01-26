@@ -30,11 +30,12 @@ const ListingCard = React.memo(({
     setImgIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
+  const isHorizontal = className.includes('horizontal');
+
   return (
     <Link
       href={`/listings/${l.id}`}
-      className={`card ${className}`}
-      style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+      className={`listing-card ${className}`}
     >
       <div className="listing-card-image-container">
         {images.length > 0 ? (
@@ -59,16 +60,18 @@ const ListingCard = React.memo(({
             )}
           </>
         ) : (
-          <div className="listing-card-placeholder">
+          <div className="listing-card-placeholder" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '2rem', color: '#cbd5e1' }}>
             {categoryIcons[l.category] || "🏷️"}
           </div>
         )}
         
         <div className="listing-card-badges">
            <div style={{ display: 'flex', gap: '6px' }}>
-             {l.offerprice && <span className="pill pill-price">{l.offerprice}</span>}
+             {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
-           <span className="pill" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: '#000', fontWeight: 'bold' }}>✓ {t("verified")}</span>
+           {l.isVerified && (
+             <span className="pill" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--success)', fontWeight: 'bold' }}>✓ {t("verified")}</span>
+           )}
         </div>
       </div>
 
@@ -82,11 +85,11 @@ const ListingCard = React.memo(({
         </div>
 
         <p className="listing-card-description">
-          {getDescriptionPreview(l.description, 30)}
+          {getDescriptionPreview(l.description, isHorizontal ? 60 : 30)}
         </p>
 
         <div className="listing-card-footer">
-          <span className="listing-stat highlight">⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
+          <span className="listing-stat highlight" style={{ color: 'var(--accent)' }}>⭐ {Number(stats.avgRating || 0).toFixed(1)}</span>
           <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>💬 {stats.feedbackCount}</span>
           <span className="listing-stat" style={{ color: 'var(--text-muted)' }}>🔥 {stats.engagement}</span>
         </div>
