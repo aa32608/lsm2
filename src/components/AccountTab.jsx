@@ -330,228 +330,230 @@ const AccountTab = () => {
         </aside>
 
         <main className="account-main">
-          {/* Profile Information Card */}
-          <div className="account-card">
-          <div className="account-card-header">
-            <h3>📋 {t("profileInfo")}</h3>
-            <p>{t("accountDetails")}</p>
-          </div>
-          
-          <div className="account-card-body">
-            <div className="account-info-list">
-              <div className="account-info-item">
-                <div className="info-icon">✉️</div>
-                <div className="info-content">
-                  <p className="info-label">{t("emailLabel")}</p>
-                  <p className="info-value">{user?.email || t("unspecified")}</p>
-                  {user?.emailVerified ? (
-                    <span className="account-badge success">✅ {t("verified")}</span>
-                  ) : (
-                    <span className="account-badge warning">⏳ {t("pendingVerification")}</span>
-                  )}
-                </div>
+          <div className="account-main-left">
+            {/* Profile Information Card */}
+            <div className="account-card">
+              <div className="account-card-header">
+                <h3>📋 {t("profileInfo")}</h3>
+                <p>{t("accountDetails")}</p>
               </div>
               
-              <div className="account-info-item">
-                <div className="info-icon">📞</div>
-                <div className="info-content">
-                  <p className="info-label">{t("phoneNumber")}</p>
-                  {!phoneEditing ? (
-                    <div className="flex-row-between">
-                      <p className="info-value">
-                        {accountPhone || (
-                          <span className="text-muted">{t("addPhoneNumber")}</span>
-                        )}
-                      </p>
-                      <button className="account-btn ghost small" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
+              <div className="account-card-body">
+                <div className="account-info-list">
+                  <div className="account-info-item">
+                    <div className="info-icon">✉️</div>
+                    <div className="info-content">
+                      <p className="info-label">{t("emailLabel")}</p>
+                      <p className="info-value">{user?.email || t("unspecified")}</p>
+                      {user?.emailVerified ? (
+                        <span className="account-badge success">✅ {t("verified")}</span>
+                      ) : (
+                        <span className="account-badge warning">⏳ {t("pendingVerification")}</span>
+                      )}
                     </div>
-                  ) : !phoneConfirmationResult ? (
-                    <form className="account-form-group" onSubmit={handleChangePhone}>
-                      <div className="flex-row gap-sm">
-                        <select
-                          value={phoneCountryCode}
-                          onChange={(e) => setPhoneCountryCode(e.target.value)}
-                          className="account-input"
-                          style={{ width: '80px' }}
-                        >
-                          {countryCodes.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.code}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="tel"
-                          className="account-input"
-                          value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          placeholder={t("phoneNumber")}
-                        />
-                      </div>
+                  </div>
+                  
+                  <div className="account-info-item">
+                    <div className="info-icon">📞</div>
+                    <div className="info-content">
+                      <p className="info-label">{t("phoneNumber")}</p>
+                      {!phoneEditing ? (
+                        <div className="flex-row-between">
+                          <p className="info-value">
+                            {accountPhone || (
+                              <span className="text-muted">{t("addPhoneNumber")}</span>
+                            )}
+                          </p>
+                          <button className="account-btn ghost small" onClick={() => setPhoneEditing(true)}>{t("edit")}</button>
+                        </div>
+                      ) : !phoneConfirmationResult ? (
+                        <form className="account-form-group" onSubmit={handleChangePhone}>
+                          <div className="flex-row gap-sm">
+                            <select
+                              value={phoneCountryCode}
+                              onChange={(e) => setPhoneCountryCode(e.target.value)}
+                              className="account-input"
+                              style={{ width: '80px' }}
+                            >
+                              {countryCodes.map((c) => (
+                                <option key={c.code} value={c.code}>
+                                  {c.code}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="tel"
+                              className="account-input"
+                              value={phoneNumber}
+                              onChange={(e) => setPhoneNumber(e.target.value)}
+                              placeholder={t("phoneNumber")}
+                            />
+                          </div>
 
-                      <div className="account-form-actions">
-                        <button type="button" className="account-btn ghost small" onClick={() => {
-                          setPhoneEditing(false);
-                          setPhoneConfirmationResult(null);
-                        }}>{t("cancel")}</button>
-                        <button type="submit" className="account-btn primary small" disabled={savingPhone}>
-                          {savingPhone ? t("sendingCode") : t("savePhone")}
+                          <div className="account-form-actions">
+                            <button type="button" className="account-btn ghost small" onClick={() => {
+                              setPhoneEditing(false);
+                              setPhoneConfirmationResult(null);
+                            }}>{t("cancel")}</button>
+                            <button type="submit" className="account-btn primary small" disabled={savingPhone}>
+                              {savingPhone ? t("sendingCode") : t("savePhone")}
+                            </button>
+                          </div>
+                          <div id="recaptcha-container-account"></div>
+                        </form>
+                      ) : (
+                        <form className="account-form-group" onSubmit={handleVerifyPhoneCode}>
+                          <div className="account-form-field">
+                            <label className="account-form-label">{t("enterCode")}</label>
+                            <input
+                              type="text"
+                              className="account-form-input"
+                              value={phoneVerificationCode}
+                              onChange={(e) => setPhoneVerificationCode(e.target.value.replace(/\D/g, ""))}
+                              placeholder={t("enterCode")}
+                              maxLength="6"
+                            />
+                          </div>
+                          <div className="account-form-actions">
+                            <button type="button" className="account-btn ghost small" onClick={() => {
+                              setPhoneConfirmationResult(null);
+                              setPhoneVerificationCode("");
+                            }}>{t("back")}</button>
+                            <button type="submit" className="account-btn primary small" disabled={savingPhone}>
+                              {savingPhone ? t("verifying") : t("verifyCode")}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="account-info-item">
+                    <div className="info-icon">📅</div>
+                    <div className="info-content">
+                      <p className="info-label">{t("accountSince")}</p>
+                      <p className="info-value">
+                        {user?.metadata?.creationTime
+                          ? new Date(user.metadata.creationTime).toLocaleDateString(lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {!user?.emailVerified && (
+                  <div className="account-alert">
+                    <div className="account-alert-icon">⚠️</div>
+                    <div className="account-alert-content">
+                      <p className="account-alert-title">{t("verifyYourEmail")}</p>
+                      <p className="account-alert-sub">{t("verifyEmailHint")}</p>
+                      <div className="account-alert-actions">
+                        <button
+                          className="account-btn ghost small"
+                          onClick={async () => {
+                            try {
+                              if (user) {
+                                await sendEmailVerification(user);
+                                showMessage(t("verificationSent"), "success");
+                              }
+                            } catch (err) {
+                              showMessage(t("verificationError") + " " + err.message, "error");
+                            }
+                          }}
+                        >
+                          {t("resendVerificationEmail")}
+                        </button>
+                        <button
+                          className="account-btn primary small"
+                          onClick={() => {
+                            setAuthMode("verify");
+                            setShowAuthModal(true);
+                          }}
+                        >
+                          {t("iVerified")}
                         </button>
                       </div>
-                      <div id="recaptcha-container-account"></div>
-                    </form>
-                  ) : (
-                    <form className="account-form-group" onSubmit={handleVerifyPhoneCode}>
-                      <div className="account-form-field">
-                        <label className="account-form-label">{t("enterCode")}</label>
-                        <input
-                          type="text"
-                          className="account-form-input"
-                          value={phoneVerificationCode}
-                          onChange={(e) => setPhoneVerificationCode(e.target.value.replace(/\D/g, ""))}
-                          placeholder={t("enterCode")}
-                          maxLength="6"
-                        />
-                      </div>
-                      <div className="account-form-actions">
-                        <button type="button" className="account-btn ghost small" onClick={() => {
-                          setPhoneConfirmationResult(null);
-                          setPhoneVerificationCode("");
-                        }}>{t("back")}</button>
-                        <button type="submit" className="account-btn primary small" disabled={savingPhone}>
-                          {savingPhone ? t("verifying") : t("verifyCode")}
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              </div>
-              
-              <div className="account-info-item">
-                <div className="info-icon">📅</div>
-                <div className="info-content">
-                  <p className="info-label">{t("accountSince")}</p>
-                  <p className="info-value">
-                    {user?.metadata?.creationTime
-                      ? new Date(user.metadata.creationTime).toLocaleDateString(lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })
-                      : "—"}
-                  </p>
-                </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {!user?.emailVerified && (
-              <div className="account-alert">
-                <div className="account-alert-icon">⚠️</div>
-                <div className="account-alert-content">
-                  <p className="account-alert-title">{t("verifyYourEmail")}</p>
-                  <p className="account-alert-sub">{t("verifyEmailHint")}</p>
-                  <div className="account-alert-actions">
-                    <button
-                      className="account-btn ghost small"
-                      onClick={async () => {
-                        try {
-                          if (user) {
-                            await sendEmailVerification(user);
-                            showMessage(t("verificationSent"), "success");
-                          }
-                        } catch (err) {
-                          showMessage(t("verificationError") + " " + err.message, "error");
-                        }
-                      }}
-                    >
-                      {t("resendVerificationEmail")}
-                    </button>
-                    <button
-                      className="account-btn primary small"
-                      onClick={() => {
-                        setAuthMode("verify");
-                        setShowAuthModal(true);
-                      }}
-                    >
-                      {t("iVerified")}
-                    </button>
+            {/* Quick Links Card */}
+            <div className="card account-card account-quick-links">
+              <div className="account-card-header">
+                <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
+              </div>
+              <div className="hero-action-grid" style={{ padding: '1rem' }}>
+                <button 
+                  className="action-tile"
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+                  onClick={() => router.push("/mylistings")}
+                >
+                  <span className="action-icon">📁</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p className="action-title">{t("myListings")}</p>
+                    <p className="action-desc">{myListingsRaw.length} {t("listingsLabel")}</p>
                   </div>
-                </div>
+                  <span className="quick-link-arrow">→</span>
+                </button>
+                <button 
+                  className="action-tile"
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+                  onClick={() => router.push("/listings")}
+                >
+                  <span className="action-icon">🔍</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p className="action-title">{t("explore")}</p>
+                    <p className="action-desc">{t("browseListingsHint")}</p>
+                  </div>
+                  <span className="quick-link-arrow">→</span>
+                </button>
+                <button 
+                  className="action-tile"
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+                  onClick={() => setShowPostForm(true)}
+                >
+                  <span className="action-icon">➕</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p className="action-title">{t("submitListing")}</p>
+                    <p className="action-desc">{t("createListingHint")}</p>
+                  </div>
+                  <span className="quick-link-arrow">→</span>
+                </button>
+                <button 
+                  className="action-tile"
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+                  onClick={() => setShowTerms(true)}
+                >
+                  <span className="action-icon">📜</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p className="action-title">{t("termsOfService")}</p>
+                    <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
+                  </div>
+                  <span className="quick-link-arrow">→</span>
+                </button>
+                <button 
+                  className="action-tile"
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
+                  onClick={() => setShowPrivacy(true)}
+                >
+                  <span className="action-icon">🔒</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <p className="action-title">{t("privacyPolicy")}</p>
+                    <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
+                  </div>
+                  <span className="quick-link-arrow">→</span>
+                </button>
               </div>
-            )}
-          </div>
-          </div>
-
-          {/* Quick Links Card */}
-          <div className="card account-card account-quick-links">
-          <div className="account-card-header">
-            <h3 className="account-card-title">⚡ {t("quickActions")}</h3>
-          </div>
-          <div className="hero-action-grid" style={{ padding: '1rem' }}>
-            <button 
-              className="action-tile"
-              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-              onClick={() => router.push("/mylistings")}
-            >
-              <span className="action-icon">📁</span>
-              <div style={{ textAlign: 'left' }}>
-                <p className="action-title">{t("myListings")}</p>
-                <p className="action-desc">{myListingsRaw.length} {t("listingsLabel")}</p>
-              </div>
-              <span className="quick-link-arrow">→</span>
-            </button>
-            <button 
-              className="action-tile"
-              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-              onClick={() => router.push("/listings")}
-            >
-              <span className="action-icon">🔍</span>
-              <div style={{ textAlign: 'left' }}>
-                <p className="action-title">{t("explore")}</p>
-                <p className="action-desc">{t("browseListingsHint")}</p>
-              </div>
-              <span className="quick-link-arrow">→</span>
-            </button>
-            <button 
-              className="action-tile"
-              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-              onClick={() => setShowPostForm(true)}
-            >
-              <span className="action-icon">➕</span>
-              <div style={{ textAlign: 'left' }}>
-                <p className="action-title">{t("submitListing")}</p>
-                <p className="action-desc">{t("createListingHint")}</p>
-              </div>
-              <span className="quick-link-arrow">→</span>
-            </button>
-            <button 
-              className="action-tile"
-              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-              onClick={() => setShowTerms(true)}
-            >
-              <span className="action-icon">📜</span>
-              <div style={{ textAlign: 'left' }}>
-                <p className="action-title">{t("termsOfService")}</p>
-                <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
-              </div>
-              <span className="quick-link-arrow">→</span>
-            </button>
-            <button 
-              className="action-tile"
-              style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-              onClick={() => setShowPrivacy(true)}
-            >
-              <span className="action-icon">🔒</span>
-              <div style={{ textAlign: 'left' }}>
-                <p className="action-title">{t("privacyPolicy")}</p>
-                <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
-              </div>
-              <span className="quick-link-arrow">→</span>
-            </button>
-          </div>
+            </div>
           </div>
 
-          <div className="account-column">
+          <div className="account-main-right">
           {/* Edit Profile Card */}
           <div className="card account-card account-profile-section">
             <div className="account-card-header">
