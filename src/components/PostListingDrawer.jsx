@@ -571,12 +571,24 @@ const PostListingDrawer = () => {
 
                         <div className="field-group">
                             <label className="field-label">{t("images")}</label>
-                            <div
-                            onClick={() => document.getElementById("post-images").click()}
-                            className="upload-placeholder"
+                            <label
+                            htmlFor="post-images"
+                            className="btn btn-secondary upload-button"
+                            style={{ 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              gap: '0.5rem',
+                              cursor: 'pointer',
+                              width: '100%',
+                              minHeight: '52px',
+                              fontSize: '1rem',
+                              fontWeight: 600
+                            }}
                             >
+                            <span aria-hidden="true">📷</span>
                             {t("clickToUpload")}
-                            </div>
+                            </label>
                             <input
                             id="post-images"
                             type="file"

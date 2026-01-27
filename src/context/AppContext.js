@@ -1085,6 +1085,11 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [selectedExtendPlan, setSelectedExtendPlan] = useState("1");
 
   const handleStartExtendFlow = useCallback((listing) => {
+    // For pending/unpaid listings, handle payment flow instead
+    if (listing.status === "pending" || listing.status === "unpaid") {
+      // This will be handled by MyListingCard button
+      return;
+    }
     setExtendTarget(listing);
     setSelectedExtendPlan("1");
     setExtendModalOpen(true);
@@ -1094,6 +1099,9 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     if (!extendTarget) return;
     const listing = extendTarget;
     const planId = selectedExtendPlan;
+    
+    // For pending/unpaid listings, use type "create" instead of "extend"
+    const listingType = (listing.status === "pending" || listing.status === "unpaid") ? "create" : "extend";
 
     try {
       setLoading(true);
@@ -1102,21 +1110,25 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      const res = await fetch(`${API_BASE}/api/create-payment`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-          },
-          body: JSON.stringify({
-              listingId: listing.id,
-              type: "extend",
-              customerEmail: user?.email,
-              customerName: userProfile?.name || user?.displayName,
-              plan: planId
-          }),
-          signal: controller.signal
-      });
+          // For pending/unpaid listings, use type "create" instead of "extend"
+          const listingType = (listing.status === "pending" || listing.status === "unpaid") ? "create" : "extend";
+          
+          const res = await fetch(`${API_BASE}/api/create-payment`, {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+              },
+              body: JSON.stringify({
+                  listingId: listing.id,
+                  type: listingType,
+                  customerEmail: user?.email,
+                  customerName: userProfile?.name || user?.displayName,
+                  plan: planId,
+                  userId: user?.uid
+              }),
+              signal: controller.signal
+          });
       
       clearTimeout(timeoutId);
       

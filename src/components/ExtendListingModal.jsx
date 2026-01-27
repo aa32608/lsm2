@@ -33,7 +33,11 @@ const ExtendListingModal = () => {
             exit={{ scale: 0.95, opacity: 0 }}
           >
             <div className="modal-header">
-              <h3 className="modal-title">{t("extendListing")}</h3>
+              <h3 className="modal-title">
+                {(extendTarget.status === "pending" || extendTarget.status === "unpaid") 
+                  ? (t("completePayment") || t("proceedToPayment"))
+                  : t("extendListing")}
+              </h3>
               <button 
                 className="icon-btn" 
                 onClick={() => setExtendModalOpen(false)}
@@ -43,9 +47,20 @@ const ExtendListingModal = () => {
               </button>
             </div>
             <div className="modal-body">
-              <p className="text-body mb-lg">
-                {t("extendDescription")}
-              </p>
+              {(extendTarget.status === "pending" || extendTarget.status === "unpaid") ? (
+                <>
+                  <p className="text-body mb-lg" style={{ color: 'var(--danger)', fontWeight: 600 }}>
+                    {t("listingNeedsPayment")}
+                  </p>
+                  <p className="text-body mb-lg">
+                    {t("completePaymentToActivate")}
+                  </p>
+                </>
+              ) : (
+                <p className="text-body mb-lg">
+                  {t("extendDescription")}
+                </p>
+              )}
               
               <div className="plan-selection-grid">
                 {PLANS.map(plan => (
@@ -54,11 +69,11 @@ const ExtendListingModal = () => {
                     className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''}`}
                     onClick={() => setSelectedExtendPlan(plan.id)}
                   >
-                    <div className="flex justify-between items-center mb-xs">
-                      <span className="font-bold">{t(`month${plan.id}`)}</span>
-                      <span className="text-primary font-bold">{plan.price}</span>
+                    <div className="plan-content">
+                      <div className="plan-duration">{t(`month${plan.id}`)}</div>
+                      <div className="plan-price">{plan.price}</div>
+                      <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
                     </div>
-                    <div className="text-sm text-muted">{t(`days${plan.duration.split(' ')[0]}`)}</div>
                   </div>
                 ))}
               </div>

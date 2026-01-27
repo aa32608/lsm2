@@ -80,6 +80,9 @@ export const TRANSLATIONS = {
     planPremium: "Premium",
     extendDescription: "Choose a plan to extend your listing duration.",
     extendListing: "Extend Listing",
+    listingNeedsPayment: "This listing needs payment to be activated.",
+    completePaymentToActivate: "Complete payment to activate your listing and make it visible to users.",
+    completePayment: "Complete Payment",
     proceedToPayment: "Proceed to Payment",
 
     // Header / Navigation
@@ -331,7 +334,9 @@ export const TRANSLATIONS = {
 
     // Listing actions
     edit: "Edit",
+    extend: "Extend",
     del: "Delete",
+    deleteListing: "Delete listing",
     call: "Call",
     emailAction: "Email",
     copy: "Copy",
@@ -1023,6 +1028,8 @@ export const TRANSLATIONS = {
     planPremium: "Premium",
     extendDescription: "Zgjidhni një plan për të zgjatur kohëzgjatjen e listimit tuaj.",
     extendListing: "Zgjat Listimin",
+    listingNeedsPayment: "Ky listim ka nevojë për pagesë për t'u aktivizuar.",
+    completePaymentToActivate: "Plotësoni pagesën për të aktivizuar listimin tuaj dhe për ta bërë të dukshëm për përdoruesit.",
     proceedToPayment: "Vazhdo te Pagesa",
 
     category: "Kategoria",
@@ -1778,6 +1785,9 @@ export const TRANSLATIONS = {
     planPremium: "Премиум",
     extendDescription: "Изберете план за продолжување на времетраењето на вашиот оглас.",
     extendListing: "Продолжи Оглас",
+    listingNeedsPayment: "Овој оглас треба плаќање за да се активира.",
+    completePaymentToActivate: "Завршете го плаќањето за да го активирате вашиот оглас и да го направите видлив за корисниците.",
+    completePayment: "Заврши Плаќање",
     proceedToPayment: "Продолжи кон Плаќање",
 
     closeFilters: "Затвори филтри",
@@ -2044,6 +2054,8 @@ export const TRANSLATIONS = {
     bizCall: "BizCall",
     browseListingsHint: "Прелистај ги сите огласи",
     browseMarketplace: "Прелистај го пазарот",
+    extend: "Продолжи",
+    deleteListing: "Избриши оглас",
     call: "Повикај",
     categorySpotlight: "Популарни категории",
     changeEmail: "Промени е-пошта",

@@ -2,6 +2,11 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 
+const API_BASE =
+  (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    ? "http://localhost:5000"
+    : "https://lsm-wozo.onrender.com");
+
 const MyListingCard = React.memo(({
   listing: l,
   t,
@@ -14,6 +19,7 @@ const MyListingCard = React.memo(({
   showMessage,
   handleShareListing,
   confirmDelete,
+  user,
 }) => {
   const router = useRouter();
   const stats = getListingStats(l);
@@ -145,14 +151,54 @@ const MyListingCard = React.memo(({
                 <span className="btn-text">{t("edit")}</span>
               </button>
               
-              <button
-                className="btn btn-sm btn-extend"
-                onClick={() => startExtendFlow(l)}
-                aria-label={`${t("extend")} ${t("listing")}: ${l.name}`}
-              >
-                <span aria-hidden="true">⏰</span>
-                <span className="btn-text">{t("extend")}</span>
-              </button>
+              {(l.status === "pending" || l.status === "unpaid") ? (
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={() => {
+                    // For pending/unpaid listings, redirect to payment
+                    const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+                      ? "http://localhost:5000"
+                      : "https://lsm-wozo.onrender.com");
+                    
+                    fetch(`${API_BASE}/api/create-payment`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        listingId: l.id,
+                        type: "create",
+                        customerEmail: l.userEmail,
+                        customerName: l.name,
+                        plan: l.plan || "1"
+                      })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.checkoutUrl) {
+                        window.location.href = data.checkoutUrl;
+                      } else {
+                        showMessage(t("paymentError"), "error");
+                      }
+                    })
+                    .catch(err => {
+                      console.error(err);
+                      showMessage(t("paymentError"), "error");
+                    });
+                  }}
+                  aria-label={`${t("proceedToPayment")}: ${l.name}`}
+                >
+                  <span aria-hidden="true">💳</span>
+                  <span className="btn-text">{t("proceedToPayment")}</span>
+                </button>
+              ) : (
+                <button
+                  className="btn btn-sm btn-extend"
+                  onClick={() => startExtendFlow(l)}
+                  aria-label={`${t("extend")} ${t("listing")}: ${l.name}`}
+                >
+                  <span aria-hidden="true">⏰</span>
+                  <span className="btn-text">{t("extend")}</span>
+                </button>
+              )}
             </div>
           </div>
           
@@ -204,7 +250,7 @@ const MyListingCard = React.memo(({
               className="btn btn-ghost btn-sm btn-icon-only btn-danger"
               onClick={() => confirmDelete && confirmDelete(l.id)}
               aria-label={`${t("deleteListing")}: ${l.name}`}
-              title={t("del")}
+              title={t("deleteListing")}
             >
               <span aria-hidden="true">🗑️</span>
             </button>

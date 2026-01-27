@@ -201,18 +201,11 @@ async function sendEmail(to, subject, text) {
     }
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
-    const isTestingMode = !verifiedDomain;
     
     let finalTo = to;
-    let finalFrom = isTestingMode 
-      ? "BizCall MK <onboarding@resend.dev>" 
-      : `BizCall MK <notifications@${verifiedDomain}>`;
-
-    if (isTestingMode) {
-      finalTo = "artinalimi69@gmail.com"; 
-      console.log(`[TEST MODE] Redirecting email for ${to} to ${finalTo}`);
-      text = `[INTENDED FOR: ${to}]\n\n${text}`;
-    }
+    let finalFrom = verifiedDomain 
+      ? `BizCall MK <notifications@${verifiedDomain}>`
+      : "BizCall MK <onboarding@resend.dev>";
 
     const { data, error } = await resend.emails.send({
       from: finalFrom, 
@@ -622,9 +615,8 @@ async function sendMarketingEmails() {
     }
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
-    const isTestingMode = !verifiedDomain;
 
-    const websiteUrl = "https://bizcall.vercel.app"; // Or your production URL
+    const websiteUrl = "https://bizcall.mk";
 
     const templates = [
       {
@@ -672,15 +664,10 @@ async function sendMarketingEmails() {
       const userLang = user.language || "sq";
       let finalTo = user.email;
       let finalSubject = selectedTemplate.subjects[userLang] || selectedTemplate.subjects["en"];
-      let finalText = (selectedTemplate.texts[userLang] || selectedTemplate.texts["en"])(user.name);
-      let finalFrom = isTestingMode 
-        ? "BizCall MK <onboarding@resend.dev>" 
-        : `BizCall MK <notifications@${verifiedDomain}>`;
-
-      if (isTestingMode) {
-        finalTo = "artinalimi69@gmail.com";
-        finalSubject = `[TEST FOR ${user.email}] ${finalSubject}`;
-      }
+      let finalText = (selectedTemplate.texts[userLang] || selectedTemplate.texts["en"])(user.name || user.email?.split('@')[0] || "there");
+      let finalFrom = verifiedDomain 
+        ? `BizCall MK <notifications@${verifiedDomain}>`
+        : "BizCall MK <onboarding@resend.dev>";
 
       console.log(`[Marketing] Sending email to ${finalTo}...`);
       const result = await resend.emails.send({
@@ -721,10 +708,10 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 
 /* ----------------------- CRON SCHEDULER ----------------------- */
 
-// Schedule the marketing emails to run every Monday at 9:00 AM UTC.
+// Schedule the marketing emails to run every Monday at 6:00 PM GMT+2 (16:00 UTC).
 // Cron expression: minute hour dayOfMonth month dayOfWeek
-// 0 9 * * 1 = At 09:00 on Monday
-const cronExpression = "0 9 * * 1";
+// 0 16 * * 1 = At 16:00 UTC (6:00 PM GMT+2) on Monday
+const cronExpression = "0 16 * * 1";
 
 console.log(`[Cron] Marketing emails scheduled for every Monday at 9:00 AM UTC (Cron: ${cronExpression})`);
 

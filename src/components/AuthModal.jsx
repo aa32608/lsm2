@@ -441,17 +441,16 @@ const AuthModal = () => {
             </div>
         
             {/* Checkbox for Terms */}
-            <div className="field-group checkbox-group" style={{ display: 'flex', alignItems: 'flex-start' }}>
+            <div className="checkbox-group">
                 <input 
                 type="checkbox" 
                 id="agreeTerms" 
                 checked={agreedToTerms} 
                 onChange={(e) => setAgreedToTerms(e.target.checked)} 
                 className="auth-checkbox"
-                style={{ marginTop: '4px' }}
                 />
-                <label htmlFor="agreeTerms" className="auth-terms-label text-sm text-muted">
-                {t("agreeTo")} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("termsOfService")}</button> {t("and")} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("privacyPolicy")}</button>.
+                <label htmlFor="agreeTerms" className="auth-terms-label">
+                {t("agreeTo")} <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and")} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
                 </label>
             </div>
 

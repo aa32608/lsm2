@@ -350,6 +350,7 @@ export default function MyListingsTab() {
                   key={l.id}
                   listing={l}
                   t={t}
+                  user={user}
                   categoryIcons={categoryIcons}
                   getDaysUntilExpiry={getDaysUntilExpiry}
                   getListingStats={getListingStats}
