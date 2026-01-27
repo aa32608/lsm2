@@ -708,12 +708,12 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 
 /* ----------------------- CRON SCHEDULER ----------------------- */
 
-// Schedule the marketing emails to run every Monday at 6:00 PM GMT+2 (16:00 UTC).
+// Schedule the marketing emails to run every Tuesday at 6:20 PM GMT+2 (16:20 UTC).
 // Cron expression: minute hour dayOfMonth month dayOfWeek
-// 0 16 * * 1 = At 16:00 UTC (6:00 PM GMT+2) on Monday
-const cronExpression = "0 16 * * 1";
+// 20 16 * * 2 = At 16:20 UTC (6:20 PM GMT+2) on Tuesday
+const cronExpression = "20 16 * * 2";
 
-console.log(`[Cron] Marketing emails scheduled for every Monday at 9:00 AM UTC (Cron: ${cronExpression})`);
+console.log(`[Cron] Marketing emails scheduled for every Tuesday at 6:20 PM GMT+2 / 16:20 UTC (Cron: ${cronExpression})`);
 
 cron.schedule(cronExpression, async () => {
   console.log("[Cron] Triggering weekly marketing emails...");

@@ -3008,6 +3008,224 @@ textarea:hover {
   text-decoration: underline;
 }
 
+/* Auth Modal Mobile Responsive */
+@media (max-width: 768px) {
+  .auth-modal {
+    width: 95%;
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 20px;
+    margin: 2.5vh auto;
+    overflow-y: auto;
+  }
+
+  .auth-modal .modal-header {
+    padding: 16px;
+    position: sticky;
+    top: 0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .auth-tabs {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .auth-tab {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+
+  .auth-modal .modal-body {
+    padding: 20px 16px;
+    max-height: calc(95vh - 80px);
+    overflow-y: auto;
+  }
+
+  .auth-subtitle {
+    font-size: 0.875rem;
+    padding: 0 8px;
+    margin-bottom: 20px;
+  }
+
+  .auth-method-toggle {
+    margin-bottom: 20px;
+    padding: 3px;
+    gap: 6px;
+  }
+
+  .auth-method-toggle .btn {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
+
+  .auth-field-group,
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .auth-field-group .field-label,
+  .field-group .field-label {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+
+  .auth-modal .input,
+  .auth-modal .select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px 16px;
+    min-height: 48px;
+  }
+
+  .phone-input-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .phone-country {
+    width: 100% !important;
+    min-width: 100%;
+  }
+
+  .phone-number {
+    width: 100%;
+  }
+
+  .checkbox-group {
+    padding: 12px;
+    margin-bottom: 20px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .auth-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 0;
+    margin-top: 2px;
+  }
+
+  .auth-terms-label {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .auth-actions {
+    margin-top: 24px;
+    gap: 12px;
+  }
+
+  .auth-actions .btn {
+    min-height: 48px;
+    font-size: 0.95rem;
+    padding: 14px 20px;
+  }
+
+  .auth-modal .btn.full-width {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .auth-modal .btn-ghost {
+    min-height: 44px;
+  }
+
+  #recaptcha-container,
+  #recaptcha-signup {
+    margin-top: 12px;
+  }
+
+  .auth-body-card {
+    padding: 24px 16px;
+    text-align: center;
+  }
+
+  .auth-body-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+  }
+
+  .auth-body-card p {
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-modal {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+  }
+
+  .auth-modal .modal-header {
+    padding: 12px;
+  }
+
+  .auth-tabs {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .auth-tab {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .auth-modal .modal-body {
+    padding: 16px 12px;
+    max-height: calc(100vh - 60px);
+  }
+
+  .auth-subtitle {
+    font-size: 0.8125rem;
+    margin-bottom: 16px;
+  }
+
+  .auth-method-toggle {
+    margin-bottom: 16px;
+    gap: 4px;
+  }
+
+  .auth-method-toggle .btn {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+  }
+
+  .auth-field-group,
+  .field-group {
+    margin-bottom: 16px;
+  }
+
+  .auth-modal .input,
+  .auth-modal .select {
+    padding: 12px 14px;
+  }
+
+  .checkbox-group {
+    padding: 10px;
+    margin-bottom: 16px;
+  }
+
+  .auth-terms-label {
+    font-size: 0.8125rem;
+  }
+
+  .auth-actions {
+    margin-top: 20px;
+  }
+
+  .auth-actions .btn {
+    min-height: 44px;
+    font-size: 0.9rem;
+    padding: 12px 16px;
+  }
+}
+
 /* Phone Input Group */
 .phone-input-group {
   display: flex;

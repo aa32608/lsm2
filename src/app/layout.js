@@ -95,8 +95,7 @@ export default async function RootLayout({ children }) {
         <link rel="preconnect" href="https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app" />
         <link rel="dns-prefetch" href="https://lsm-wozo.onrender.com" />
         <link rel="preconnect" href="https://lsm-wozo.onrender.com" />
-        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onLoad="this.onload=null;this.rel='stylesheet'" />
-        <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" /></noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>
         <LayoutWrapper initialListings={allListings} initialPublicListings={publicListings}>
