@@ -121,6 +121,18 @@ export const EMAIL_TRANSLATIONS = {
         sq: (name, url) => `Përshëndetje,\n\nShpallja juaj "${name}" ka skaduar prej pothuajse 30 ditësh. Ajo do të fshihet përgjithmonë pas 3 ditësh nëse nuk rinovohet.\n\nRinovoni tani për ta mbajtur atë: ${url}\n\nEkipi i BizCall`,
         mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е истечен речиси 30 дена. Ќе биде трајно избришан за 3 дена доколку не се обнови.\n\nОбновете сега за да го задржите: ${url}\n\nТимот на BizCall`
       }
+    },
+    feedback_received: {
+      subject: {
+        en: "⭐ New Review on Your Listing",
+        sq: "⭐ Vlerësim i Ri në Shpalljen Tuaj",
+        mk: "⭐ Нова Рецензија на Вашиот Оглас"
+      },
+      text: {
+        en: (listingName, reviewerName, rating, comment, url) => `Hello,\n\nGreat news! You received a new ${rating}-star review on your listing "${listingName}". ⭐\n\nReviewer: ${reviewerName}\nRating: ${rating}/5\nComment: "${comment}"\n\nView your listing and all reviews here: ${url}\n\nThank you for being part of BizCall MK!\n\nThe BizCall Team`,
+        sq: (listingName, reviewerName, rating, comment, url) => `Përshëndetje,\n\nLajm i madh! Keni marrë një vlerësim të ri ${rating}-yllësh për shpalljen tuaj "${listingName}". ⭐\n\nVlerësuesi: ${reviewerName}\nVlerësimi: ${rating}/5\nKomenti: "${comment}"\n\nShikoni shpalljen tuaj dhe të gjitha vlerësimet këtu: ${url}\n\nFaleminderit që jeni pjesë e BizCall MK!\n\nEkipi i BizCall`,
+        mk: (listingName, reviewerName, rating, comment, url) => `Здраво,\n\nОдлични вести! Добивте нова ${rating}-ѕвездена рецензија на вашиот оглас "${listingName}". ⭐\n\nРецензент: ${reviewerName}\nОцена: ${rating}/5\nКоментар: "${comment}"\n\nПогледнете го вашиот оглас и сите рецензии тука: ${url}\n\nВи благодариме што сте дел од BizCall MK!\n\nТимот на BizCall`
+      }
     }
   },
   errors: {

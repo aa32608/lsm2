@@ -226,6 +226,23 @@ function updateMarketingEmailCooldown(email) {
   marketingEmailCooldowns.set(email, Date.now());
 }
 
+// Email queue for rate limiting - ensures at least 1 second between emails
+let lastEmailSentTime = 0;
+const MIN_EMAIL_INTERVAL_MS = 1000; // 1 second minimum between emails
+
+async function waitForEmailRateLimit() {
+  const now = Date.now();
+  const timeSinceLastEmail = now - lastEmailSentTime;
+  
+  if (timeSinceLastEmail < MIN_EMAIL_INTERVAL_MS) {
+    const waitTime = MIN_EMAIL_INTERVAL_MS - timeSinceLastEmail;
+    console.log(`[Email] Rate limiting: waiting ${waitTime}ms before next email`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+  
+  lastEmailSentTime = Date.now();
+}
+
 async function sendEmail(to, subject, text, isMarketingEmail = false) {
   if (!to || !subject || !text) {
     console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
@@ -236,6 +253,9 @@ async function sendEmail(to, subject, text, isMarketingEmail = false) {
   if (isMarketingEmail && !(await checkMarketingEmailCooldown(to))) {
     return { error: "Marketing email cooldown active", skipped: true };
   }
+
+  // Wait for rate limit (non-blocking for the backend)
+  await waitForEmailRateLimit();
 
   try {
     if (!resend) {
@@ -323,10 +343,54 @@ async function sendEmail(to, subject, text, isMarketingEmail = false) {
   }
 }
 
+// Endpoint for feedback/review notifications
+app.post("/api/send-feedback-notification", async (req, res) => {
+  const { listingId, listingName, ownerEmail, reviewerName, rating, comment } = req.body;
+  
+  if (!ownerEmail || !listingId) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const userId = req.body.ownerUserId || null;
+    const userLang = userId ? await getUserLanguage(userId) : 'sq';
+    const link = `https://bizcall.mk/?listing=${listingId}`;
+    
+    const subject = EMAIL_TRANSLATIONS.listing.feedback_received.subject[userLang] || 
+                   EMAIL_TRANSLATIONS.listing.feedback_received.subject.en;
+    const text = EMAIL_TRANSLATIONS.listing.feedback_received.text[userLang](
+      listingName || "Your listing",
+      reviewerName || "A user",
+      rating || 5,
+      comment || "",
+      link
+    ) || EMAIL_TRANSLATIONS.listing.feedback_received.text.en(
+      listingName || "Your listing",
+      reviewerName || "A user",
+      rating || 5,
+      comment || "",
+      link
+    );
+
+    const emailResult = await sendEmail(ownerEmail, subject, text, false);
+    
+    if (emailResult.ok) {
+      console.log(`[API] ✅ Feedback notification sent to ${ownerEmail} for listing ${listingId}. Email ID: ${emailResult.id}`);
+      res.json({ success: true, emailId: emailResult.id });
+    } else {
+      console.error(`[API] ❌ Failed to send feedback notification:`, emailResult.error);
+      res.status(500).json({ error: emailResult.error });
+    }
+  } catch (err) {
+    console.error("[API] Error sending feedback notification:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post("/api/send-email", async (req, res) => {
   const { to, subject, text } = req.body;
   console.log(`[API] /api/send-email called for ${to}`);
-  const result = await sendEmail(to, subject, text);
+  const result = await sendEmail(to, subject, text, false);
   if (result.error && !result.skipped) {
     console.error(`[API] Email send failed:`, result.error);
     return res.status(500).json({ error: result.error });
@@ -615,13 +679,13 @@ app.post("/api/webhook", async (req, res) => {
             }
             
             if (subject && text) {
-                const emailResult = await sendEmail(userEmail, subject, text);
+                const emailResult = await sendEmail(userEmail, subject, text, false);
                 if (emailResult.ok) {
-                    console.log(`[Webhook] Notification email sent to ${userEmail}. Email ID: ${emailResult.id}`);
+                    console.log(`[Webhook] ✅ Notification email sent to ${userEmail}. Email ID: ${emailResult.id}`);
                 } else if (!emailResult.skipped) {
-                    console.error(`[Webhook] Failed to send notification email to ${userEmail}:`, emailResult.error);
+                    console.error(`[Webhook] ❌ Failed to send notification email to ${userEmail}:`, emailResult.error);
                 } else {
-                    console.log(`[Webhook] Notification email skipped for ${userEmail} due to cooldown`);
+                    console.log(`[Webhook] ⏭️ Notification email skipped for ${userEmail} due to cooldown`);
                 }
             }
         }
@@ -705,9 +769,8 @@ cron.schedule("0 0 * * *", async () => {
                                  console.log(`[Cron] Sent pre-deletion warning for listing ${id} to ${email}`);
                                  warningCount++;
                              } else if (!emailResult.skipped) {
-                                 console.error(`[Cron] Failed to send pre-deletion warning for listing ${id} to ${email}:`, emailResult.error);
+                                 console.error(`[Cron] ❌ Failed to send pre-deletion warning for listing ${id} to ${email}:`, emailResult.error);
                              }
-                             await new Promise(resolve => setTimeout(resolve, 500));
                         }
                     }
 
@@ -1137,15 +1200,14 @@ cron.schedule("0 0 * * *", async () => {
                 const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
 
-                const emailResult = await sendEmail(userEmail, subject, text);
+                const emailResult = await sendEmail(userEmail, subject, text, false);
                 if (emailResult.ok) {
                     await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
-                    console.log(`[Cron] Sent pre-deletion warning for ${id} to ${userEmail}`);
+                    console.log(`[Cron] ✅ Sent pre-deletion warning for ${id} to ${userEmail}. Email ID: ${emailResult.id}`);
                     warningCount++;
                 } else if (!emailResult.skipped) {
-                    console.error(`[Cron] Failed to send pre-deletion warning for ${id} to ${userEmail}:`, emailResult.error);
+                    console.error(`[Cron] ❌ Failed to send pre-deletion warning for ${id} to ${userEmail}:`, emailResult.error);
                 }
-                await new Promise(resolve => setTimeout(resolve, 500)); // Rate limit
              }
           }
 

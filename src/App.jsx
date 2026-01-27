@@ -1934,13 +1934,29 @@ export default function App({ initialListings = [], initialPublicListings = [] }
           avgRating: newAvg
         });
 
-        // 3. Notify listing owner
+        // 3. Notify listing owner via backend API
         const ownerEmail = listing.userEmail;
         if (ownerEmail) {
-          const subject = `${t("reviewNotificationSubject")}: ${listing.name}`;
-          const text = `${t("reviewNotificationText")}\n\n${t("reviewNotificationComment")}: ${comment}\n\n${t("reviewNotificationCheck")}: ${window.location.origin}?listing=${listingId}`;
           try {
-            await sendEmail(ownerEmail, subject, text);
+            const response = await fetch(`${API_BASE}/api/send-feedback-notification`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                listingId,
+                listingName: listing.name,
+                ownerEmail,
+                ownerUserId: listing.userId,
+                reviewerName: authorName || (user?.email ? user.email.split('@')[0] : "User"),
+                rating,
+                comment
+              })
+            });
+            if (response.ok) {
+              const result = await response.json();
+              console.log("Feedback notification sent:", result);
+            } else {
+              console.error("Failed to send feedback notification:", await response.text());
+            }
           } catch (err) {
             console.error("Failed to send feedback notification:", err);
           }
