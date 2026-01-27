@@ -794,8 +794,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       // If new session, clear cache and mark for refresh
       if (!lastSession || lastSession !== sessionKey) {
         sessionStorage.setItem("firebase_last_session", sessionKey);
-        // Clear old cache to force fresh load
-        localStorage.removeItem("cached_listings");
+        // Cache removed for performance - no longer needed
       }
     }
   }, []);
