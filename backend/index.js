@@ -110,9 +110,16 @@ console.log("Environment Variables Loaded:");
 // Initialize Resend lazily to prevent crash if API key is missing during startup
 let resend;
 if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
+  try {
+    resend = new Resend(process.env.RESEND_API_KEY);
+    console.log("[Resend] Initialized successfully");
+  } catch (err) {
+    console.error("[Resend] Failed to initialize:", err);
+    resend = null;
+  }
 } else {
-  console.warn("WARNING: RESEND_API_KEY is not set. Email functionality will be disabled.");
+  console.error("ERROR: RESEND_API_KEY is not set. Email functionality will be disabled.");
+  console.error("Please set RESEND_API_KEY in your environment variables.");
 }
 
 /* -------------------- FIREBASE SETUP (Render-friendly) -------------------- */
@@ -190,13 +197,18 @@ app.use(bodyParser.json());
 
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
-    console.error("sendEmail: Missing required fields");
+    console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
     return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
+  }
+
+  // Check cooldown
+  if (!(await checkEmailCooldown(to))) {
+    return { error: "Email cooldown active", skipped: true };
   }
 
   try {
     if (!resend) {
-      console.warn("sendEmail: Resend is not configured.");
+      console.error("[Email] Resend is not configured. RESEND_API_KEY missing.");
       return { error: EMAIL_TRANSLATIONS.errors.resend_not_configured.en };
     }
 
@@ -207,6 +219,9 @@ async function sendEmail(to, subject, text) {
       ? `BizCall MK <notifications@${verifiedDomain}>`
       : "BizCall MK <onboarding@resend.dev>";
 
+    console.log(`[Email] Attempting to send email to ${finalTo} from ${finalFrom}`);
+    console.log(`[Email] Subject: ${subject.substring(0, 50)}...`);
+
     const { data, error } = await resend.emails.send({
       from: finalFrom, 
       to: [finalTo],
@@ -215,24 +230,81 @@ async function sendEmail(to, subject, text) {
     });
 
     if (error) {
-      console.error("Resend error:", error);
-      return { error };
+      console.error("[Email] Resend API error:", JSON.stringify(error, null, 2));
+      return { error: error.message || JSON.stringify(error) };
     }
 
+    if (!data || !data.id) {
+      console.error("[Email] Resend returned no data/id:", data);
+      return { error: "No email ID returned from Resend" };
+    }
+
+    // Update cooldown on success
+    updateEmailCooldown(to);
+    
+    console.log(`[Email] Successfully sent email to ${finalTo}. Email ID: ${data.id}`);
     return { ok: true, id: data.id };
   } catch (err) {
-    console.error("Email send error:", err);
-    return { error: err };
+    console.error("[Email] Exception during send:", err);
+    console.error("[Email] Error stack:", err.stack);
+    return { error: err.message || String(err) };
   }
 }
 
 app.post("/api/send-email", async (req, res) => {
   const { to, subject, text } = req.body;
+  console.log(`[API] /api/send-email called for ${to}`);
   const result = await sendEmail(to, subject, text);
-  if (result.error) {
+  if (result.error && !result.skipped) {
+    console.error(`[API] Email send failed:`, result.error);
     return res.status(500).json({ error: result.error });
   }
+  if (result.skipped) {
+    console.log(`[API] Email skipped due to cooldown`);
+    return res.status(200).json({ skipped: true, message: "Email skipped due to cooldown" });
+  }
+  console.log(`[API] Email sent successfully:`, result.id);
   res.json(result);
+});
+
+// Test endpoint to verify email configuration
+app.post("/api/test-email", async (req, res) => {
+  const { adminKey, testEmail } = req.body;
+  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  
+  if (!testEmail) {
+    return res.status(400).json({ error: "testEmail is required" });
+  }
+  
+  console.log(`[Test] Testing email to ${testEmail}`);
+  
+  if (!resend) {
+    return res.status(500).json({ 
+      error: "Resend not configured", 
+      details: "RESEND_API_KEY is missing or invalid" 
+    });
+  }
+  
+  const result = await sendEmail(
+    testEmail,
+    "Test Email from BizCall",
+    "This is a test email to verify email configuration is working correctly."
+  );
+  
+  if (result.error) {
+    return res.status(500).json({ 
+      error: result.error,
+      details: "Check server logs for more information"
+    });
+  }
+  
+  res.json({ 
+    success: true, 
+    emailId: result.id,
+    message: "Test email sent successfully" 
+  });
 });
 
 
@@ -279,7 +351,12 @@ app.post("/api/create-payment", async (req, res) => {
                         EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
             
             if (customerEmail) {
-                sendEmail(customerEmail, subject, text);
+                const emailResult = await sendEmail(customerEmail, subject, text);
+                if (emailResult.ok) {
+                    console.log(`[Payment] Free trial email sent to ${customerEmail}`);
+                } else if (!emailResult.skipped) {
+                    console.error(`[Payment] Failed to send free trial email to ${customerEmail}:`, emailResult.error);
+                }
             }
 
             return res.json({ success: true, isFreeTrial: true });
@@ -438,8 +515,14 @@ app.post("/api/webhook", async (req, res) => {
             }
             
             if (subject && text) {
-                await sendEmail(userEmail, subject, text);
-                console.log(`[Webhook] Notification email sent to ${userEmail}`);
+                const emailResult = await sendEmail(userEmail, subject, text);
+                if (emailResult.ok) {
+                    console.log(`[Webhook] Notification email sent to ${userEmail}. Email ID: ${emailResult.id}`);
+                } else if (!emailResult.skipped) {
+                    console.error(`[Webhook] Failed to send notification email to ${userEmail}:`, emailResult.error);
+                } else {
+                    console.log(`[Webhook] Notification email skipped for ${userEmail} due to cooldown`);
+                }
             }
         }
     }
@@ -491,10 +574,14 @@ cron.schedule("0 0 * * *", async () => {
                             const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
 
-                            await sendEmail(email, subject, text);
-                            updates[`listings/${id}/expiryWarningSent`] = true;
-                            console.log(`[Cron] Sent expiry warning for listing ${id}`);
-                            warningCount++;
+                            const emailResult = await sendEmail(email, subject, text);
+                            if (emailResult.ok) {
+                                updates[`listings/${id}/expiryWarningSent`] = true;
+                                console.log(`[Cron] Sent expiry warning for listing ${id} to ${email}`);
+                                warningCount++;
+                            } else if (!emailResult.skipped) {
+                                console.error(`[Cron] Failed to send expiry warning for listing ${id} to ${email}:`, emailResult.error);
+                            }
                             await new Promise(resolve => setTimeout(resolve, 500)); // Rate limit
                         }
                     }
@@ -512,10 +599,14 @@ cron.schedule("0 0 * * *", async () => {
                              const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
  
-                             await sendEmail(email, subject, text);
-                             updates[`listings/${id}/preDeletionWarningSent`] = true;
-                             console.log(`[Cron] Sent pre-deletion warning for listing ${id}`);
-                             warningCount++;
+                             const emailResult = await sendEmail(email, subject, text);
+                             if (emailResult.ok) {
+                                 updates[`listings/${id}/preDeletionWarningSent`] = true;
+                                 console.log(`[Cron] Sent pre-deletion warning for listing ${id} to ${email}`);
+                                 warningCount++;
+                             } else if (!emailResult.skipped) {
+                                 console.error(`[Cron] Failed to send pre-deletion warning for listing ${id} to ${email}:`, emailResult.error);
+                             }
                              await new Promise(resolve => setTimeout(resolve, 500));
                         }
                     }
@@ -556,7 +647,12 @@ cron.schedule("0 0 * * *", async () => {
                     const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                     
-                    await sendEmail(item.email, subject, text);
+                    const emailResult = await sendEmail(item.email, subject, text);
+                    if (emailResult.ok) {
+                        console.log(`[Cron] Sent deletion notification for listing ${item.id} to ${item.email}`);
+                    } else if (!emailResult.skipped) {
+                        console.error(`[Cron] Failed to send deletion notification for listing ${item.id} to ${item.email}:`, emailResult.error);
+                    }
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
@@ -669,14 +765,34 @@ async function sendMarketingEmails() {
         ? `BizCall MK <notifications@${verifiedDomain}>`
         : "BizCall MK <onboarding@resend.dev>";
 
+      // Check cooldown before sending
+      if (!(await checkEmailCooldown(finalTo))) {
+        console.log(`[Marketing] Skipping ${finalTo} due to cooldown`);
+        results.push({ skipped: true });
+        continue;
+      }
+
       console.log(`[Marketing] Sending email to ${finalTo}...`);
-      const result = await resend.emails.send({
-        from: finalFrom, 
-        to: [finalTo],
-        subject: finalSubject,
-        text: finalText,
-      });
-      results.push(result);
+      try {
+        const result = await resend.emails.send({
+          from: finalFrom, 
+          to: [finalTo],
+          subject: finalSubject,
+          text: finalText,
+        });
+        
+        if (result.error) {
+          console.error(`[Marketing] Failed to send to ${finalTo}:`, result.error);
+          results.push({ error: result.error });
+        } else {
+          updateEmailCooldown(finalTo);
+          console.log(`[Marketing] Successfully sent to ${finalTo}. Email ID: ${result.data?.id || 'unknown'}`);
+          results.push(result);
+        }
+      } catch (err) {
+        console.error(`[Marketing] Exception sending to ${finalTo}:`, err);
+        results.push({ error: err.message || String(err) });
+      }
 
       // Wait 600ms between emails to respect Resend's 2 requests/second rate limit
       await new Promise(resolve => setTimeout(resolve, 600));
@@ -708,12 +824,15 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 
 /* ----------------------- CRON SCHEDULER ----------------------- */
 
-// Schedule the marketing emails to run every Tuesday at 6:20 PM GMT+2 (16:20 UTC).
+// Schedule the marketing emails to run every Tuesday at 7:15 PM CET.
 // Cron expression: minute hour dayOfMonth month dayOfWeek
-// 20 16 * * 2 = At 16:20 UTC (6:20 PM GMT+2) on Tuesday
-const cronExpression = "20 16 * * 2";
+// 15 18 * * 2 = At 18:15 UTC (7:15 PM CET in winter, 8:15 PM CEST in summer) on Tuesday
+// Note: North Macedonia uses CET (UTC+1) in winter and CEST (UTC+2) in summer
+// This will send at 7:15 PM during winter (CET) and 8:15 PM during summer (CEST)
+const cronExpression = "15 18 * * 2";
 
-console.log(`[Cron] Marketing emails scheduled for every Tuesday at 6:20 PM GMT+2 / 16:20 UTC (Cron: ${cronExpression})`);
+console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC (Cron: ${cronExpression})`);
+console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time due to daylight saving.`);
 
 cron.schedule(cronExpression, async () => {
   console.log("[Cron] Triggering weekly marketing emails...");
@@ -767,9 +886,13 @@ cron.schedule("0 9 * * *", async () => {
         const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
         
-        await sendEmail(userEmail, subject, text);
-        console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
-        count++;
+        const emailResult = await sendEmail(userEmail, subject, text);
+        if (emailResult.ok) {
+            console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
+            count++;
+        } else if (!emailResult.skipped) {
+            console.error(`[Cron] Failed to send expiry warning for listing ${id} to ${userEmail}:`, emailResult.error);
+        }
         
         // Respect rate limits
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -825,10 +948,14 @@ cron.schedule("0 0 * * *", async () => {
                 const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
 
-                await sendEmail(userEmail, subject, text);
-                await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
-                console.log(`[Cron] Sent pre-deletion warning for ${id}`);
-                warningCount++;
+                const emailResult = await sendEmail(userEmail, subject, text);
+                if (emailResult.ok) {
+                    await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
+                    console.log(`[Cron] Sent pre-deletion warning for ${id} to ${userEmail}`);
+                    warningCount++;
+                } else if (!emailResult.skipped) {
+                    console.error(`[Cron] Failed to send pre-deletion warning for ${id} to ${userEmail}:`, emailResult.error);
+                }
                 await new Promise(resolve => setTimeout(resolve, 500)); // Rate limit
              }
           }
@@ -847,7 +974,12 @@ cron.schedule("0 0 * * *", async () => {
                  const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                  
-                 await sendEmail(userEmail, subject, text);
+                 const emailResult = await sendEmail(userEmail, subject, text);
+                 if (emailResult.ok) {
+                     console.log(`[Cron] Sent deletion notification for ${id} to ${userEmail}`);
+                 } else if (!emailResult.skipped) {
+                     console.error(`[Cron] Failed to send deletion notification for ${id} to ${userEmail}:`, emailResult.error);
+                 }
                  await new Promise(resolve => setTimeout(resolve, 500));
              }
              
