@@ -116,7 +116,7 @@ const Header = ({ onMenuOpen }) => {
             animation: 'shimmer 1.5s infinite'
           }}></div>
         ) : user ? (
-          <button className="btn btn-ghost" onClick={onLogout}>
+          <button className="btn btn-ghost" onClick={onLogout} style={{ marginRight: '15%' }}>
             {t("logout")}
           </button>
         ) : (
