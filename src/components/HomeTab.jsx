@@ -145,45 +145,7 @@ export default function HomeTab() {
         </div>
       </section>
 
-      {/* CATEGORIES */}
-      <section 
-        className="categories-section" 
-        aria-labelledby="categories-title"
-      >
-        <div className="container">
-          <div className="categories-card card">
-            <div className="section-header">
-              <h2 id="categories-title" className="section-title">
-                <span className="section-icon" aria-hidden="true">🎯</span>
-                {t("homePopularCategoriesTitle")}
-              </h2>
-            </div>
-            
-            <div 
-              className="categories-grid" 
-              role="list"
-              aria-label="Popular categories"
-            >
-              {Object.keys(categoryIcons).map((cat) => (
-                <button
-                  key={cat}
-                  className="category-chip"
-                  onClick={() => handleCategoryClick(cat)}
-                  aria-label={`Browse ${t(cat)} category`}
-                  type="button"
-                >
-                  <span className="category-icon" aria-hidden="true">
-                    {categoryIcons[cat]}
-                  </span>
-                  <span className="category-name">{t(cat)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FEATURES SECTION */}
+      {/* FEATURES SECTION - Moved before Categories */}
       <section 
         className="features-section" 
         aria-labelledby="features-title"
@@ -224,6 +186,44 @@ export default function HomeTab() {
               <p className="feature-description">
                 {t("ratingsReviewsDesc") || "Read reviews from real users to make informed decisions."}
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CATEGORIES */}
+      <section 
+        className="categories-section" 
+        aria-labelledby="categories-title"
+      >
+        <div className="container">
+          <div className="categories-card card">
+            <div className="section-header">
+              <h2 id="categories-title" className="section-title">
+                <span className="section-icon" aria-hidden="true">🎯</span>
+                {t("homePopularCategoriesTitle")}
+              </h2>
+            </div>
+            
+            <div 
+              className="categories-grid" 
+              role="list"
+              aria-label="Popular categories"
+            >
+              {Object.keys(categoryIcons).map((cat) => (
+                <button
+                  key={cat}
+                  className="category-chip"
+                  onClick={() => handleCategoryClick(cat)}
+                  aria-label={`Browse ${t(cat)} category`}
+                  type="button"
+                >
+                  <span className="category-icon" aria-hidden="true">
+                    {categoryIcons[cat]}
+                  </span>
+                  <span className="category-name">{t(cat)}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

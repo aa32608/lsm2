@@ -911,26 +911,48 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
     try {
       setLoading(true);
+      
+      // Pre-warm connection to payment API
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const res = await fetch(`${API_BASE}/api/create-payment`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
           body: JSON.stringify({
               listingId: listing.id,
               type: "extend",
               customerEmail: user?.email,
               customerName: userProfile?.name || user?.displayName,
               plan: planId
-          })
+          }),
+          signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        throw new Error(`Payment API error: ${res.status}`);
+      }
+      
       const data = await res.json();
       if (data.checkoutUrl) {
+          // Redirect immediately without delay
           window.location.href = data.checkoutUrl;
       } else {
         throw new Error("No checkout URL returned");
       }
     } catch (err) {
-      console.error(err);
-      showMessage(t("paymentError") || "Payment initialization failed", "error");
+      if (err.name === 'AbortError') {
+        console.error("Payment request timeout:", err);
+        showMessage("Payment request timed out. Please try again.", "error");
+      } else {
+        console.error(err);
+        showMessage(t("paymentError") || "Payment initialization failed", "error");
+      }
       setLoading(false);
     }
   };

@@ -18,7 +18,20 @@ export const viewport = {
 
 async function getListings() {
   try {
-    const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { next: { revalidate: 60 } });
+    // Optimize fetch with timeout for faster failure handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { 
+      next: { revalidate: 60 },
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!res.ok) throw new Error('Failed to fetch data');
     const data = await res.json();
     if (!data) return [];
@@ -28,7 +41,11 @@ async function getListings() {
       ...data[key]
     }));
   } catch (error) {
-    console.error("Error fetching listings:", error);
+    if (error.name === 'AbortError') {
+      console.warn("Listings fetch timeout, using empty array");
+    } else {
+      console.error("Error fetching listings:", error);
+    }
     return [];
   }
 }
@@ -49,6 +66,9 @@ export default async function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app" />
+        <link rel="preconnect" href="https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app" />
+        <link rel="dns-prefetch" href="https://lsm-wozo.onrender.com" />
+        <link rel="preconnect" href="https://lsm-wozo.onrender.com" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body>

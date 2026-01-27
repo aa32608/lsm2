@@ -118,7 +118,7 @@ const ListingCard = React.memo(({
         )}
         
         <div className="listing-card-badges">
-           <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
              {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
            {l.status === "verified" && (
@@ -144,13 +144,13 @@ const ListingCard = React.memo(({
         )}
 
         {/* Show price in list view only */}
-        {isHorizontal && l.offerprice && (
+        {/* {isHorizontal && l.offerprice && (
           <div className="listing-card-price" style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
             <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white', fontWeight: '600' }}>
               {l.offerprice}
             </span>
           </div>
-        )}
+        )} */}
         
         {/* Price is shown in badges for grid view, so no need to duplicate here */}
 

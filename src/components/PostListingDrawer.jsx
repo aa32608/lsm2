@@ -165,11 +165,18 @@ const PostListingDrawer = () => {
         price: selectedPlan.priceVal,
       });
 
-      // Initiate Payment
+      // Initiate Payment - Optimized with timeout and error handling
       try {
+        // Pre-warm connection to payment API
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         const res = await fetch(`${API_BASE}/api/create-payment`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
             body: JSON.stringify({
                 listingId,
                 type: "create",
@@ -177,8 +184,16 @@ const PostListingDrawer = () => {
                 customerEmail: user?.email,
                 customerName: userProfile?.name || user?.displayName,
                 plan: planId
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) {
+          throw new Error(`Payment API error: ${res.status}`);
+        }
+        
         const data = await res.json();
         
         if (data.success && data.isFreeTrial) {
@@ -189,14 +204,20 @@ const PostListingDrawer = () => {
         }
 
         if (data.checkoutUrl) {
+            // Redirect immediately without delay
             window.location.href = data.checkoutUrl;
             return; 
         } else {
-            throw new Error("Payment initialization failed");
+            throw new Error("Payment initialization failed: No checkout URL");
         }
       } catch (paymentErr) {
-          console.error("Payment error:", paymentErr);
-          showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+          if (paymentErr.name === 'AbortError') {
+            console.error("Payment request timeout:", paymentErr);
+            showMessage("Payment request timed out. Please try again.", "error");
+          } else {
+            console.error("Payment error:", paymentErr);
+            showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+          }
       }
       
       setShowPostForm(false);

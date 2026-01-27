@@ -16,6 +16,20 @@ import { EMAIL_TRANSLATIONS } from './translations.js';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Pre-initialize DodoPayments client at startup for faster payment processing
+let dodoClient = null;
+if (process.env.DODO_PAYMENTS_API_KEY) {
+  try {
+    dodoClient = new DodoPayments({
+      bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+      environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+    });
+    console.log('[DodoPayments] Client pre-initialized successfully');
+  } catch (err) {
+    console.error('[DodoPayments] Pre-initialization failed:', err);
+  }
+}
 const isProduction = process.env.NODE_ENV === 'production';
 
 console.log("Environment Variables Loaded:");
@@ -245,7 +259,8 @@ app.post("/api/create-payment", async (req, res) => {
   }
 
   try {
-    const client = new DodoPayments({
+    // Use pre-initialized client or create new one if needed
+    const client = dodoClient || new DodoPayments({
       bearerToken: process.env.DODO_PAYMENTS_API_KEY,
       environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
     });

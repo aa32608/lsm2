@@ -16,33 +16,6 @@ export default function FirebaseLoader({ children }) {
     let unsubscribe;
     let timeout;
 
-    const initFirebase = () => {
-      try {
-        // Check if Firebase is available
-        if (!auth || !db) {
-          // If Firebase isn't available, wait a bit and check again
-          timeout = setTimeout(() => {
-            if (auth && db) {
-              checkAuthState();
-            } else {
-              // If still not available, proceed anyway to prevent infinite loading
-              setFirebaseReady(true);
-            }
-          }, 100);
-          return;
-        }
-
-        // Check auth state immediately (Firebase v9+ LOCAL persistence)
-        checkAuthState();
-      } catch (e) {
-        console.warn("Firebase initialization error:", e);
-        // Don't block forever - proceed after short delay
-        timeout = setTimeout(() => {
-          setFirebaseReady(true);
-        }, 500);
-      }
-    };
-
     const checkAuthState = () => {
       try {
         // Access auth.currentUser synchronously - Firebase v9+ has this cached
@@ -59,17 +32,45 @@ export default function FirebaseLoader({ children }) {
           setFirebaseReady(true);
         });
 
-        // Safety timeout - don't block forever (max 2 seconds)
+        // Safety timeout - don't block forever (max 1 second for faster loading)
         timeout = setTimeout(() => {
           setFirebaseReady(true);
           if (unsubscribe) unsubscribe();
-        }, 2000);
+        }, 1000);
       } catch (e) {
         console.warn("Firebase auth check failed:", e);
         setFirebaseReady(true);
       }
     };
 
+    const initFirebase = () => {
+      try {
+        // Check if Firebase is available
+        if (!auth || !db) {
+          // If Firebase isn't available, wait a bit and check again
+          timeout = setTimeout(() => {
+            if (auth && db) {
+              checkAuthState();
+            } else {
+              // If still not available, proceed anyway to prevent infinite loading
+              setFirebaseReady(true);
+            }
+          }, 50); // Reduced from 100ms
+          return;
+        }
+
+        // Check auth state immediately (Firebase v9+ LOCAL persistence)
+        checkAuthState();
+      } catch (e) {
+        console.warn("Firebase initialization error:", e);
+        // Don't block forever - proceed after short delay
+        timeout = setTimeout(() => {
+          setFirebaseReady(true);
+        }, 300); // Reduced from 500ms
+      }
+    };
+
+    // Start immediately
     initFirebase();
 
     return () => {

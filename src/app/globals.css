@@ -266,6 +266,7 @@ img {
   border-radius: var(--radius-lg);
   position: relative;
   letter-spacing: -0.02em;
+  align-self: center;
 }
 
 .header-logo::before {
@@ -385,6 +386,7 @@ img {
   flex-shrink: 0;
   flex: 0 0 auto;
   margin-left: auto;
+  align-self: center;
 }
 
 @media (max-width: 768px) {
@@ -432,6 +434,7 @@ img {
   letter-spacing: 0.01em;
   position: relative;
   overflow: hidden;
+  align-self: center;
 }
 
 .header-actions .btn::before {
@@ -1003,29 +1006,35 @@ img {
   padding-top: var(--spacing-sm);
 }
 
-/* Mobile adjustments for grid view - Show title, category, location, price */
+/* Mobile adjustments - Make all cards horizontal to save height */
 @media (max-width: 768px) {
-  /* Grid view on mobile - vertical cards */
-  .listing-card:not(.horizontal) {
-    flex-direction: column;
-    height: auto;
-    min-height: 280px;
+  /* Make ALL listing cards horizontal on mobile (like desktop) */
+  .listing-card {
+    flex-direction: row !important;
+    height: 140px !important;
+    align-items: stretch;
+    border-radius: var(--radius-md);
+    overflow: hidden;
   }
   
-  .listing-card:not(.horizontal) .listing-card-image-container {
-    width: 100%;
-    aspect-ratio: 4/3;
-    height: auto;
+  .listing-card .listing-card-image-container {
+    width: 180px !important;
+    height: 100% !important;
+    aspect-ratio: auto !important;
+    flex-shrink: 0;
   }
   
-  .listing-card:not(.horizontal) .listing-card-content {
-    padding: var(--spacing-sm);
+  .listing-card .listing-card-content {
+    padding: var(--spacing-sm) var(--spacing-md) !important;
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    flex: 1;
+    justify-content: space-between;
+    overflow: hidden;
   }
   
-  .listing-card:not(.horizontal) .listing-card-title {
+  .listing-card .listing-card-title {
     font-size: 0.95rem;
     font-weight: 600;
     -webkit-line-clamp: 2;
@@ -1034,82 +1043,68 @@ img {
     display: block;
   }
   
-  .listing-card:not(.horizontal) .listing-card-meta {
+  .listing-card .listing-card-meta {
     display: flex;
     gap: var(--spacing-xs);
     margin-bottom: var(--spacing-xs);
     flex-wrap: wrap;
   }
   
-  .listing-card:not(.horizontal) .listing-card-meta .pill {
+  .listing-card .listing-card-meta .pill {
     font-size: 0.7rem;
     padding: 0.25rem 0.5rem;
   }
   
-  /* Show price in grid view on mobile */
-  .listing-card:not(.horizontal) .listing-card-badges {
-    display: flex !important;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-  }
-  
-  .listing-card:not(.horizontal) .listing-card-badges .pill-price {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.625rem;
-    font-weight: 600;
-    display: inline-block;
-  }
-  
-  /* Ensure category and location are visible in grid view */
-  .listing-card:not(.horizontal) .listing-card-meta .pill-category,
-  .listing-card:not(.horizontal) .listing-card-meta .pill-location {
-    display: inline-flex;
-  }
-  
-  /* Hide description on mobile grid view */
-  .listing-card:not(.horizontal) .listing-card-description {
+  /* Hide description on mobile */
+  .listing-card .listing-card-description {
     display: none;
   }
   
-  .listing-card:not(.horizontal) .listing-card-footer {
+  .listing-card .listing-card-footer {
     padding-top: var(--spacing-xs);
     margin-top: auto;
     border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-xs);
   }
   
-  .listing-card:not(.horizontal) .listing-stat {
+  .listing-card .listing-stats {
+    display: flex;
+    gap: var(--spacing-xs);
+    flex: 1;
+  }
+  
+  .listing-card .listing-stat {
     font-size: 0.7rem;
+    white-space: nowrap;
   }
   
-  .listing-card:not(.horizontal) .listing-action-btn {
+  .listing-card .listing-card-actions {
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  
+  .listing-card .listing-action-btn {
     width: 28px;
     height: 28px;
     font-size: 0.75rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
-  /* Horizontal/list view on mobile */
-  .listing-card.horizontal {
-    flex-direction: row;
-    height: 120px;
+  .listing-card-badges {
+    top: 6px;
+    left: 6px;
+    right: 6px;
   }
   
-  .listing-card.horizontal .listing-card-image-container {
-    width: 120px;
-    height: 100%;
-  }
-  
-  .listing-card.horizontal .listing-card-content {
-    padding: var(--spacing-sm);
-  }
-  
-  .listing-card.horizontal .listing-card-title {
-    font-size: 0.9rem;
-    -webkit-line-clamp: 1;
-  }
-  
-  .listing-card.horizontal .listing-card-description {
-    display: none;
+  .listing-card-badges .pill {
+    font-size: 0.65rem;
+    padding: 0.125rem 0.375rem;
   }
   
   /* Hide carousel buttons on mobile */
@@ -3354,6 +3349,7 @@ img {
     align-items: center !important;
     order: 3;
     margin-left: auto;
+    align-self: center;
   }
 
   .header-actions .select {
@@ -3362,6 +3358,7 @@ img {
     padding-right: 1.75rem;
     min-width: 65px;
     min-height: 36px;
+    align-self: center;
   }
 
   .header-actions .btn {
@@ -3373,12 +3370,14 @@ img {
     min-height: 36px;
     min-width: 70px;
     white-space: nowrap;
+    align-self: center;
   }
   
   .hamburger-btn {
     order: 1;
     flex-shrink: 0;
     z-index: 10;
+    align-self: center;
   }
   
   .header-logo {
@@ -3388,10 +3387,12 @@ img {
     top: 50%;
     transform: translate(-50%, -50%);
     margin: 0;
+    align-self: center;
   }
   
   .header-actions {
     order: 3;
+    align-self: center;
   }
 
   .submit-listing-header-btn {
