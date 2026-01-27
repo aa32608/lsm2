@@ -246,6 +246,7 @@ const AuthModal = () => {
                           </svg>
                           <input
                             className="auth-input"
+                            style={{padding: '16px 16px 16px 52px'}}
                             type="email"
                             placeholder={t("email")}
                             value={email}
@@ -263,6 +264,7 @@ const AuthModal = () => {
                           </svg>
                           <input
                             className="auth-input"
+                            style={{padding: '16px 16px 16px 52px'}}
                             type="password"
                             placeholder={t("password")}
                             value={password}
@@ -331,6 +333,7 @@ const AuthModal = () => {
                                 </svg>
                                 <input
                                   className="auth-input"
+                                  style={{padding: '16px 16px 16px 52px'}}
                                   type="tel"
                                   placeholder={t("phonePlaceholder")}
                                   value={phoneNumber}
@@ -367,6 +370,7 @@ const AuthModal = () => {
                               </svg>
                               <input
                                 className="auth-input"
+                                style={{padding: '16px 16px 16px 52px'}}
                                 type="text"
                                 placeholder={t("verificationCodePlaceholder")}
                                 value={otp}
@@ -412,6 +416,7 @@ const AuthModal = () => {
                       </svg>
                       <input
                         className="auth-input"
+                        style={{padding: '16px 16px 16px 52px'}}
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
@@ -428,6 +433,7 @@ const AuthModal = () => {
                       </svg>
                       <input
                         className="auth-input"
+                        style={{padding: '16px 16px 16px 52px'}}
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -444,6 +450,7 @@ const AuthModal = () => {
                       </svg>
                       <input
                         className="auth-input"
+                        style={{padding: '16px 16px 16px 52px'}}
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -460,6 +467,7 @@ const AuthModal = () => {
                       </svg>
                       <input
                         className="auth-input"
+                        style={{padding: '16px 16px 16px 52px'}}
                         type="password"
                         value={passwordForm?.repeatNewPassword || ""}
                         onChange={(e) =>
@@ -490,6 +498,7 @@ const AuthModal = () => {
                         </svg>
                         <input
                           className="auth-input"
+                          style={{padding: '16px 16px 16px 52px'}}
                           type="tel"
                           value={phoneNumber}
                           onChange={(e) =>
@@ -583,6 +592,7 @@ const AuthModal = () => {
                           </svg>
                           <input
                             className="auth-input"
+                            style={{padding: '16px 16px 16px 52px'}}
                             type="text"
                             placeholder={t("verificationCodePlaceholder")}
                             value={verificationCode}
