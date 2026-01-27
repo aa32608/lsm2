@@ -1012,10 +1012,10 @@ app.post("/api/admin/test-marketing-now", async (req, res) => {
 // This will send at 7:15 PM during winter (CET) and 8:15 PM during summer (CEST)
 const cronExpression = "15 18 * * 2";
 
-// TEMPORARY: Schedule test run in 10 minutes from server start
-// Calculate next 10 minutes
+// TEMPORARY: Schedule test run in 5 minutes from server start
+// Calculate next 5 minutes
 const now = new Date();
-const testTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
+const testTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
 const testMinute = testTime.getUTCMinutes();
 const testHour = testTime.getUTCHours();
 const testCronExpression = `${testMinute} ${testHour} * * *`; // Run once at the calculated time
@@ -1027,7 +1027,7 @@ console.log(`╚═════════════════════�
 console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC`);
 console.log(`[Cron] Regular cron expression: ${cronExpression}`);
 console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time`);
-console.log(`\n[Cron] 🧪 TEST MODE: Scheduling test run in 10 minutes`);
+console.log(`\n[Cron] 🧪 TEST MODE: Scheduling test run in 5 minutes`);
 console.log(`[Cron] Current UTC time: ${now.toISOString()}`);
 console.log(`[Cron] Test will run at: ${testTime.toISOString()} (UTC)`);
 console.log(`[Cron] Test cron expression: ${testCronExpression}`);
