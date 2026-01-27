@@ -795,7 +795,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     if (!isNaN(pageParam) && pageParam > 0) setPage(pageParam);
     if (!isNaN(pageSizeParam) && pageSizeParam > 0) setPageSize(pageSizeParam);
   }, []);
+  // Sync URL params (only after mount to avoid hydration issues)
   useEffect(() => {
+    if (typeof window === "undefined") return; // SSR guard
+    
     const params = new URLSearchParams(window.location.search);
     params.set("tab", selectedTab);
     if (selectedTab === "allListings") {
@@ -818,9 +821,36 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState({}, "", next);
   }, [selectedTab, q, catFilter, locFilter, sortBy, viewMode, page, pageSize]);
+  
+  // Reset page to 1 when filters change (but not on initial mount to avoid hydration issues)
+  const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    setPage(1);
-  }, [q, catFilter, locFilter, sortBy, pageSize, selectedTab]);
+    setIsMounted(true);
+  }, []);
+  
+  // Track previous filter values to detect actual changes
+  const prevFiltersRef = React.useRef({ q, catFilter, locFilter, sortBy });
+  useEffect(() => {
+    if (!isMounted) {
+      // On mount, just store initial values
+      prevFiltersRef.current = { q, catFilter, locFilter, sortBy };
+      return;
+    }
+    
+    // Check if any filter actually changed
+    const filtersChanged = 
+      prevFiltersRef.current.q !== q ||
+      prevFiltersRef.current.catFilter !== catFilter ||
+      prevFiltersRef.current.locFilter !== locFilter ||
+      prevFiltersRef.current.sortBy !== sortBy;
+    
+    if (filtersChanged && page > 1) {
+      setPage(1);
+    }
+    
+    // Update ref for next comparison
+    prevFiltersRef.current = { q, catFilter, locFilter, sortBy };
+  }, [q, catFilter, locFilter, sortBy, isMounted, page, setPage]);
 
 
 
@@ -1736,12 +1766,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     });
     return map;
   }, [deferredListings]);
-  // Reset page to 1 when filters change
-  useEffect(() => {
-    if (page > 1) {
-      setPage(1);
-    }
-  }, [deferredQ, catFilter, locFilter, sortBy, page, setPage]);
 
   const filtered = useMemo(() => {
     let arr = [...verifiedListings];
