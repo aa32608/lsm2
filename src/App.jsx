@@ -342,30 +342,27 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     plan: "1",          // "1", "3", "6", "12"
   });
 
-  const [listings, setListings] = useState(() => {
+  // Optimize: Read cache once during initialization and reuse
+  const initialCache = (() => {
     if (initialListings && initialListings.length > 0) return initialListings;
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_listings");
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
-  const [publicListings, setPublicListings] = useState(() => {
     if (initialPublicListings && initialPublicListings.length > 0) return initialPublicListings;
     if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_listings");
-      return cached ? JSON.parse(cached) : [];
+      try {
+        const cached = localStorage.getItem("cached_listings");
+        return cached ? JSON.parse(cached) : [];
+      } catch (e) {
+        return [];
+      }
     }
     return [];
-  });
+  })();
+
+  const [listings, setListings] = useState(initialCache);
+  const [publicListings, setPublicListings] = useState(initialCache);
   const [userListings, setUserListings] = useState([]);
   const [listingsLoading, setListingsLoading] = useState(() => {
     if (initialListings && initialListings.length > 0) return false;
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_listings");
-      return !cached; // If we have cache, don't show loading spinner initially
-    }
-    return true;
+    return initialCache.length === 0; // If we have cache, don't show loading spinner initially
   });
   const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
@@ -375,6 +372,25 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const showMessage = useCallback((text, type = "info") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "info" }), 5000);
+  }, []);
+
+  // Optimized shallow comparison for listings arrays (much faster than JSON.stringify)
+  const areListingsEqual = useCallback((a, b) => {
+    if (a.length !== b.length) return false;
+    if (a.length === 0) return true;
+    // Compare first, middle, and last items as a quick check
+    // If arrays are sorted by createdAt, this is usually sufficient
+    const checkIndices = [0, Math.floor(a.length / 2), a.length - 1];
+    for (const idx of checkIndices) {
+      if (a[idx]?.id !== b[idx]?.id || a[idx]?.createdAt !== b[idx]?.createdAt) {
+        return false;
+      }
+    }
+    // Full comparison only if quick check passes
+    for (let i = 0; i < a.length; i++) {
+      if (a[i]?.id !== b[i]?.id) return false;
+    }
+    return true;
   }, []);
 
   const [selectedListing, setSelectedListing] = useState(null);
@@ -948,8 +964,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     if (userListings.length === 0) {
       setListings((prev) => {
         const sorted = [...publicListings].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        // Deep compare or just length check for performance
-        if (prev.length === sorted.length && JSON.stringify(prev) === JSON.stringify(sorted)) {
+        // Use optimized shallow comparison instead of JSON.stringify
+        if (areListingsEqual(prev, sorted)) {
           return prev;
         }
         return sorted;
@@ -961,15 +977,20 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const combined = Array.from(merged.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       
       setListings((prev) => {
-        if (prev.length === combined.length && JSON.stringify(prev) === JSON.stringify(combined)) {
+        if (areListingsEqual(prev, combined)) {
           return prev;
         }
         return combined;
       });
     }
+  }, [publicListings, userListings, areListingsEqual]);
 
-    // Cache update logic
-    if (publicListings.length > 0) {
+  // Debounced cache update - separate effect to avoid blocking main updates
+  useEffect(() => {
+    if (publicListings.length === 0) return;
+
+    // Debounce cache updates to avoid frequent localStorage writes
+    const timeoutId = setTimeout(() => {
       const cacheData = publicListings
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
         .slice(0, 150)
@@ -992,22 +1013,33 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         }));
 
       const newCache = JSON.stringify(cacheData);
-      const currentCache = localStorage.getItem("cached_listings");
       
-      if (currentCache !== newCache) {
+      // Use requestIdleCallback for non-blocking localStorage writes
+      const writeCache = () => {
         try {
-          // Explicitly remove old cache before adding new, as requested to ensure freshness
-          localStorage.removeItem("cached_listings");
-          localStorage.setItem("cached_listings", newCache);
+          const currentCache = localStorage.getItem("cached_listings");
+          if (currentCache !== newCache) {
+            localStorage.removeItem("cached_listings");
+            localStorage.setItem("cached_listings", newCache);
+          }
         } catch (e) {
           console.error("Cache storage failed:", e);
           if (e.name === "QuotaExceededError" || e.code === 22) {
             localStorage.removeItem("cached_listings");
           }
         }
+      };
+
+      // Use requestIdleCallback if available, otherwise setTimeout with 0 delay
+      if (typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(writeCache, { timeout: 2000 });
+      } else {
+        setTimeout(writeCache, 0);
       }
-    }
-  }, [publicListings, userListings]);
+    }, 2000); // Debounce: only update cache 2 seconds after last change
+
+    return () => clearTimeout(timeoutId);
+  }, [publicListings]);
 
   // 1. Public listings (verified) - Use get() for faster initial load, then onValue for updates
   useEffect(() => {
@@ -1031,7 +1063,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
       
       setPublicListings(prev => {
-        if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
+        if (areListingsEqual(prev, arr)) return prev;
         return arr;
       });
       setListingsLoading(false);
@@ -1050,7 +1082,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
       
       setPublicListings(prev => {
-        if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
+        if (areListingsEqual(prev, arr)) return prev;
         return arr;
       });
     }, (err) => {
@@ -1058,7 +1090,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [areListingsEqual]);
 
   // 2. User listings - Run when user changes
   useEffect(() => {

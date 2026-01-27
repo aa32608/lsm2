@@ -122,6 +122,7 @@ const Header = ({ onMenuOpen }) => {
         ) : (
           <button
             className="btn btn-primary"
+            style={{ marginRight: '15%' }}
             onClick={() => {
               setAuthMode("login");
               setShowAuthModal(true);
