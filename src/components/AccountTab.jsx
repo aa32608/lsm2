@@ -41,9 +41,9 @@ const AccountTab = () => {
     return (
       <div className="account-auth-prompt">
         <div className="account-auth-icon" aria-hidden="true">👤</div>
-        <h2 className="account-auth-title">{t("loginToSeeMore") || "Please Login"}</h2>
+        <h2 className="account-auth-title">{t("loginToSeeMore")}</h2>
         <p className="account-auth-description">
-          {t("accountLoginDescription") || "Login to manage your profile and account settings."}
+          {t("accountLoginDescription")}
         </p>
         <button 
           className="btn btn-primary"
@@ -51,9 +51,9 @@ const AccountTab = () => {
             setAuthMode("login");
             setShowAuthModal(true);
           }}
-          aria-label={t("login") || "Login"}
+          aria-label={t("login")}
         >
-          {t("login") || "Login"}
+          {t("login")}
         </button>
       </div>
     );
@@ -125,7 +125,7 @@ const AccountTab = () => {
       showMessage(t("codeSent"), "success");
     } catch (err) {
       console.error(err);
-      showMessage(t("errorSendingCode") + ": " + err.message, "error");
+      showMessage(`${t("errorSendingCode")}: ${err.message}`, "error");
     } finally {
       setSavingPhone(false);
     }
@@ -212,9 +212,9 @@ const AccountTab = () => {
 
   // Delete Account
   const handleDeleteAccount = async () => {
-    if (!window.confirm(t("confirmDeleteAccount") || "Are you sure you want to delete your account? This cannot be undone.")) return;
+    if (!window.confirm(t("confirmDeleteAccount"))) return;
     
-    const password = prompt(t("enterPasswordToConfirm") || "Please enter your password to confirm:");
+    const password = prompt(t("enterPasswordToConfirm"));
     if (!password) return;
 
     try {
@@ -232,7 +232,7 @@ const AccountTab = () => {
       router.push("/");
     } catch (err) {
       console.error(err);
-      showMessage(t("deleteAccountError") + ": " + err.message, "error");
+      showMessage(`${t("deleteAccountError")}: ${err.message}`, "error");
     }
   };
 
@@ -285,10 +285,10 @@ const AccountTab = () => {
         <div className="account-page-header-content">
           <h1 className="account-page-title">
             <span className="account-page-icon" aria-hidden="true">👤</span>
-            {t("account") || "My Account"}
+            {t("account")}
           </h1>
           <p className="account-page-subtitle">
-            {t("accountSubtitle") || "Manage your profile, settings, and preferences"}
+            {t("accountSubtitle")}
           </p>
         </div>
       </div>
@@ -299,7 +299,7 @@ const AccountTab = () => {
           <div className="account-user-profile">
             <div className="account-avatar">
               {user.photoURL ? (
-                <img src={user.photoURL} alt="User avatar" />
+                <img src={user.photoURL} alt={t("userAvatar")} />
               ) : (
                 <div className="avatar-placeholder">{user.email?.[0]?.toUpperCase() || "U"}</div>
               )}
@@ -309,7 +309,7 @@ const AccountTab = () => {
             <button 
               className="account-btn account-btn-outline account-btn-sm account-btn-full-width" 
               onClick={handleLogout}
-              aria-label={t("logout") || "Logout"}
+              aria-label={t("logout")}
             >
               <span aria-hidden="true">🚪</span> {t("logout")}
             </button>
@@ -461,7 +461,7 @@ const AccountTab = () => {
                                 showMessage(t("verificationSent"), "success");
                               }
                             } catch (err) {
-                              showMessage(t("verificationError") + " " + err.message, "error");
+                              showMessage(`${t("verificationError")} ${err.message}`, "error");
                             }
                           }}
                         >
@@ -533,7 +533,7 @@ const AccountTab = () => {
                   <span className="action-icon">📜</span>
                   <div style={{ textAlign: 'left' }}>
                     <p className="action-title">{t("termsOfService")}</p>
-                    <p className="action-desc">{t("readTerms") || "Read our terms"}</p>
+                    <p className="action-desc">{t("readTerms")}</p>
                   </div>
                   <span className="quick-link-arrow">→</span>
                 </button>
@@ -545,7 +545,7 @@ const AccountTab = () => {
                   <span className="action-icon">🔒</span>
                   <div style={{ textAlign: 'left' }}>
                     <p className="action-title">{t("privacyPolicy")}</p>
-                    <p className="action-desc">{t("readPrivacy") || "Read our privacy policy"}</p>
+                    <p className="action-desc">{t("readPrivacy")}</p>
                   </div>
                   <span className="quick-link-arrow">→</span>
                 </button>
@@ -558,7 +558,7 @@ const AccountTab = () => {
           <div className="card account-card account-profile-section">
             <div className="account-card-header">
               <h3 className="account-card-title">👤 {t("editProfile")}</h3>
-              <p className="account-card-subtitle">{t("updateProfileDesc") || "Update your public profile information"}</p>
+              <p className="account-card-subtitle">{t("updateProfileDesc")}</p>
             </div>
             <form className="account-form-group" onSubmit={handleUpdateProfile}>
               <div className="account-form-field">
@@ -568,7 +568,7 @@ const AccountTab = () => {
                   className="account-form-input"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder={t("displayNamePlaceholder") || "Enter your display name"}
+                  placeholder={t("displayNamePlaceholder")}
                 />
               </div>
               <div className="account-form-actions">
@@ -708,11 +708,11 @@ const AccountTab = () => {
           <div className="card account-card account-danger-zone">
             <div className="account-card-header">
               <h3 className="account-card-title text-danger">⚠️ {t("dangerZone")}</h3>
-              <p className="account-card-subtitle">{t("dangerZoneDesc") || "Irreversible account actions"}</p>
+              <p className="account-card-subtitle">{t("dangerZoneDesc")}</p>
             </div>
             <div className="account-form-section">
               <p className="account-form-section-desc mb-md">
-                {t("deleteAccountWarning") || "Once you delete your account, there is no going back. Please be certain."}
+                {t("deleteAccountWarning")}
               </p>
               <button 
                 className="account-btn danger full-width"

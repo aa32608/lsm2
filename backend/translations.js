@@ -122,5 +122,94 @@ export const EMAIL_TRANSLATIONS = {
         mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е истечен речиси 30 дена. Ќе биде трајно избришан за 3 дена доколку не се обнови.\n\nОбновете сега за да го задржите: ${url}\n\nТимот на BizCall`
       }
     }
+  },
+  errors: {
+    missing_listing_id: {
+      en: "Missing listingId",
+      sq: "Mungon listingId",
+      mk: "Недостасува listingId"
+    },
+    payment_service_not_configured: {
+      en: "Payment service not configured",
+      sq: "Shërbimi i pagesës nuk është konfiguruar",
+      mk: "Сервисот за плаќање не е конфигуриран"
+    },
+    payment_product_not_configured: {
+      en: "Payment product not configured",
+      sq: "Produkti i pagesës nuk është konfiguruar",
+      mk: "Продуктот за плаќање не е конфигуриран"
+    },
+    failed_to_create_payment_session: {
+      en: "Failed to create payment session. Check server logs for details.",
+      sq: "Dështoi krijimi i sesionit të pagesës. Kontrolloni regjistrat e serverit për detaje.",
+      mk: "Не успеа креирање на сесија за плаќање. Проверете ги логите на серверот за детали."
+    },
+    webhook_error: {
+      en: "Webhook Error",
+      sq: "Gabim në Webhook",
+      mk: "Грешка во Webhook"
+    },
+    unauthorized: {
+      en: "Unauthorized",
+      sq: "E paautorizuar",
+      mk: "Неовластено"
+    },
+    failed_to_send_emails: {
+      en: "Failed to send emails",
+      sq: "Dështoi dërgimi i email-eve",
+      mk: "Не успеа испраќање на е-пошта"
+    },
+    server_entry_missing: {
+      en: "Server entry missing. Please build the project.",
+      sq: "Hyrja e serverit mungon. Ju lutemi ndërtoni projektin.",
+      mk: "Недостасува влезната точка на серверот. Ве молиме изградете го проектот."
+    },
+    missing_required_fields: {
+      en: "Missing required fields",
+      sq: "Mungojnë fushat e kërkuara",
+      mk: "Недостасуваат задолжителните полиња"
+    },
+    resend_not_configured: {
+      en: "Resend not configured",
+      sq: "Resend nuk është konfiguruar",
+      mk: "Resend не е конфигуриран"
+    },
+    no_users_found: {
+      en: "No users found",
+      sq: "Nuk u gjetën përdorues",
+      mk: "Не се пронајдени корисници"
+    },
+    no_subscribed_users: {
+      en: "No subscribed users",
+      sq: "Nuk ka përdorues të abonuar",
+      mk: "Нема претплатени корисници"
+    },
+    resend_not_configured_error: {
+      en: "Resend is not configured. Please set RESEND_API_KEY.",
+      sq: "Resend nuk është konfiguruar. Ju lutemi vendosni RESEND_API_KEY.",
+      mk: "Resend не е конфигуриран. Ве молиме поставете RESEND_API_KEY."
+    },
+    guest_user: {
+      en: "Guest User",
+      sq: "Përdorues i ftuar",
+      mk: "Гостин корисник"
+    }
+  },
+  maintenance: {
+    site_building: {
+      en: "Site is Building",
+      sq: "Sajti po ndërtohet",
+      mk: "Страницата се гради"
+    },
+    building_message: {
+      en: "The frontend assets are currently being built. Please wait a moment and refresh.",
+      sq: "Asetet e frontend-it po ndërtohen aktualisht. Ju lutemi prisni një moment dhe rifreskoni.",
+      mk: "Активностите на frontend-от моментално се градат. Ве молиме почекајте малку и освежете."
+    },
+    build_artifacts_not_found: {
+      en: "(Error: Frontend build artifacts not found)",
+      sq: "(Gabim: Asetet e ndërtimit të frontend-it nuk u gjetën)",
+      mk: "(Грешка: Активностите на градењето на frontend-от не се пронајдени)"
+    }
   }
 };

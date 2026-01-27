@@ -17,9 +17,9 @@ export default function MyListingsTab() {
     return (
       <div className="my-listings-auth-prompt">
         <div className="auth-prompt-icon" aria-hidden="true">🔐</div>
-        <h2 className="auth-prompt-title">{t("loginToSeeMore") || "Please Login"}</h2>
+        <h2 className="auth-prompt-title">{t("loginToSeeMore")}</h2>
         <p className="auth-prompt-description">
-          {t("loginDescription") || "You need to be logged in to view and manage your listings."}
+          {t("loginDescription")}
         </p>
         <button 
           className="btn btn-primary"
@@ -27,9 +27,9 @@ export default function MyListingsTab() {
             setAuthMode("login");
             setShowAuthModal(true);
           }}
-          aria-label={t("login") || "Login"}
+          aria-label={t("login")}
         >
-          {t("login") || "Login"}
+          {t("login")}
         </button>
       </div>
     );
@@ -159,10 +159,10 @@ export default function MyListingsTab() {
         <div className="my-listings-header-content">
           <h1 className="my-listings-page-title">
             <span className="my-listings-page-icon" aria-hidden="true">📁</span>
-            {t("myListings") || "My Listings"}
+            {t("myListings")}
           </h1>
           <p className="my-listings-page-subtitle">
-            {t("myListingsHint") || "Manage and track all your listings in one place"}
+            {t("myListingsHint")}
           </p>
         </div>
       </div>
@@ -172,24 +172,24 @@ export default function MyListingsTab() {
           {/* STATS AND TOOLBAR */}
           <div className="my-listings-toolbar">
             <div className="my-listings-stats">
-              <div className="my-stat-chip positive" role="status" aria-label={`${myVerifiedCount} verified listings`}>
+              <div className="my-stat-chip positive" role="status" aria-label={`${myVerifiedCount} ${t("verifiedListingsLabel")}`}>
                 <span className="my-stat-icon" aria-hidden="true">✅</span>
                 <div className="my-stat-content">
-                  <span className="my-stat-label">{t("verified") || "Verified"}</span>
+                  <span className="my-stat-label">{t("verified")}</span>
                   <span className="my-stat-value">{myVerifiedCount}</span>
                 </div>
               </div>
-              <div className="my-stat-chip warning" role="status" aria-label={`${myListingsRaw.length - myVerifiedCount} pending listings`}>
+              <div className="my-stat-chip warning" role="status" aria-label={`${myListingsRaw.length - myVerifiedCount} ${t("pendingListingsLabel")}`}>
                 <span className="my-stat-icon" aria-hidden="true">⏳</span>
                 <div className="my-stat-content">
-                  <span className="my-stat-label">{t("pending") || "Pending"}</span>
+                  <span className="my-stat-label">{t("pending")}</span>
                   <span className="my-stat-value">{myListingsRaw.length - myVerifiedCount}</span>
                 </div>
               </div>
-              <div className="my-stat-chip info" role="status" aria-label={`${myListings.length} total listings`}>
+              <div className="my-stat-chip info" role="status" aria-label={`${myListings.length} ${t("totalListingsLabel")}`}>
                 <span className="my-stat-icon" aria-hidden="true">📊</span>
                 <div className="my-stat-content">
-                  <span className="my-stat-label">{t("total") || "Total"}</span>
+                  <span className="my-stat-label">{t("total")}</span>
                   <span className="my-stat-value">{myListings.length}</span>
                 </div>
               </div>
@@ -200,10 +200,10 @@ export default function MyListingsTab() {
                 <input
                   type="search"
                   className="my-listings-search-input"
-                  placeholder={t("searchPlaceholder") || "Search your listings..."}
+                  placeholder={t("searchYourListings")}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  aria-label="Search your listings"
+                  aria-label={t("searchYourListingsLabel")}
                 />
               </div>
 
@@ -212,21 +212,21 @@ export default function MyListingsTab() {
                 className="toolbar-btn"
                 onClick={() => setFiltersOpen((v) => !v)}
                 aria-expanded={filtersOpen}
-                aria-label={t("filters") || "Toggle filters"}
-                title={t("filters") || "Filters"}
+                aria-label={t("toggleFilters")}
+                title={t("filters")}
               >
                 <span aria-hidden="true">🔍</span>
-                {hasActiveFilters && <span className="filter-badge" aria-label="Active filters"></span>}
+                {hasActiveFilters && <span className="filter-badge" aria-label={t("activeFilters")}></span>}
               </button>
               
               <button
                 type="button"
                 className="btn btn-primary"
                 onClick={() => setShowPostForm(true)}
-                aria-label={t("submitListing") || "Submit new listing"}
+                aria-label={t("submitListing")}
               >
                 <span aria-hidden="true">➕</span>
-                <span className="btn-text">{t("submitListing") || "New Listing"}</span>
+                <span className="btn-text">{t("newListing")}</span>
               </button>
             </div>
           </div>
@@ -247,17 +247,17 @@ export default function MyListingsTab() {
 
           {/* Active Filters Bar */}
           {hasActiveFilters && (
-            <div className="active-filters-bar" role="region" aria-label="Active filters">
-              <span className="active-filters-label">{t("activeFilters") || "Active filters"}:</span>
+            <div className="active-filters-bar" role="region" aria-label={t("activeFilters")}>
+              <span className="active-filters-label">{t("activeFilters")}:</span>
               <div className="active-filters-chips" role="list">
                 {q && (
                   <span className="active-filter-chip" role="listitem">
-                    <span className="filter-chip-label">{t("search") || "Search"}: "{q}"</span>
+                    <span className="filter-chip-label">{t("search")}: "{q}"</span>
                     <button
                       type="button"
                       className="filter-chip-remove"
                       onClick={() => setQ("")}
-                      aria-label={`Remove search filter: ${q}`}
+                      aria-label={`${t("removeSearchFilter")}: ${q}`}
                     >
                       <span aria-hidden="true">✕</span>
                     </button>
@@ -265,12 +265,12 @@ export default function MyListingsTab() {
                 )}
                 {statusFilter !== "all" && (
                   <span className="active-filter-chip" role="listitem">
-                    <span className="filter-chip-label">{t("status") || "Status"}: {t(statusFilter) || statusFilter}</span>
+                    <span className="filter-chip-label">{t("status")}: {t(statusFilter) || statusFilter}</span>
                     <button
                       type="button"
                       className="filter-chip-remove"
                       onClick={() => setStatusFilter("all")}
-                      aria-label={`Remove status filter: ${statusFilter}`}
+                      aria-label={`${t("removeStatusFilter")}: ${t(statusFilter) || statusFilter}`}
                     >
                       <span aria-hidden="true">✕</span>
                     </button>
@@ -278,7 +278,7 @@ export default function MyListingsTab() {
                 )}
                 {expiryFilter !== "all" && (
                   <span className="active-filter-chip" role="listitem">
-                    <span className="filter-chip-label">{t("expiry") || "Expiry"}: {t(expiryFilter) || expiryFilter}</span>
+                    <span className="filter-chip-label">{t("expiry")}: {t(expiryFilter) || expiryFilter}</span>
                     <button
                       type="button"
                       className="filter-chip-remove"
@@ -293,9 +293,9 @@ export default function MyListingsTab() {
                   type="button"
                   className="btn-clear-all-filters"
                   onClick={clearAllFilters}
-                  aria-label={t("clearAll") || "Clear all filters"}
+                  aria-label={t("clearAllFilters")}
                 >
-                  {t("clearAll") || "Clear All"}
+                  {t("clearAll")}
                 </button>
               </div>
             </div>
@@ -307,18 +307,18 @@ export default function MyListingsTab() {
               <div className="empty-icon" aria-hidden="true">📭</div>
               <h3 className="empty-title">
                 {myListingsRaw.length === 0 
-                  ? t("noListingsYet") || "No Listings Yet"
+                  ? t("noListingsYet")
                   : hasActiveFilters
-                    ? t("noListingsMatchFilters") || "No listings match your filters"
-                    : t("noListingsYet") || "No Listings Yet"
+                    ? t("noListingsMatchFilters")
+                    : t("noListingsYet")
                 }
               </h3>
               <p className="empty-text">
                 {myListingsRaw.length === 0 
-                  ? t("noListingsYetDescription") || "Start by creating your first listing!"
+                  ? t("noListingsYetDescription")
                   : hasActiveFilters
-                    ? t("noListingsMatchFiltersDescription") || "Try adjusting your filters to see more results."
-                    : t("noListingsYetDescription") || "Start by creating your first listing!"
+                    ? t("noListingsMatchFiltersDescription")
+                    : t("noListingsYetDescription")
                 }
               </p>
               {myListingsRaw.length > 0 && hasActiveFilters && (
@@ -326,9 +326,9 @@ export default function MyListingsTab() {
                   className="btn btn-primary"
                   onClick={clearAllFilters}
                   type="button"
-                  aria-label={t("clearFilters") || "Clear filters"}
+                  aria-label={t("clearFilters")}
                 >
-                  {t("clearFilters") || "Clear Filters"}
+                  {t("clearFilters")}
                 </button>
               )}
               {myListingsRaw.length === 0 && (
@@ -336,15 +336,15 @@ export default function MyListingsTab() {
                   className="btn btn-primary"
                   onClick={() => setShowPostForm(true)}
                   type="button"
-                  aria-label={t("submitListing") || "Submit new listing"}
+                  aria-label={t("submitListing")}
                 >
                   <span aria-hidden="true">➕</span>
-                  {t("submitListing") || "Create Your First Listing"}
+                  {t("createYourFirstListing")}
                 </button>
               )}
             </div>
           ) : (
-            <div className="my-listings-grid" role="list" aria-label="Your listings">
+            <div className="my-listings-grid" role="list" aria-label={t("yourListings")}>
               {myListings.map((l) => (
                 <MyListingCard
                   key={l.id}

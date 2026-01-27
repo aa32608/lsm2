@@ -65,7 +65,7 @@ const EditListingModal = () => {
                   <p className="text-sm text-muted mb-xs uppercase">{t("preview")}</p>
                   <h4 className="text-h3 mb-xs">{editForm.name || t("name")}</h4>
                   <p className="text-body mb-sm">
-                    {(t(editForm.category) || editForm.category || t("category"))} • {editLocationPreview || t("location")}
+                    {t(editForm.category) || editForm.category || t("category")} • {editLocationPreview || t("location")}
                   </p>
                 </div>
                 <div className="flex gap-sm">
@@ -183,11 +183,11 @@ const EditListingModal = () => {
               </div>
 
               <div className="field-group">
-                <label className="field-label">{t("priceRangeLabel") || "Price Range"}</label>
+                <label className="field-label">{t("priceRangeLabel")}</label>
                 <div className="modern-price-section">
                   <div className="price-range-container">
                     <div className="currency-selector-wrapper">
-                      <label className="currency-label">{t("currency") || "Currency"}</label>
+                      <label className="currency-label">{t("currency")}</label>
                       <select
                         className="select currency-select"
                         value={editForm.offerCurrency || "EUR"}
@@ -231,7 +231,7 @@ const EditListingModal = () => {
                     </div>
                     {editForm.offerprice && (
                       <div className="price-preview">
-                        <span className="price-preview-label">{t("preview") || "Preview"}:</span>
+                        <span className="price-preview-label">{t("preview")}:</span>
                         <span className="price-preview-value">{editForm.offerprice}</span>
                       </div>
                     )}
@@ -275,7 +275,7 @@ const EditListingModal = () => {
 
               <div className="field-group">
                 <label className="field-label">
-                  {t("images")} (Max 4)
+                  {t("imagesMax4")}
                 </label>
                 <div className="flex items-center gap-4 mb-sm">
                   <label className="btn btn-secondary small cursor-pointer" htmlFor="edit-image">

@@ -51,7 +51,7 @@ export default function HomeTab() {
             {t("homeSimpleSubtitle")}
           </p>
           
-          <div className="hero-actions" role="group" aria-label="Main actions">
+          <div className="hero-actions" role="group" aria-label={t("mainActions")}>
             <button
               className="btn btn-primary hero-btn-primary"
               onClick={handlePostClick}
@@ -97,7 +97,7 @@ export default function HomeTab() {
                 className="step-card"
                 role="listitem"
               >
-                <div className="step-number" aria-label={`Step ${step}`}>
+                <div className="step-number" aria-label={`${t("step")} ${step}`}>
                   {step}
                 </div>
                 <p className="step-description">
@@ -124,21 +124,21 @@ export default function HomeTab() {
               <div className="stat-icon" aria-hidden="true">📋</div>
               <div className="stat-content">
                 <div className="stat-value">{activeListingCount || 0}</div>
-                <div className="stat-label">{t("activeListings") || "Active Listings"}</div>
+                <div className="stat-label">{t("activeListings")}</div>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon" aria-hidden="true">✓</div>
               <div className="stat-content">
                 <div className="stat-value">{verifiedListingCount || 0}</div>
-                <div className="stat-label">{t("verifiedListings") || "Verified Listings"}</div>
+                <div className="stat-label">{t("verifiedListings")}</div>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon" aria-hidden="true">👥</div>
               <div className="stat-content">
                 <div className="stat-value">{publicListings?.length || 0}</div>
-                <div className="stat-label">{t("publicListings") || "Public Listings"}</div>
+                <div className="stat-label">{t("publicListings")}</div>
               </div>
             </div>
           </div>
@@ -154,37 +154,37 @@ export default function HomeTab() {
           <div className="section-header">
             <h2 id="features-title" className="section-title">
               <span className="section-icon" aria-hidden="true">🌟</span>
-              {t("whyChooseUs") || "Why Choose BizCall MK?"}
+              {t("whyChooseUs")}
             </h2>
           </div>
           
           <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon" aria-hidden="true">🔒</div>
-              <h3 className="feature-title">{t("verifiedListings") || "Verified Listings"}</h3>
+              <h3 className="feature-title">{t("verifiedListings")}</h3>
               <p className="feature-description">
-                {t("verifiedListingsDesc") || "All listings are verified for authenticity and trustworthiness."}
+                {t("verifiedListingsDesc")}
               </p>
             </div>
             <div className="feature-card">
               <div className="feature-icon" aria-hidden="true">💰</div>
-              <h3 className="feature-title">{t("noCommissions") || "No Commissions"}</h3>
+              <h3 className="feature-title">{t("noCommissions")}</h3>
               <p className="feature-description">
-                {t("noCommissionsDesc") || "Connect directly with service providers. No middleman, no fees."}
+                {t("noCommissionsDesc")}
               </p>
             </div>
             <div className="feature-card">
               <div className="feature-icon" aria-hidden="true">📱</div>
-              <h3 className="feature-title">{t("easyContact") || "Easy Contact"}</h3>
+              <h3 className="feature-title">{t("easyContact")}</h3>
               <p className="feature-description">
-                {t("easyContactDesc") || "Contact listings directly via phone, WhatsApp, or email."}
+                {t("easyContactDesc")}
               </p>
             </div>
             <div className="feature-card">
               <div className="feature-icon" aria-hidden="true">⭐</div>
-              <h3 className="feature-title">{t("ratingsReviews") || "Ratings & Reviews"}</h3>
+              <h3 className="feature-title">{t("ratingsReviews")}</h3>
               <p className="feature-description">
-                {t("ratingsReviewsDesc") || "Read reviews from real users to make informed decisions."}
+                {t("ratingsReviewsDesc")}
               </p>
             </div>
           </div>
@@ -208,14 +208,14 @@ export default function HomeTab() {
             <div 
               className="categories-grid" 
               role="list"
-              aria-label="Popular categories"
+              aria-label={t("popularCategories") || t("homePopularCategoriesTitle")}
             >
               {Object.keys(categoryIcons).map((cat) => (
                 <button
                   key={cat}
                   className="category-chip"
                   onClick={() => handleCategoryClick(cat)}
-                  aria-label={`Browse ${t(cat)} category`}
+                  aria-label={`${t("browse")} ${t(cat)} ${t("category")}`}
                   type="button"
                 >
                   <span className="category-icon" aria-hidden="true">

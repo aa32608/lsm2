@@ -629,9 +629,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     } catch (err) {
       console.error("Delete account error:", err);
       if (err.code === 'auth/requires-recent-login') {
-        showMessage(t("reauthRequired") || "Please log out and log in again to delete your account.", "error");
+        showMessage(t("reauthRequired"), "error");
       } else {
-        showMessage(err.message, "error");
+        showMessage(translateFirebaseError(err, t), "error");
       }
     } finally {
       setLoading(false);
@@ -923,11 +923,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             
             if (Object.keys(updates).length > 0) {
                 await update(dbRef(db), updates);
-                showMessage(type === 'extend' ? "Listing extended successfully!" : "Payment successful! Listing activated.", "success");
+                showMessage(type === 'extend' ? t("listingExtendedSuccessfully") : t("paymentSuccessfulListingActivated"), "success");
             }
         } catch (err) {
             console.error("Payment success handling error:", err);
-            showMessage("Payment succeeded but listing update failed. Please contact support.", "error");
+            showMessage(t("paymentSucceededButListingUpdateFailed"), "error");
         } finally {
             setLoading(false);
         }
@@ -1376,7 +1376,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     
     // Check limit
     if (currentImages.length + files.length > 4) {
-      showMessage(t("maxImagesError") || "Maximum 4 images allowed", "error");
+      showMessage(t("maxImagesError"), "error");
       return;
     }
 
@@ -1577,7 +1577,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
           }
       } catch (paymentErr) {
           console.error("Payment error:", paymentErr);
-          showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+          showMessage(t("listingSavedButPaymentFailed"), "error");
       }
       
       setShowPostForm(false);
@@ -2030,7 +2030,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       }
     } catch (err) {
       console.error(err);
-      showMessage(t("paymentError") || "Payment initialization failed", "error");
+      showMessage(t("paymentError"), "error");
       setLoading(false);
     }
   };
@@ -3939,7 +3939,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                   showMessage(t("codeSent"), "success");
                                 } catch (err) {
                                   console.error(err);
-                                  showMessage(err.message, "error");
+                                  showMessage(translateFirebaseError(err, t), "error");
                                   if (window.recaptchaVerifier) {
                                     try {
                                       window.recaptchaVerifier.clear();
@@ -3993,7 +3993,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                   setVerificationCode("");
                                   setConfirmationResult(null);
                                 } catch (err) {
-                                  showMessage(err.message, "error");
+                                  showMessage(translateFirebaseError(err, t), "error");
                                 } finally {
                                   setPhoneLoading(false);
                                 }
@@ -4114,7 +4114,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         disabled={phoneLoading}
                         onClick={async () => {
                           if (!agreedToTerms)
-                            return showMessage(t("mustAgreeToTerms") || "You must agree to the Terms of Service and Privacy Policy.", "error");
+                            return showMessage(t("mustAgreeToTerms"), "error");
 
                           if (!validateEmail(email))
                             return showMessage(t("enterValidEmail"), "error");
@@ -4150,7 +4150,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             console.error(err);
                             window.signupRecaptchaVerifier?.clear?.();
                             window.signupRecaptchaVerifier = null;
-                            showMessage(err.message, "error");
+                            showMessage(translateFirebaseError(err, t), "error");
                           } finally {
                             setPhoneLoading(false);
                           }
@@ -4240,7 +4240,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                               }
                             } catch (err) {
                               console.error(err);
-                              showMessage(err.message, "error");
+                              showMessage(translateFirebaseError(err, t), "error");
                             } finally {
                               setPhoneLoading(false);
                             }
@@ -4275,13 +4275,13 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         className="btn btn-ghost full-width"
                         disabled={resendBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage("You must be logged in.", "error");
+                          if (!auth.currentUser) return showMessage(t("youMustBeLoggedIn"), "error");
                           setResendBusy(true);
                           try {
                             await sendEmailVerification(auth.currentUser);
                             showMessage(t("emailLinkSent"), "success");
                           } catch (err) {
-                            showMessage(String(err?.message || err), "error");
+                            showMessage(err, "error");
                           } finally {
                             setResendBusy(false);
                           }
@@ -4294,7 +4294,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         className="btn full-width"
                         disabled={verifyBusy}
                         onClick={async () => {
-                          if (!auth.currentUser) return showMessage("You must be logged in.", "error");
+                          if (!auth.currentUser) return showMessage(t("youMustBeLoggedIn"), "error");
                           setVerifyBusy(true);
                           try {
                             await auth.currentUser.reload();
@@ -4306,7 +4306,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                               showMessage(t("notVerifiedYet"), "error");
                             }
                           } catch (err) {
-                            showMessage(String(err?.message || err), "error");
+                            showMessage(err, "error");
                           } finally {
                             setVerifyBusy(false);
                           }
@@ -4372,7 +4372,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           await sendEmailVerification(u);
                           showMessage(t("emailLinkSent"), "success");
                         } catch (err) {
-                          showMessage(err.message, "error");
+                          showMessage(translateFirebaseError(err, t), "error");
                         }
                       }}
                     >
@@ -4395,7 +4395,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             );
                           }
                         } catch (err) {
-                          showMessage(err.message, "error");
+                          showMessage(translateFirebaseError(err, t), "error");
                         }
                       }}
                     >

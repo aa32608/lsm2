@@ -13,6 +13,25 @@ import { fileURLToPath } from 'url';
 import DodoPayments from 'dodopayments';
 import { EMAIL_TRANSLATIONS } from './translations.js';
 
+// Helper to get user language preference
+async function getUserLanguage(userId) {
+  if (!userId || !isFirebaseInitialized) return 'sq'; // Default to Albanian
+  try {
+    const userRef = db.ref(`users/${userId}`);
+    const userSnap = await userRef.once('value');
+    const userData = userSnap.val();
+    return userData?.language || 'sq'; // Default to Albanian
+  } catch (err) {
+    console.warn(`[Language] Failed to get language for user ${userId}:`, err);
+    return 'sq'; // Default fallback
+  }
+}
+
+// Helper to get translation
+function getTranslation(translations, lang = 'sq') {
+  return translations[lang] || translations['en'] || translations['sq'] || '';
+}
+
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -172,13 +191,13 @@ app.use(bodyParser.json());
 async function sendEmail(to, subject, text) {
   if (!to || !subject || !text) {
     console.error("sendEmail: Missing required fields");
-    return { error: "Missing required fields" };
+    return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
   }
 
   try {
     if (!resend) {
       console.warn("sendEmail: Resend is not configured.");
-      return { error: "Resend not configured" };
+      return { error: EMAIL_TRANSLATIONS.errors.resend_not_configured.en };
     }
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
@@ -230,7 +249,7 @@ app.post("/api/create-payment", async (req, res) => {
   const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
 
   if (!listingId) {
-    return res.status(400).json({ error: "Missing listingId" });
+    return res.status(400).json({ error: EMAIL_TRANSLATIONS.errors.missing_listing_id.en });
   }
 
   // --- FREE TRIAL LOGIC ---
@@ -260,8 +279,11 @@ app.post("/api/create-payment", async (req, res) => {
             console.log(`[Free Trial] Activated for user ${userId}, listing ${listingId}`);
             
             // Send Confirmation Email
-            const subject = "BizCall MK: Free Trial Activated / Provë Falas e Aktivizuar / Бесплатен Пробен Период Активиран";
-            const text = `Hello / Përshëndetje / Здраво,\n\nYour first listing has been activated for free for 1 month! 🎉\nShpallja juaj e parë është aktivizuar falas për 1 muaj!\nВашиот прв оглас е активиран бесплатно за 1 месец!\n\nEnjoy the full benefits of BizCall MK.\nShijoni përfitimet e plota të BizCall MK.\nУживајте во целосните придобивки на BizCall MK.\n\nThe BizCall Team`;
+            const userLang = await getUserLanguage(userId);
+            const subject = EMAIL_TRANSLATIONS.listing.free_trial_activated.subject[userLang] || 
+                           EMAIL_TRANSLATIONS.listing.free_trial_activated.subject.en;
+            const text = EMAIL_TRANSLATIONS.listing.free_trial_activated.text[userLang]() || 
+                        EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
             
             if (customerEmail) {
                 sendEmail(customerEmail, subject, text);
@@ -278,7 +300,7 @@ app.post("/api/create-payment", async (req, res) => {
 
   if (!process.env.DODO_PAYMENTS_API_KEY) {
     console.error("DODO_PAYMENTS_API_KEY is missing");
-    return res.status(503).json({ error: "Payment service not configured" });
+    return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_service_not_configured.en });
   }
 
   // Map plan to product ID
@@ -308,7 +330,7 @@ app.post("/api/create-payment", async (req, res) => {
 
   if (!PRODUCT_ID) {
      console.error("No Product ID configured");
-     return res.status(503).json({ error: "Payment product not configured" });
+     return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
   }
 
   try {
@@ -323,7 +345,7 @@ app.post("/api/create-payment", async (req, res) => {
       product_cart: [{ product_id: PRODUCT_ID, quantity: 1 }],
       customer: { 
         email: customerEmail || 'guest@example.com', 
-        name: customerName || 'Guest User' 
+        name: customerName || EMAIL_TRANSLATIONS.errors.guest_user.en
       },
       metadata: { listingId, type, plan },
       return_url: `${req.headers.origin || 'https://bizcall.mk'}/?payment=success&listingId=${listingId}&type=${type}&plan=${plan}`,
@@ -332,7 +354,7 @@ app.post("/api/create-payment", async (req, res) => {
     res.json({ checkoutUrl: session.checkout_url });
   } catch (err) {
     console.error("Dodo Payment Error Full:", JSON.stringify(err, null, 2));
-    res.status(500).json({ error: "Failed to create payment session. Check server logs for details. " + err.message });
+    res.status(500).json({ error: EMAIL_TRANSLATIONS.errors.failed_to_create_payment_session.en + " " + (err.message || "") });
   }
 });
 
@@ -399,19 +421,27 @@ app.post("/api/webhook", async (req, res) => {
         // Send Notification Email
         const userEmail = listing.userEmail || listing.email; 
         if (userEmail) {
-            const listingName = listing.name || "Service";
             const link = `https://bizcall.mk/?listing=${listingId}`;
             const expiryDate = new Date(type === 'create' ? (now + durationMs) : (updates[`listings/${listingId}/expiresAt`])).toLocaleDateString();
+            
+            // Get user language preference
+            const userId = listing.userId;
+            const userLang = userId ? await getUserLanguage(userId) : 'sq';
+            const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
             
             let subject = "";
             let text = "";
             
             if (type === 'create') {
-                subject = `BizCall MK: Listing Activated / Shpallja u Aktivizua / Огласот е Активиран`;
-                text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" has been successfully activated!\nShpallja juaj "${listingName}" është aktivizuar me sukses!\nВашиот оглас "${listingName}" е успешно активиран!\n\nIt is now live on BizCall MK.\nTani është aktiv në BizCall MK.\nСега е активен на BizCall MK.\n\nManage your listing here: ${link}\n\nThe BizCall Team`;
+                subject = EMAIL_TRANSLATIONS.listing.listing_activated.subject[userLang] || 
+                         EMAIL_TRANSLATIONS.listing.listing_activated.subject.en;
+                text = EMAIL_TRANSLATIONS.listing.listing_activated.text[userLang](listingName, link) || 
+                      EMAIL_TRANSLATIONS.listing.listing_activated.text.en(listingName, link);
             } else if (type === 'extend') {
-                subject = `BizCall MK: Listing Extended / Shpallja u Vazhdua / Огласот е Продолжен`;
-                text = `Hello / Përshëndetje / Здраво,\n\nYour listing "${listingName}" has been successfully extended!\nShpallja juaj "${listingName}" është vazhduar me sukses!\nВашиот оглас "${listingName}" е успешно продолжен!\n\nNew Expiry Date: ${expiryDate}\nData e re e skadimit: ${expiryDate}\nНов датум на истекување: ${expiryDate}\n\nManage your listing here: ${link}\n\nThe BizCall Team`;
+                subject = EMAIL_TRANSLATIONS.listing.listing_extended.subject[userLang] || 
+                         EMAIL_TRANSLATIONS.listing.listing_extended.subject.en;
+                text = EMAIL_TRANSLATIONS.listing.listing_extended.text[userLang](listingName, expiryDate, link) || 
+                      EMAIL_TRANSLATIONS.listing.listing_extended.text.en(listingName, expiryDate, link);
             }
             
             if (subject && text) {
@@ -424,7 +454,7 @@ app.post("/api/webhook", async (req, res) => {
     res.json({ received: true });
   } catch (err) {
     console.error("Webhook Error:", err);
-    res.status(500).send("Webhook Error");
+    res.status(500).send(EMAIL_TRANSLATIONS.errors.webhook_error.en);
   }
 });
 
@@ -458,13 +488,15 @@ cron.schedule("0 0 * * *", async () => {
                     if (timeUntilExpiry > 0 && timeUntilExpiry <= SEVEN_DAYS_MS && !listing.expiryWarningSent) {
                         const email = listing.userEmail || listing.email;
                         if (email) {
-                            const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
-                                            EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
-                                            EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
+                            const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
+                            const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
+                            const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
+                            const link = "https://bizcall.mk/my-listings";
                             
-                            const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listing.name || "Service", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
-                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listing.name || "Shërbimi", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings") + "\n\n---\n\n" +
-                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listing.name || "Услуга", new Date(listing.expiresAt).toLocaleDateString(), "https://bizcall.mk/my-listings");
+                            const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject[userLang] || 
+                                          EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en;
+                            const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
+                                        EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
 
                             await sendEmail(email, subject, text);
                             updates[`listings/${id}/expiryWarningSent`] = true;
@@ -478,16 +510,14 @@ cron.schedule("0 0 * * *", async () => {
                     if (timeSinceExpiry >= TWENTY_SEVEN_DAYS_MS && timeSinceExpiry < THIRTY_DAYS_MS && !listing.preDeletionWarningSent) {
                         const email = listing.userEmail || listing.email;
                         if (email) {
-                             const listingName = listing.name || "Service";
+                             const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
+                             const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
                              const link = `https://bizcall.mk/?listing=${id}`; // Or renewal link
                              
-                             const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en + " / " + 
-                                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.sq + " / " + 
-                                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.mk;
-                             
-                             const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link) + "\n\n---\n\n" +
-                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.sq(listingName, link) + "\n\n---\n\n" +
-                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.mk(listingName, link);
+                             const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject[userLang] || 
+                                            EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en;
+                             const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
+                                         EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
  
                              await sendEmail(email, subject, text);
                              updates[`listings/${id}/preDeletionWarningSent`] = true;
@@ -499,7 +529,7 @@ cron.schedule("0 0 * * *", async () => {
 
                     // C. Delete Expired (> 30 days post-expiry)
                     if (timeSinceExpiry >= THIRTY_DAYS_MS) {
-                        listingsToDelete.push({ id, email: listing.userEmail || listing.email, name: listing.name, reason: "expired" });
+                        listingsToDelete.push({ id, email: listing.userEmail || listing.email, name: listing.name, userId: listing.userId, reason: "expired" });
                     }
                 }
 
@@ -523,14 +553,15 @@ cron.schedule("0 0 * * *", async () => {
                 console.log(`[Cron] Deleted listing ${item.id} (Reason: ${item.reason})`);
                 
                 // Send Deletion Email (only for verified expired listings)
-                if (item.reason === "expired" && item.email) {
-                    const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en + " / " +
-                                    EMAIL_TRANSLATIONS.listing.expired_deleted.subject.sq + " / " +
-                                    EMAIL_TRANSLATIONS.listing.expired_deleted.subject.mk;
+                if (item.reason === "expired" && item.email && item.userId) {
+                    const userLang = await getUserLanguage(item.userId);
+                    const listingName = item.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
+                    const link = "https://bizcall.mk/add-listing";
                     
-                    const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(item.name || "Service", "https://bizcall.mk/add-listing") + "\n\n---\n\n" +
-                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.sq(item.name || "Shërbimi", "https://bizcall.mk/add-listing") + "\n\n---\n\n" +
-                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.mk(item.name || "Услуга", "https://bizcall.mk/add-listing");
+                    const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject[userLang] || 
+                                   EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en;
+                    const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
+                                EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                     
                     await sendEmail(item.email, subject, text);
                     await new Promise(resolve => setTimeout(resolve, 500));
@@ -574,7 +605,7 @@ async function sendMarketingEmails() {
 
     if (!users) {
       console.log("[Marketing] No users found in database.");
-      return { message: "No users found", sentCount: 0 };
+      return { message: EMAIL_TRANSLATIONS.errors.no_users_found.en, sentCount: 0 };
     }
 
     const subscribedUsers = Object.values(users).filter(
@@ -583,11 +614,11 @@ async function sendMarketingEmails() {
 
     if (subscribedUsers.length === 0) {
       console.log("[Marketing] No subscribed users found.");
-      return { message: "No subscribed users", sentCount: 0 };
+      return { message: EMAIL_TRANSLATIONS.errors.no_subscribed_users.en, sentCount: 0 };
     }
 
     if (!resend) {
-      throw new Error("Resend is not configured. Please set RESEND_API_KEY.");
+      throw new Error(EMAIL_TRANSLATIONS.errors.resend_not_configured_error.en);
     }
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
@@ -677,14 +708,14 @@ async function sendMarketingEmails() {
 app.post("/api/admin/send-weekly-marketing", async (req, res) => {
   const { adminKey } = req.body;
   if (adminKey !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
+    return res.status(401).json({ error: EMAIL_TRANSLATIONS.errors.unauthorized.en });
   }
 
   try {
     const result = await sendMarketingEmails();
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Failed to send emails" });
+    res.status(500).json({ error: EMAIL_TRANSLATIONS.errors.failed_to_send_emails.en });
   }
 });
 
@@ -737,17 +768,17 @@ cron.schedule("0 9 * * *", async () => {
     for (const [id, listing] of Object.entries(listings)) {
       if (listing.status === "verified" && (listing.userEmail || listing.email)) {
         const userEmail = listing.userEmail || listing.email;
-        const listingName = listing.name || "Service";
         const link = `https://bizcall.mk/?listing=${id}`;
         const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
         
-        const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en + " / " + 
-                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.sq + " / " + 
-                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.mk;
+        // Get user language preference
+        const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
+        const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
         
-        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link) + "\n\n---\n\n" +
-                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.sq(listingName, expiryDate, link) + "\n\n---\n\n" +
-                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.mk(listingName, expiryDate, link);
+        const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject[userLang] || 
+                       EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en;
+        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
+                    EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
         
         await sendEmail(userEmail, subject, text);
         console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
@@ -798,16 +829,14 @@ cron.schedule("0 0 * * *", async () => {
           if (daysSinceExpiry >= 27 && daysSinceExpiry < 30 && !listing.preDeletionWarningSent) {
              const userEmail = listing.userEmail || listing.email;
              if (userEmail) {
-                const listingName = listing.name || "Service";
+                const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
+                const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
                 const link = `https://bizcall.mk/?listing=${id}`;
                 
-                const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en + " / " + 
-                                EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.sq + " / " + 
-                                EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.mk;
-                
-                const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link) + "\n\n---\n\n" +
-                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.sq(listingName, link) + "\n\n---\n\n" +
-                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.mk(listingName, link);
+                const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject[userLang] || 
+                               EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en;
+                const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
+                            EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
 
                 await sendEmail(userEmail, subject, text);
                 await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
@@ -821,17 +850,15 @@ cron.schedule("0 0 * * *", async () => {
           if (daysSinceExpiry >= 30) {
              const userEmail = listing.userEmail || listing.email;
              // Send notification
-             if (userEmail) {
-                 const listingName = listing.name || "Service";
-                 const link = `https://bizcall.mk/create`; // Encourage new listing
+             if (userEmail && listing.userId) {
+                 const userLang = await getUserLanguage(listing.userId);
+                 const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
+                 const link = `https://bizcall.mk/create`;
                  
-                 const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en + " / " + 
-                                 EMAIL_TRANSLATIONS.listing.expired_deleted.subject.sq + " / " + 
-                                 EMAIL_TRANSLATIONS.listing.expired_deleted.subject.mk;
-                 
-                 const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link) + "\n\n---\n\n" +
-                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.sq(listingName, link) + "\n\n---\n\n" +
-                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.mk(listingName, link);
+                 const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject[userLang] || 
+                                EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en;
+                 const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
+                             EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                  
                  await sendEmail(userEmail, subject, text);
                  await new Promise(resolve => setTimeout(resolve, 500));
@@ -910,13 +937,17 @@ app.use(async (req, res, next) => {
 
       if (!fs.existsSync(indexPath) && !fs.existsSync(templatePath)) {
         console.warn('Frontend build not found at:', distPath);
+        // Try to detect language from Accept-Language header or default to English
+        const acceptLang = req.headers['accept-language'] || 'en';
+        const lang = acceptLang.includes('sq') ? 'sq' : acceptLang.includes('mk') ? 'mk' : 'en';
+        
         return res.status(503).send(`
           <html>
-            <head><title>Maintenance</title></head>
+            <head><title>${EMAIL_TRANSLATIONS.maintenance.site_building[lang] || EMAIL_TRANSLATIONS.maintenance.site_building.en}</title></head>
             <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-              <h1>Site is Building</h1>
-              <p>The frontend assets are currently being built. Please wait a moment and refresh.</p>
-              <p style="color: #666; font-size: 0.9em;">(Error: Frontend build artifacts not found)</p>
+              <h1>${EMAIL_TRANSLATIONS.maintenance.site_building[lang] || EMAIL_TRANSLATIONS.maintenance.site_building.en}</h1>
+              <p>${EMAIL_TRANSLATIONS.maintenance.building_message[lang] || EMAIL_TRANSLATIONS.maintenance.building_message.en}</p>
+              <p style="color: #666; font-size: 0.9em;">${EMAIL_TRANSLATIONS.maintenance.build_artifacts_not_found[lang] || EMAIL_TRANSLATIONS.maintenance.build_artifacts_not_found.en}</p>
             </body>
           </html>
         `);
@@ -931,7 +962,9 @@ app.use(async (req, res, next) => {
       const serverEntryPath = path.resolve(__dirname, '../dist-server/entry-server.js');
       if (!fs.existsSync(serverEntryPath)) {
          console.warn('Server entry not found at:', serverEntryPath);
-         return res.status(503).send('Server entry missing. Please build the project.');
+         const acceptLang = req.headers['accept-language'] || 'en';
+         const lang = acceptLang.includes('sq') ? 'sq' : acceptLang.includes('mk') ? 'mk' : 'en';
+         return res.status(503).send(EMAIL_TRANSLATIONS.errors.server_entry_missing[lang] || EMAIL_TRANSLATIONS.errors.server_entry_missing.en);
       }
       render = (await import(serverEntryPath)).render;
     }

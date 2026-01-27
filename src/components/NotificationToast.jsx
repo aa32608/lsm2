@@ -1,8 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useApp } from "../context/AppContext";
 
 export default function NotificationToast({ message, type = "info", onClose }) {
+  const { t } = useApp();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export default function NotificationToast({ message, type = "info", onClose }) {
             }}
             onMouseEnter={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.3)")}
             onMouseLeave={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.2)")}
-            aria-label="Close notification"
+            aria-label={t("closeNotification")}
           >
             ×
           </button>

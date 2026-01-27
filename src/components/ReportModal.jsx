@@ -62,7 +62,7 @@ const ReportModal = () => {
           >
             <div className="modal-header">
               <h3 className="modal-title">{t("reportListing")}</h3>
-              <button className="icon-btn" onClick={() => setShowReportModal(false)}>✕</button>
+              <button className="icon-btn" onClick={() => setShowReportModal(false)} aria-label={t("close")}>✕</button>
             </div>
             <div className="modal-body">
               <div className="field-group">

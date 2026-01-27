@@ -33,12 +33,18 @@ const ExtendListingModal = () => {
             exit={{ scale: 0.95, opacity: 0 }}
           >
             <div className="modal-header">
-              <h3 className="modal-title">{t("extendListing") || "Extend Listing"}</h3>
-              <button className="icon-btn" onClick={() => setExtendModalOpen(false)}>✕</button>
+              <h3 className="modal-title">{t("extendListing")}</h3>
+              <button 
+                className="icon-btn" 
+                onClick={() => setExtendModalOpen(false)}
+                aria-label={t("close")}
+              >
+                ✕
+              </button>
             </div>
             <div className="modal-body">
               <p className="text-body mb-lg">
-                {t("extendDescription") || "Choose a plan to extend your listing duration."}
+                {t("extendDescription")}
               </p>
               
               <div className="plan-selection-grid">
@@ -63,7 +69,7 @@ const ExtendListingModal = () => {
                 {t("cancel")}
               </button>
               <button className="btn btn-primary" onClick={handleProceedExtend}>
-                {t("proceedToPayment") || "Proceed to Payment"}
+                {t("proceedToPayment")}
               </button>
             </div>
           </motion.div>

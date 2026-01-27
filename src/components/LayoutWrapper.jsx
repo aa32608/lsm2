@@ -57,9 +57,9 @@ const LayoutContent = ({ children }) => {
 
       <footer className="footer">
         <div className="footer-links">
-          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms") || "Terms"}</button>
+          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms")}</button>
           <span className="separator">•</span>
-          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy") || "Privacy"}</button>
+          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy")}</button>
         </div>
         <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
       </footer>

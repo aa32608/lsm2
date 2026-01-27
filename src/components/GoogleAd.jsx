@@ -1,7 +1,9 @@
 "use client";
 import React, { useEffect } from "react";
+import { useApp } from "../context/AppContext";
 
 const GoogleAd = ({ className, style, slot }) => {
+  const { t } = useApp();
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && window.adsbygoogle) {
@@ -21,7 +23,7 @@ const GoogleAd = ({ className, style, slot }) => {
           data-ad-format="auto"
           data-full-width-responsive="true"></ins>
        {/* Placeholder text visible only when ad script not loaded/blocked */}
-       <div style={{ position: 'absolute', pointerEvents: 'none', color: '#cbd5e1', fontSize: '0.75rem', zIndex: 0 }}>Advertisement</div>
+       <div style={{ position: 'absolute', pointerEvents: 'none', color: '#cbd5e1', fontSize: '0.75rem', zIndex: 0 }}>{t("advertisement")}</div>
     </div>
   );
 };

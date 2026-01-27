@@ -91,10 +91,10 @@ export default function ListingsTab() {
               <input
                 type="search"
                 className="listings-search-input"
-                placeholder={t("searchPlaceholder") || "Search listings..."}
+                placeholder={t("searchPlaceholder")}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                aria-label="Search listings"
+                aria-label={t("searchListings")}
               />
             </div>
             
@@ -102,8 +102,8 @@ export default function ListingsTab() {
               <button 
                 className="toolbar-btn"
                 onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}
-                aria-label={viewMode === "list" ? t("switchToGrid") || "Switch to grid view" : t("switchToList") || "Switch to list view"}
-                title={viewMode === "list" ? t("switchToGrid") || "Grid View" : t("switchToList") || "List View"}
+                aria-label={viewMode === "list" ? t("switchToGrid") : t("switchToList")}
+                title={viewMode === "list" ? t("gridView") : t("listView")}
               >
                 <span aria-hidden="true">{viewMode === "list" ? "⊞" : "☰"}</span>
               </button>
@@ -111,12 +111,12 @@ export default function ListingsTab() {
               <button 
                 className="toolbar-btn"
                 onClick={() => setFiltersOpen(true)}
-                aria-label={t("filters") || "Open filters"}
-                title={t("filters") || "Filters"}
+                aria-label={t("filters")}
+                title={t("filters")}
                 aria-pressed={filtersOpen}
               >
                 <span aria-hidden="true">🔍</span>
-                {hasActiveFilters && <span className="filter-badge" aria-label="Active filters"></span>}
+                {hasActiveFilters && <span className="filter-badge" aria-label={t("activeFilters")}></span>}
               </button>
             </div>
            </div>
@@ -124,7 +124,7 @@ export default function ListingsTab() {
            {/* Active Filters Chips */}
            {hasActiveFilters && (
              <div className="active-filters-bar">
-               <span className="active-filters-label">{t("activeFilters") || "Active filters"}:</span>
+               <span className="active-filters-label">{t("activeFilters")}:</span>
                <div className="active-filters-chips" role="list">
                  {catFilter && (
                    <span className="active-filter-chip" role="listitem">
@@ -133,7 +133,7 @@ export default function ListingsTab() {
                      <button 
                        className="filter-chip-remove" 
                       onClick={() => setCatFilter("")}
-                      aria-label={`Remove ${t(catFilter) || catFilter} category filter`}
+                      aria-label={`${t("removeCategoryFilter")}: ${t(catFilter) || catFilter}`}
                     >
                       ✕
                     </button>
@@ -146,7 +146,7 @@ export default function ListingsTab() {
                      <button 
                        className="filter-chip-remove" 
                       onClick={() => setLocFilter("")}
-                      aria-label={`Remove ${locFilter} location filter`}
+                      aria-label={`${t("removeLocationFilter")}: ${locFilter}`}
                     >
                       ✕
                     </button>
@@ -159,7 +159,7 @@ export default function ListingsTab() {
                      <button 
                        className="filter-chip-remove" 
                       onClick={() => setQ("")}
-                      aria-label="Clear search"
+                      aria-label={t("clearSearch")}
                     >
                       ✕
                     </button>
@@ -168,9 +168,9 @@ export default function ListingsTab() {
                  <button 
                    className="clear-all-filters-btn" 
                    onClick={() => { setCatFilter(""); setLocFilter(""); setQ(""); }}
-                   aria-label="Clear all filters"
+                   aria-label={t("clearAllFilters")}
                  >
-                   {t("clearAll") || "Clear All"}
+                   {t("clearAll")}
                  </button>
                </div>
              </div>
@@ -181,7 +181,7 @@ export default function ListingsTab() {
              <ListingsSkeleton count={pageSize} viewMode={viewMode} />
            ) : pagedFiltered.length > 0 ? (
              <>
-               <div className={`listings-container listings-${viewMode}`} role="list" aria-label="Listings">
+               <div className={`listings-container listings-${viewMode}`} role="list" aria-label={t("listingsLabel") || t("listings")}>
                  {pagedFiltered.map((l) => (
                    <ListingCard
                     key={l.id}
@@ -201,25 +201,25 @@ export default function ListingsTab() {
 
                {/* PAGINATION */}
                {totalPages > 1 && (
-                 <nav className="listings-pagination" aria-label="Pagination">
+                 <nav className="listings-pagination" aria-label={t("pagination")}>
                    <button
                      className="pagination-btn"
                      disabled={page <= 1}
                      onClick={() => setPage(page - 1)}
-                     aria-label="Previous page"
+                     aria-label={t("previousPage")}
                    >
-                     ← {t("previous") || "Previous"}
+                     ← {t("previous")}
                    </button>
                    <span className="pagination-info" aria-current="page">
-                     {t("page") || "Page"} {page} {t("of") || "of"} {totalPages}
+                     {t("page")} {page} {t("of")} {totalPages}
                    </span>
                    <button
                      className="pagination-btn"
                      disabled={page >= totalPages}
                      onClick={() => setPage(page + 1)}
-                     aria-label="Next page"
+                     aria-label={t("nextPage")}
                    >
-                     {t("next") || "Next"} →
+                     {t("next")} →
                    </button>
                  </nav>
                )}
@@ -227,18 +227,18 @@ export default function ListingsTab() {
            ) : (
              <div className="listings-empty">
                <p className="listings-empty-icon" aria-hidden="true">🔍</p>
-               <h3 className="listings-empty-title">{t("noListingsFound") || "No listings found"}</h3>
+               <h3 className="listings-empty-title">{t("noListingsFound")}</h3>
                <p className="listings-empty-text">
                  {hasActiveFilters 
-                   ? t("tryAdjustingFilters") || "Try adjusting your filters to see more results."
-                   : t("noListingsYet") || "No listings available yet."}
+                   ? t("tryAdjustingFilters")
+                   : t("noListingsYet")}
                </p>
                {hasActiveFilters && (
                  <button 
                    className="btn btn-primary"
                    onClick={() => { setCatFilter(""); setLocFilter(""); setQ(""); }}
                  >
-                   {t("clearAllFilters") || "Clear All Filters"}
+                   {t("clearAllFilters")}
                  </button>
                )}
              </div>
@@ -246,7 +246,7 @@ export default function ListingsTab() {
         </main>
 
         {/* SIDEBAR */}
-        <aside className="listings-sidebar" aria-label="Sidebar">
+        <aside className="listings-sidebar" aria-label={t("sidebar")}>
           <div className="sidebar-ad">
             <GoogleAd style={{ minHeight: '250px' }} />
           </div>

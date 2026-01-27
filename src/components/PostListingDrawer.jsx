@@ -53,7 +53,7 @@ const PostListingDrawer = () => {
 
     const currentImages = form.images || [];
     if (currentImages.length + files.length > 4) {
-      showMessage(t("maxImagesError") || "Maximum 4 images allowed", "error");
+      showMessage(t("maxImagesError"), "error");
       return;
     }
 
@@ -197,7 +197,7 @@ const PostListingDrawer = () => {
         const data = await res.json();
         
         if (data.success && data.isFreeTrial) {
-            showMessage(t("listingCreatedSuccess") || "Listing created successfully! Free trial activated.", "success");
+            showMessage(t("listingCreatedSuccessFreeTrial"), "success");
             setShowPostForm(false);
             window.location.reload(); 
             return;
@@ -205,7 +205,7 @@ const PostListingDrawer = () => {
 
         if (data.checkoutUrl) {
             // Show notification before redirecting
-            showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
+            showMessage(t("redirectingToPayment"), "info");
             // Redirect immediately without delay
             setTimeout(() => {
               window.location.href = data.checkoutUrl;
@@ -217,10 +217,10 @@ const PostListingDrawer = () => {
       } catch (paymentErr) {
           if (paymentErr.name === 'AbortError') {
             console.error("Payment request timeout:", paymentErr);
-            showMessage(t("paymentTimeout") || "Payment request timed out. Please try again.", "error");
+            showMessage(t("paymentTimeout"), "error");
           } else {
             console.error("Payment error:", paymentErr);
-            showMessage(t("listingSavedUnpaid") || "Listing saved but payment failed. Please try again from My Listings.", "error");
+            showMessage(t("listingSavedUnpaid"), "error");
           }
       }
       
@@ -329,7 +329,7 @@ const PostListingDrawer = () => {
                             <label className="field-label">{t("name")}</label>
                             <input
                             className="input"
-                            placeholder={t("namePlaceholder") || t("name")}
+                            placeholder={t("namePlaceholder")}
                             value={form.name}
                             onChange={(e) =>
                                 setForm({
@@ -439,7 +439,7 @@ const PostListingDrawer = () => {
                             <label className="field-label">{t("description")}</label>
                             <textarea
                             className="textarea"
-                            placeholder={t("descriptionPlaceholder") || t("description")}
+                            placeholder={t("descriptionPlaceholder")}
                             value={form.description}
                             onChange={(e) =>
                                 setForm({
@@ -487,10 +487,10 @@ const PostListingDrawer = () => {
 
                         {/* Offer price range + currency - Redesigned */}
                         <div className="modern-price-section field-group">
-                            <label className="field-label">{t("priceRange") || "Price Range"}</label>
+                            <label className="field-label">{t("priceRange")}</label>
                             <div className="price-range-container">
                                 <div className="currency-selector-wrapper">
-                                    <label className="currency-label">{t("currency") || "Currency"}</label>
+                                    <label className="currency-label">{t("currency")}</label>
                                     <select
                                         className="select currency-select"
                                         value={form.offerCurrency}
@@ -530,7 +530,7 @@ const PostListingDrawer = () => {
                                 </div>
                                 {form.offerprice && (
                                     <div className="price-preview">
-                                        <span className="price-preview-label">{t("preview") || "Preview"}:</span>
+                                        <span className="price-preview-label">{t("preview")}:</span>
                                         <span className="price-preview-value">{form.offerprice}</span>
                                     </div>
                                 )}
@@ -538,7 +538,7 @@ const PostListingDrawer = () => {
                         </div>
 
                         <div className="field-group">
-                            <label className="field-label">{t("tags") || "Tags"}</label>
+                            <label className="field-label">{t("tags")}</label>
                             <input
                             className="input"
                             placeholder={t("tagsPlaceholder")}
@@ -554,7 +554,7 @@ const PostListingDrawer = () => {
                         </div>
 
                         <div className="field-group">
-                            <label className="field-label">{t("socialLink") || "Social Link"}</label>
+                            <label className="field-label">{t("socialLink")}</label>
                             <input
                             className="input"
                             placeholder={t("socialPlaceholder")}
@@ -575,7 +575,7 @@ const PostListingDrawer = () => {
                             onClick={() => document.getElementById("post-images").click()}
                             className="upload-placeholder"
                             >
-                            {t("clickToUpload") || "Click to upload images"}
+                            {t("clickToUpload")}
                             </div>
                             <input
                             id="post-images"
@@ -670,14 +670,14 @@ const PostListingDrawer = () => {
                 
                         {/* Plan Selection */}
                         <div className="plan-selection-section">
-                          <h4 className="plan-selection-title">{t("selectPlan") || "Select Plan"}</h4>
+                          <h4 className="plan-selection-title">{t("selectPlan")}</h4>
                           
                           {user && userProfile && !userProfile.hasUsedFreeTrial && (
                             <div className="free-trial-banner">
                                <div className="free-trial-icon">🎁</div>
                                <div className="free-trial-content">
-                                 <strong>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
-                                 <span>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
+                                 <strong>{t("freeTrialAvailable")}</strong>
+                                 <span>{t("freeTrialDesc")}</span>
                                </div>
                             </div>
                           )}
@@ -696,7 +696,7 @@ const PostListingDrawer = () => {
                                     {t(`month${plan.id}`)}
                                     {isFreeTrialEligible && (
                                       <span className="plan-badge-free">
-                                        {t("free") || "FREE"}
+                                        {t("free")}
                                       </span>
                                     )}
                                   </div>
@@ -706,7 +706,7 @@ const PostListingDrawer = () => {
                                    {isFreeTrialEligible ? (
                                       <>
                                         <span className="plan-price-original">{plan.price}</span>
-                                        <span className="plan-price-final">0 EUR</span>
+                                        <span className="plan-price-final">{t("zeroEur")}</span>
                                       </>
                                    ) : (
                                       <span className="plan-price-final">{plan.price}</span>
@@ -724,7 +724,7 @@ const PostListingDrawer = () => {
                         >
                           {loading
                             ? `⏳ ${t("loading")}`
-                            : t("createListing") || "Create Listing"}
+                            : t("createListing")}
                         </button>
                       </form>
                     )}
@@ -777,7 +777,7 @@ const PostListingDrawer = () => {
               </div>
 
               <div className="modal-body" style={{ maxHeight: "70vh", overflow: "hidden" }}>
-                <Suspense fallback={<div className="map-loading">Loading Map...</div>}>
+                <Suspense fallback={<div className="map-loading">{t("loadingMap")}</div>}>
                   <NorthMacedoniaMap
                     selectedCity={form.locationCity}
                     onSelectCity={(cityName) => {

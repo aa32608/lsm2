@@ -66,10 +66,10 @@ const Sidebar = ({ onClose, isOpen }) => {
               setForm((f) => ({ ...f, step: 1 }));
               onClose();
             }}
-            aria-label={t("submitListing") || "Submit new listing"}
+            aria-label={t("submitListing")}
           >
             <span className="nav-item-icon">➕</span>
-            <span className="nav-item-label">{t("submitListing") || "Submit Listing"}</span>
+            <span className="nav-item-label">{t("submitListing")}</span>
           </button>
         ) : (
           <button
@@ -79,10 +79,10 @@ const Sidebar = ({ onClose, isOpen }) => {
               setShowAuthModal(true);
               onClose();
             }}
-            aria-label={t("login") || "Login to submit listing"}
+            aria-label={t("loginToSubmitListing")}
           >
             <span className="nav-item-icon">🔐</span>
-            <span className="nav-item-label">{t("submitListing") || "Submit Listing"}</span>
+            <span className="nav-item-label">{t("submitListing")}</span>
           </button>
         )}
       </nav>

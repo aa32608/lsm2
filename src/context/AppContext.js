@@ -39,6 +39,60 @@ export const useApp = () => {
 /* Helpers */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
 
+// Helper to translate Firebase error messages
+const translateFirebaseError = (error, t) => {
+  if (!error) return t("error");
+  
+  // If error is a string, try to translate it
+  if (typeof error === 'string') {
+    // Check if it's already a translation key
+    const translation = t(error);
+    if (translation !== error) return translation;
+    
+    // Try common error patterns
+    if (error.toLowerCase().includes('network')) return t("networkError");
+    if (error.toLowerCase().includes('timeout')) return t("timeoutError") || t("error");
+    if (error.toLowerCase().includes('permission')) return t("permissionDenied") || t("error");
+    
+    // Return generic error with message
+    return `${t("error")}: ${error}`;
+  }
+  
+  // If error has a code, translate it
+  if (error.code) {
+    const codeMap = {
+      'auth/user-not-found': t("userNotFound"),
+      'auth/wrong-password': t("wrongPassword"),
+      'auth/invalid-email': t("enterValidEmail"),
+      'auth/too-many-requests': t("tooManyAttempts"),
+      'auth/network-request-failed': t("networkError"),
+      'auth/invalid-phone-number': t("enterValidPhone"),
+      'auth/credential-already-in-use': t("phoneAlreadyInUse") || t("emailAlreadyInUse"),
+      'auth/requires-recent-login': t("reauthRequired") || t("loginRequired"),
+      'auth/operation-not-allowed': t("operationNotAllowed") || t("error"),
+      'auth/email-already-in-use': t("emailAlreadyInUse"),
+      'auth/invalid-credential': t("wrongPassword"),
+      'auth/weak-password': t("passwordTooShort"),
+    };
+    
+    if (codeMap[error.code]) return codeMap[error.code];
+    
+    // Fallback to error message if available
+    if (error.message) {
+      return `${t("error")}: ${error.message}`;
+    }
+    
+    return t("error");
+  }
+  
+  // If error has a message property
+  if (error.message) {
+    return translateFirebaseError(error.message, t);
+  }
+  
+  return t("error");
+};
+
 const formatOfferPrice = (min, max, currency) => {
   const cleanMin = String(min || "").trim();
   const cleanMax = String(max || "").trim();
@@ -244,6 +298,27 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [message, setMessage] = useState({ text: "", type: "info" });
   
   const showMessage = useCallback((text, type = "info") => {
+    // If text is an error object, translate it
+    if (text && typeof text === 'object' && (text.code || text.message)) {
+      text = translateFirebaseError(text, t);
+    }
+    // If text is a string that might be an error message, check if it needs translation
+    else if (typeof text === 'string') {
+      // If it contains common error patterns but isn't already translated, try to translate
+      const errorPatterns = ['error', 'failed', 'invalid', 'network', 'timeout', 'permission'];
+      const looksLikeError = errorPatterns.some(pattern => text.toLowerCase().includes(pattern));
+      
+      if (looksLikeError && !text.startsWith(t("error"))) {
+        // Try to translate it as a key first
+        const translated = t(text);
+        if (translated !== text) {
+          text = translated;
+        } else {
+          // If not a translation key, wrap it with error prefix
+          text = `${t("error")}: ${text}`;
+        }
+      }
+    }
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "info" }), 5000);
   }, []);
@@ -388,7 +463,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     
     // Check limit
     if (currentImages.length + files.length > 4) {
-      showMessage(t("maxImagesError") || "Maximum 4 images allowed", "error");
+      showMessage(t("maxImagesError"), "error");
       return;
     }
 
@@ -692,11 +767,11 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       // Also update the listing's feedback count/avg if possible, but cloud functions usually handle this.
       // We will trust the onValue listener to pick up the new feedback.
       
-      showMessage(t("feedbackSaved") || "Review submitted", "success");
+      showMessage(t("feedbackSaved"), "success");
       return true;
     } catch (err) {
       console.error(err);
-      showMessage(t("feedbackSaveError") || "Could not save review", "error");
+      showMessage(t("feedbackSaveError"), "error");
       return false;
     } finally {
       setFeedbackSaving(false);
@@ -911,13 +986,13 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       
       // Show success notification
       if (type === 'extend') {
-        showMessage(t("listingExtendedSuccess") || "Listing extended successfully!", "success");
+        showMessage(t("listingExtendedSuccess"), "success");
       } else {
-        showMessage(t("paymentSuccess") || "Payment successful! Your listing has been activated.", "success");
+        showMessage(t("paymentSuccess"), "success");
       }
     } else if (paymentStatus === "failed" || paymentStatus === "cancel") {
       // Show failure notification
-      showMessage(t("paymentFailed") || "Payment was cancelled or failed. Your listing has been saved.", "error");
+      showMessage(t("paymentFailed"), "error");
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []); // Run once on mount
@@ -1052,7 +1127,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       const data = await res.json();
       if (data.checkoutUrl) {
           // Show notification before redirecting
-          showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
+          showMessage(t("redirectingToPayment"), "info");
           // Redirect immediately without delay
           setTimeout(() => {
             window.location.href = data.checkoutUrl;
@@ -1063,10 +1138,10 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     } catch (err) {
       if (err.name === 'AbortError') {
         console.error("Payment request timeout:", err);
-        showMessage(t("paymentTimeout") || "Payment request timed out. Please try again.", "error");
+        showMessage(t("paymentTimeout"), "error");
       } else {
         console.error(err);
-        showMessage(t("paymentError") || "Payment initialization failed", "error");
+        showMessage(t("paymentError"), "error");
       }
       setLoading(false);
     }

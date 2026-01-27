@@ -3,16 +3,19 @@ import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 
-const LoadingSpinner = () => (
-  <div className="loading-container">
-    <div className="spinner"></div>
-    <p style={{
-      color: 'var(--text-secondary)',
-      fontSize: '1rem',
-      margin: 0
-    }}>Loading...</p>
-  </div>
-);
+const LoadingSpinner = () => {
+  const { t } = useApp();
+  return (
+    <div className="loading-container">
+      <div className="spinner"></div>
+      <p style={{
+        color: 'var(--text-secondary)',
+        fontSize: '1rem',
+        margin: 0
+      }}>{t("loading")}</p>
+    </div>
+  );
+};
 
 export default function ProtectedPage({ children, redirectTo = "/" }) {
   const { user, firebaseReady, authLoading } = useApp();

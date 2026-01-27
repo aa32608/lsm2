@@ -102,7 +102,7 @@ export default function ListingDetailClient({ id, initialListing }) {
         }
       } catch (error) {
         console.error("Error fetching listing:", error);
-        showMessage(t("error") || "Error loading listing", "error");
+        showMessage(t("errorLoadingListing"), "error");
         setListing(null);
       } finally {
         setLoading(false);
@@ -179,8 +179,8 @@ export default function ListingDetailClient({ id, initialListing }) {
   if (loading) {
     return (
       <div className="detail-loading-container">
-        <div className="spinner" aria-label="Loading listing"></div>
-        <p className="detail-loading-text">{t("loading") || "Loading listing..."}</p>
+        <div className="spinner" aria-label={t("loadingListing")}></div>
+        <p className="detail-loading-text">{t("loadingListing")}</p>
       </div>
     );
   }
@@ -188,7 +188,7 @@ export default function ListingDetailClient({ id, initialListing }) {
   if (!listing) {
     return (
       <div className="container" style={{ padding: "4rem", textAlign: "center" }}>
-        <h2 className="text-h2">{t("listingNotFound") || "Listing not found"}</h2>
+        <h2 className="text-h2">{t("listingNotFound")}</h2>
         <button className="btn btn-secondary" onClick={() => {
           const previousPage = sessionStorage.getItem('previousPageUrl') || '/listings';
           const scrollPosition = sessionStorage.getItem('previousScrollPosition');
@@ -275,9 +275,9 @@ export default function ListingDetailClient({ id, initialListing }) {
               }, 600);
             }
           }}
-          aria-label={t("back") || "Back"}
+          aria-label={t("back")}
         >
-          <span aria-hidden="true">←</span> {t("back") || "Back"}
+          <span aria-hidden="true">←</span> {t("back")}
          </button>
       </div>
 
@@ -298,13 +298,13 @@ export default function ListingDetailClient({ id, initialListing }) {
                   setShowMaximize(true);
                 }
               }}
-              aria-label="Click to view full size image"
+              aria-label={t("clickToEnlarge")}
             >
                {images.length > 0 ? (
                  <>
                    <img 
                      src={images[imgIndex]} 
-                     alt={`${listing.name} - Image ${imgIndex + 1} of ${images.length}`}
+                     alt={`${listing.name} - ${t("imageThumbnails")} ${imgIndex + 1} ${t("of")} ${images.length}`}
                      className="detail-main-img" 
                    />
                    {images.length > 1 && (
@@ -326,7 +326,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                      </>
                    )}
                    <div className="detail-maximize-hint" aria-hidden="true">
-                     <span>🔍</span> Click to enlarge
+                     <span>🔍</span> {t("clickToEnlarge")}
                    </div>
                  </>
                ) : (
@@ -334,24 +334,24 @@ export default function ListingDetailClient({ id, initialListing }) {
                    <span className="detail-placeholder-icon" aria-hidden="true">
                    {categoryIcons[listing.category] || "🏷️"}
                    </span>
-                   <span className="detail-placeholder-text">No image available</span>
+                   <span className="detail-placeholder-text">{t("noImageAvailable")}</span>
                  </div>
                )}
             </div>
             {images.length > 1 && (
-              <div className="detail-thumbnails" role="tablist" aria-label="Image thumbnails">
+              <div className="detail-thumbnails" role="tablist" aria-label={t("imageThumbnails")}>
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     role="tab"
                     aria-selected={idx === imgIndex}
-                    aria-label={`View image ${idx + 1}`}
+                    aria-label={`${t("viewImage")} ${idx + 1}`}
                     className={`detail-thumb ${idx === imgIndex ? 'active' : ''}`}
                     onClick={() => setImgIndex(idx)}
                   >
                     <img 
                       src={img}
-                      alt={`Thumbnail ${idx + 1}`}
+                      alt={`${t("thumbnail")} ${idx + 1}`}
                       loading="lazy"
                   />
                   </button>
@@ -387,12 +387,12 @@ export default function ListingDetailClient({ id, initialListing }) {
                  </span>
                </div>
                {hasRating && (
-                 <div className="detail-rating-row" aria-label={`Rating: ${localFeedbackStats.avg} out of 5 stars based on ${localFeedbackStats.count} reviews`}>
+                 <div className="detail-rating-row" aria-label={`${t("ratingLabel")}: ${localFeedbackStats.avg} ${t("of")} 5 ${t("stars")} ${t("basedOn")} ${localFeedbackStats.count} ${t("reviews")}`}>
                    <span className="detail-stars" aria-hidden="true">
                      {'⭐'.repeat(Math.round(localFeedbackStats.avg))}
                    </span>
                    <span className="detail-rating-num">
-                     <strong>{localFeedbackStats.avg}</strong> ({localFeedbackStats.count} {t("reviews") || "reviews"})
+                     <strong>{localFeedbackStats.avg}</strong> ({localFeedbackStats.count} {t("reviews")})
                    </span>
                  </div>
                )}
@@ -404,18 +404,18 @@ export default function ListingDetailClient({ id, initialListing }) {
                    <a 
                      href={`tel:${listing.contact}`} 
                      className="detail-action-btn detail-action-call"
-                     aria-label={`Call ${listing.contact}`}
+                     aria-label={`${t("callAction")}: ${listing.contact}`}
                    >
-                     <span aria-hidden="true">📞</span> {t("callAction") || "Call"}
+                     <span aria-hidden="true">📞</span> {t("callAction")}
                    </a>
                    <a 
                      href={`https://wa.me/${listing.contact.replace(/[^0-9]/g, '')}`} 
                      className="detail-action-btn detail-action-whatsapp"
                      target="_blank" 
                      rel="noreferrer noopener"
-                     aria-label="Open WhatsApp chat"
+                     aria-label={t("openWhatsApp")}
                    >
-                     <span aria-hidden="true">💬</span> WhatsApp
+                     <span aria-hidden="true">💬</span> {t("whatsapp")}
                    </a>
                  </>
                )}
@@ -423,22 +423,22 @@ export default function ListingDetailClient({ id, initialListing }) {
                  <a 
                    href={`mailto:${listing.userEmail}`} 
                    className="detail-action-btn detail-action-email"
-                   aria-label={`Send email to ${listing.userEmail}`}
+                   aria-label={`${t("sendEmail")}: ${listing.userEmail}`}
                  >
-                   <span aria-hidden="true">✉️</span> {t("emailAction") || "Email"}
+                   <span aria-hidden="true">✉️</span> {t("emailAction")}
                  </a>
                )}
                <button 
                  className="detail-action-btn detail-action-share"
                  onClick={() => handleShareListing(listing)}
-                 aria-label={t("share") || "Share listing"}
+                 aria-label={t("shareListing")}
                >
                  <span aria-hidden="true">🔗</span>
                </button>
                <button 
                  className="detail-action-btn detail-action-favorite"
                  onClick={() => toggleFav(listing.id)}
-                 aria-label={favorites.includes(listing.id) ? t("removeFavorite") || "Remove from favorites" : t("addFavorite") || "Add to favorites"}
+                 aria-label={favorites.includes(listing.id) ? t("removeFavorite") : t("addFavorite")}
                  aria-pressed={favorites.includes(listing.id)}
                >
                  <span aria-hidden="true">{favorites.includes(listing.id) ? "❤️" : "🤍"}</span>
@@ -452,14 +452,14 @@ export default function ListingDetailClient({ id, initialListing }) {
           {/* Left Sidebar: Additional Info */}
           <aside className="detail-sidebar" aria-label="Additional listing information">
             <div className="detail-sidebar-content">
-              <h2 className="detail-sidebar-title">{t("additionalInfo") || "Additional Information"}</h2>
+              <h2 className="detail-sidebar-title">{t("additionalInfo")}</h2>
               
               <div className="detail-sidebar-section">
               {/* Most Important Info First - Contact & Price */}
               {listing.userEmail && (
                 <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
+                    <span aria-hidden="true">✉️</span> {t("contactEmail")}
                   </div>
                   <div className="detail-sidebar-value">
                     <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
@@ -472,7 +472,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.offerprice && (
                 <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">💰</span> {t("price") || "Price"}
+                    <span aria-hidden="true">💰</span> {t("priceLabel")}
                   </div>
                   <div className="detail-sidebar-value detail-price-value">
                     {listing.offerprice}
@@ -483,11 +483,11 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.status && (
                 <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">📊</span> {t("status") || "Status"}
+                    <span aria-hidden="true">📊</span> {t("status")}
                   </div>
                   <div className="detail-sidebar-value">
                     <span className={`detail-status-badge ${listing.status === "verified" ? "detail-status-verified" : "detail-status-pending"}`}>
-                      {listing.status === "verified" ? "✅ Verified" : "⏳ Pending"}
+                      {listing.status === "verified" ? `✅ ${t("verified")}` : `⏳ ${t("pending")}`}
                     </span>
                   </div>
                 </div>
@@ -496,7 +496,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.category && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">{categoryIcons[listing.category] || "📂"}</span> {t("category") || "Category"}
+                    <span aria-hidden="true">{categoryIcons[listing.category] || "📂"}</span> {t("category")}
                   </div>
                   <div className="detail-sidebar-value">{t(listing.category) || listing.category}</div>
                 </div>
@@ -505,7 +505,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.location && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🌍</span> {t("location") || "Location"}
+                    <span aria-hidden="true">🌍</span> {t("location")}
                   </div>
                   <div className="detail-sidebar-value">{listing.location}</div>
                 </div>
@@ -514,7 +514,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.locationCity && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🏙️</span> {t("city") || "City"}
+                    <span aria-hidden="true">🏙️</span> {t("cityLabel")}
                   </div>
                   <div className="detail-sidebar-value">{listing.locationCity}</div>
                 </div>
@@ -523,7 +523,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.locationExtra && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">📍</span> {t("locationDetails") || "Location Details"}
+                    <span aria-hidden="true">📍</span> {t("locationDetails")}
                   </div>
                   <div className="detail-sidebar-value">{listing.locationExtra}</div>
                 </div>
@@ -532,7 +532,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.socialLink && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
+                    <span aria-hidden="true">🔗</span> {t("socialLink")}
                   </div>
                   <div className="detail-sidebar-value">
                     <a 
@@ -550,7 +550,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.tags && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
+                    <span aria-hidden="true">🏷️</span> {t("tags")}
                   </div>
                   <div className="detail-sidebar-value">
                     {listing.tags.split(',').map((tag, idx) => (
@@ -563,7 +563,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {(listing.views || listing.views === 0) && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">👁️</span> {t("views") || "Views"}
+                    <span aria-hidden="true">👁️</span> {t("views")}
                   </div>
                   <div className="detail-sidebar-value">{listing.views || 0}</div>
                 </div>
@@ -572,7 +572,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {(listing.likes || listing.likes === 0) && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
+                    <span aria-hidden="true">❤️</span> {t("likes")}
                   </div>
                   <div className="detail-sidebar-value">{listing.likes || 0}</div>
                 </div>
@@ -581,7 +581,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.plan && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">💎</span> {t("plan") || "Plan"}
+                    <span aria-hidden="true">💎</span> {t("plan")}
                   </div>
                   <div className="detail-sidebar-value">{listing.plan}</div>
                 </div>
@@ -590,7 +590,7 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.createdAt && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">📅</span> {t("postedOn") || "Posted On"}
+                    <span aria-hidden="true">📅</span> {t("postedOn")}
                   </div>
                   <div className="detail-sidebar-value">
                     {formatDate(listing.createdAt)}
@@ -601,18 +601,18 @@ export default function ListingDetailClient({ id, initialListing }) {
               {listing.expiresAt && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">⏰</span> {t("expiresOn") || "Expires On"}
+                    <span aria-hidden="true">⏰</span> {t("expiresOn")}
                   </div>
                   <div className="detail-sidebar-value">
                     {formatDate(listing.expiresAt)}
                     {listing.expiresAt > Date.now() && (
                       <span className="detail-expiry-days">
-                        {' '}({getDaysUntilExpiry(listing.expiresAt)} {t("daysLeft") || "days left"})
+                        {' '}({getDaysUntilExpiry(listing.expiresAt)} {t("daysLeft")})
                       </span>
                     )}
                     {listing.expiresAt <= Date.now() && (
                       <span className="detail-expiry-days" style={{ color: 'var(--danger)' }}>
-                        {' '}({t("expired") || "Expired"})
+                        {' '}({t("expired")})
                       </span>
                     )}
                   </div>
@@ -631,12 +631,12 @@ export default function ListingDetailClient({ id, initialListing }) {
           <div className="detail-main-content">
 
           <section className="detail-section detail-description-section">
-            <h2 className="detail-section-title">{t("description") || "Description"}</h2>
+            <h2 className="detail-section-title">{t("description")}</h2>
             <div className="detail-description">
               {listing.description ? (
                 <p style={{ whiteSpace: 'pre-line', lineHeight: '1.7' }}>{listing.description}</p>
               ) : (
-                <p className="text-muted">{t("noDescription") || "No description provided."}</p>
+                <p className="text-muted">{t("noDescription")}</p>
               )}
             </div>
           </section>
@@ -648,22 +648,22 @@ export default function ListingDetailClient({ id, initialListing }) {
 
           {/* Feedback Section */}
           <section className="detail-section detail-feedback-section">
-             <h2 className="detail-section-title">{t("feedback") || "Feedback"}</h2>
+             <h2 className="detail-section-title">{t("communityFeedback")}</h2>
              
              {/* Feedback Form */}
              {user ? (
                <div className="detail-feedback-form">
                  <label className="feedback-rating-label">
-                   {t("yourRating") || "Your Rating"}
+                   {t("yourRating")}
                  </label>
-                 <div className="detail-rating-select" role="radiogroup" aria-label="Select rating">
+                 <div className="detail-rating-select" role="radiogroup" aria-label={t("selectRating")}>
                    {[1,2,3,4,5].map(r => (
                      <button
                        key={r} 
                        type="button"
                        role="radio"
                        aria-checked={r === rating}
-                       aria-label={`${r} star${r > 1 ? 's' : ''}`}
+                       aria-label={`${r} ${r === 1 ? t("star") : t("stars")}`}
                        className={`detail-star-select ${r <= rating ? 'selected' : ''}`}
                        onClick={() => setRating(r)}
                      >
@@ -672,16 +672,16 @@ export default function ListingDetailClient({ id, initialListing }) {
                    ))}
                  </div>
                  <label className="feedback-comment-label" htmlFor="feedback-comment">
-                   {t("yourReview") || "Your Review"}
+                   {t("yourReview")}
                  </label>
                  <textarea
                   id="feedback-comment"
                   className="detail-textarea"
-                  placeholder={t("writeFeedback") || "Write a review..."}
+                  placeholder={t("writeFeedback")}
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
                   rows={4}
-                  aria-label="Review comment"
+                  aria-label={t("reviewComment")}
                 />
                  <button 
                    className="detail-feedback-submit-btn"
@@ -694,14 +694,14 @@ export default function ListingDetailClient({ id, initialListing }) {
                      }
                    }}
                  >
-                   {feedbackSaving ? t("submitting") || "Submitting..." : (t("submit") || "Submit Review")}
+                   {feedbackSaving ? t("submitting") : t("submitReview")}
                  </button>
                </div>
              ) : (
                <div className="detail-login-prompt">
                  <p className="detail-login-text">
                    <Link href="/" className="detail-login-link">
-                     {t("loginToReview") || "Login to leave a review"}
+                     {t("loginToReview")}
                    </Link>
                  </p>
                </div>
@@ -712,13 +712,13 @@ export default function ListingDetailClient({ id, initialListing }) {
                {localFeedbackStats.comments.length > 0 ? (
                  <>
                    <h3 className="feedback-list-title">
-                     {t("reviews") || "Reviews"} ({localFeedbackStats.comments.length})
+                     {t("reviews")} ({localFeedbackStats.comments.length})
                    </h3>
                    <div className="feedback-items" role="list">
                      {localFeedbackStats.comments.map((fb, i) => (
                        <article key={i} className="detail-feedback-item" role="listitem">
                          <div className="detail-feedback-header">
-                           <span className="detail-feedback-author">{fb.userName || fb.userDisplayName || "Anonymous"}</span>
+                           <span className="detail-feedback-author">{fb.userName || fb.userDisplayName || t("anonymous")}</span>
                            <span className="detail-feedback-rating" aria-label={`${fb.rating} out of 5 stars`}>
                              {'⭐'.repeat(Number(fb.rating))}
                            </span>
@@ -738,7 +738,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                    </div>
                  </>
                ) : (
-                 <p className="detail-no-feedback">{t("noFeedbackYet") || "No feedback yet. Be the first to review!"}</p>
+                 <p className="detail-no-feedback">{t("noFeedbackYet")}</p>
                )}
              </div>
           </section>
@@ -750,9 +750,9 @@ export default function ListingDetailClient({ id, initialListing }) {
                 setReportingListingId(listing.id);
                 setShowReportModal(true);
               }}
-              aria-label={t("reportListing") || "Report this listing"}
+              aria-label={t("reportListing")}
             >
-              <span aria-hidden="true">🚩</span> {t("reportListing") || "Report Listing"}
+              <span aria-hidden="true">🚩</span> {t("reportListing")}
             </button>
           </div>
           </div>
@@ -766,12 +766,12 @@ export default function ListingDetailClient({ id, initialListing }) {
           onClick={() => setShowMaximize(false)}
           role="dialog"
           aria-modal="true"
-          aria-label="Full size image viewer"
+          aria-label={t("fullSizeImageViewer")}
         >
           <button 
             className="detail-close-max"
             onClick={() => setShowMaximize(false)}
-            aria-label="Close image viewer"
+            aria-label={t("closeImageViewer")}
           >
             ✕
           </button>
@@ -784,7 +784,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                   e.stopPropagation();
                   handlePrev();
                 }}
-                aria-label="Previous image"
+                aria-label={t("previousImage")}
               >
                 ‹
               </button>
@@ -794,7 +794,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                   e.stopPropagation();
                   handleNext();
                 }}
-                aria-label="Next image"
+                aria-label={t("nextImage")}
               >
                 ›
               </button>
@@ -806,7 +806,7 @@ export default function ListingDetailClient({ id, initialListing }) {
           
           <img 
             src={images[imgIndex]} 
-            alt={`${listing.name} - Full size (${imgIndex + 1} of ${images.length})`}
+            alt={`${listing.name} - ${t("fullSize")} (${imgIndex + 1} ${t("of")} ${images.length})`}
             className="detail-maximized-img" 
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}

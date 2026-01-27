@@ -125,7 +125,7 @@ const AuthModal = () => {
       showMessage(t("otpSent"), "success");
     } catch (err) {
       console.error(err);
-      showMessage(t("otpError") + ": " + err.message, "error");
+      showMessage(`${t("otpError")}: ${err.message}`, "error");
       if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
     } finally {
       setPhoneLoading(false);
@@ -265,15 +265,15 @@ const AuthModal = () => {
                           // Better error messages for login failures
                           let errorMsg = e.message;
                           if (e.code === 'auth/user-not-found') {
-                            errorMsg = t("userNotFound") || "No account found with this email address.";
+                            errorMsg = t("userNotFound");
                           } else if (e.code === 'auth/wrong-password') {
-                            errorMsg = t("wrongPassword") || "Incorrect password. Please try again.";
+                            errorMsg = t("wrongPassword");
                           } else if (e.code === 'auth/invalid-email') {
-                            errorMsg = t("enterValidEmail") || "Please enter a valid email address.";
+                            errorMsg = t("enterValidEmail");
                           } else if (e.code === 'auth/too-many-requests') {
-                            errorMsg = t("tooManyAttempts") || "Too many failed attempts. Please try again later.";
+                            errorMsg = t("tooManyAttempts");
                           } else if (e.code === 'auth/network-request-failed') {
-                            errorMsg = t("networkError") || "Network error. Please check your connection.";
+                            errorMsg = t("networkError");
                           }
                           showMessage(errorMsg, "error");
                           }
@@ -305,7 +305,7 @@ const AuthModal = () => {
                         <input
                           className="input phone-number"
                           type="tel"
-                          placeholder="70 123 456"
+                          placeholder={t("phonePlaceholder")}
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                           maxLength="12"
@@ -330,7 +330,7 @@ const AuthModal = () => {
                       <input
                         className="input"
                         type="text"
-                        placeholder="123456"
+                        placeholder={t("verificationCodePlaceholder")}
                         value={otp}
                         onChange={(e) => setOtp(e.target.value)}
                       />
@@ -360,12 +360,11 @@ const AuthModal = () => {
         {authMode === "signup" && (
             <div className="modal-body">
             <p className="auth-subtitle">
-                {t("signupSubtitle") ||
-                "Create a BizCall account to post and manage your listings."}
+                {t("signupSubtitle")}
             </p>
         
             <div className="field-group">
-                <label className="field-label">{t("name")}</label>
+                <label className="field-label">{t("signupNameLabel")}</label>
                 <input
                 className="input"
                 type="text"
@@ -452,7 +451,7 @@ const AuthModal = () => {
                 style={{ marginTop: '4px' }}
                 />
                 <label htmlFor="agreeTerms" className="auth-terms-label text-sm text-muted">
-                {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("privacyPolicy")}</button>.
+                {t("agreeTo")} <button type="button" className="link-btn" onClick={() => setShowTerms(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("termsOfService")}</button> {t("and")} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)} style={{ color: 'var(--primary)', textDecoration: 'underline', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}>{t("privacyPolicy")}</button>.
                 </label>
             </div>
 
@@ -464,7 +463,7 @@ const AuthModal = () => {
                 disabled={phoneLoading}
                 onClick={async () => {
                     if (!agreedToTerms)
-                    return showMessage(t("mustAgreeToTerms") || "You must agree to the Terms of Service and Privacy Policy.", "error");
+                    return showMessage(t("mustAgreeToTerms"), "error");
 
                     if (!validateEmail(email))
                     return showMessage(t("enterValidEmail"), "error");
@@ -500,7 +499,7 @@ const AuthModal = () => {
                     console.error(err);
                     window.signupRecaptchaVerifier?.clear?.();
                     window.signupRecaptchaVerifier = null;
-                    showMessage(err.message, "error");
+                    showMessage(err, "error");
                     } finally {
                     setPhoneLoading(false);
                     }
@@ -587,7 +586,7 @@ const AuthModal = () => {
                         }
                     } catch (err) {
                         console.error(err);
-                        showMessage(err.message, "error");
+                        showMessage(err, "error");
                     } finally {
                         setPhoneLoading(false);
                     }

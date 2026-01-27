@@ -87,7 +87,7 @@ const ListingCard = React.memo(({
     <Link
       href={listingUrl}
       className={`listing-card ${className}`}
-      aria-label={`View ${l.name} listing`}
+      aria-label={`${t("viewListing")}: ${l.name}`}
       onClick={handleCardClick}
     >
       <div className="listing-card-image-container">
@@ -170,16 +170,16 @@ const ListingCard = React.memo(({
             <button
               className="listing-action-btn"
               onClick={handleFavoriteClick}
-              aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-              title={isFavorite ? t("removeFavorite") || "Remove favorite" : t("addFavorite") || "Add favorite"}
+              aria-label={isFavorite ? t("removeFavorite") : t("addFavorite")}
+              title={isFavorite ? t("removeFavorite") : t("addFavorite")}
             >
               {isFavorite ? "❤️" : "🤍"}
             </button>
             <button
               className="listing-action-btn"
               onClick={handleShareClick}
-              aria-label={t("share") || "Share listing"}
-              title={t("share") || "Share"}
+              aria-label={t("shareListing")}
+              title={t("share")}
             >
               🔗
             </button>
