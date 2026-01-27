@@ -1,18 +1,38 @@
 "use client";
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { AppProvider, useApp } from "../context/AppContext";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
-import AuthModal from "./AuthModal";
-import PostListingDrawer from "./PostListingDrawer";
-import ExtendListingModal from "./ExtendListingModal";
-import EditListingModal from "./EditListingModal";
-import ReportModal from "./ReportModal";
 import NotificationToast from "./NotificationToast";
-import { TermsModal, PrivacyModal } from "./LegalModals";
 import CookieConsent from "./CookieConsent";
 import FirebaseLoader from "./FirebaseLoader";
 import { AnimatePresence } from "framer-motion";
+
+// Lazy load heavy modals for better performance
+const AuthModal = lazy(() => import("./AuthModal"));
+const PostListingDrawer = lazy(() => import("./PostListingDrawer"));
+const ExtendListingModal = lazy(() => import("./ExtendListingModal"));
+const EditListingModal = lazy(() => import("./EditListingModal"));
+const ReportModal = lazy(() => import("./ReportModal"));
+// LegalModals exports named exports - create a wrapper component for lazy loading
+const LegalModalsLoader = ({ showTerms, showPrivacy, onCloseTerms, onClosePrivacy, t }) => {
+  const [Modals, setModals] = React.useState(null);
+  
+  React.useEffect(() => {
+    if ((showTerms || showPrivacy) && !Modals) {
+      import("./LegalModals").then(m => setModals(m));
+    }
+  }, [showTerms, showPrivacy, Modals]);
+  
+  if (!Modals) return null;
+  
+  return (
+    <>
+      {showTerms && <Modals.TermsModal onClose={onCloseTerms} t={t} />}
+      {showPrivacy && <Modals.PrivacyModal onClose={onClosePrivacy} t={t} />}
+    </>
+  );
+};
 
 // Helper component to consume context
 const LayoutContent = ({ children }) => {
@@ -44,21 +64,27 @@ const LayoutContent = ({ children }) => {
         <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
       </footer>
 
-      <AnimatePresence>
-        {showAuthModal && <AuthModal />}
-      </AnimatePresence>
-      <PostListingDrawer />
-      <ExtendListingModal />
-      <EditListingModal />
-      <ReportModal />
+      <Suspense fallback={null}>
+        <AnimatePresence>
+          {showAuthModal && <AuthModal />}
+        </AnimatePresence>
+        <PostListingDrawer />
+        <ExtendListingModal />
+        <EditListingModal />
+        <ReportModal />
+        <LegalModalsLoader 
+          showTerms={showTerms}
+          showPrivacy={showPrivacy}
+          onCloseTerms={() => setShowTerms(false)}
+          onClosePrivacy={() => setShowPrivacy(false)}
+          t={t}
+        />
+      </Suspense>
       <NotificationToast 
         message={message?.text} 
         type={message?.type} 
         onClose={() => setMessage?.({ text: "", type: "info" })} 
       />
-      
-      {showTerms && <TermsModal onClose={() => setShowTerms(false)} t={t} />}
-      {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} t={t} />}
       <CookieConsent t={t} />
       
       <div id="recaptcha-signup" style={{ display: "none" }} />
