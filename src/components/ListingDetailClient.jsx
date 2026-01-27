@@ -420,34 +420,59 @@ export default function ListingDetailClient({ id, initialListing }) {
               <h2 className="detail-sidebar-title">{t("additionalInfo") || "Additional Information"}</h2>
               
               <div className="detail-sidebar-section">
-              {listing.tags && (
-                <div className="detail-sidebar-item">
+              {/* Most Important Info First - Contact & Price */}
+              {listing.userEmail && (
+                <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
+                    <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
                   </div>
                   <div className="detail-sidebar-value">
-                    {listing.tags.split(',').map((tag, idx) => (
-                      <span key={idx} className="detail-tag">{tag.trim()}</span>
-                    ))}
+                    <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
+                      {listing.userEmail}
+                    </a>
                   </div>
                 </div>
               )}
-              
-              {listing.socialLink && (
-                <div className="detail-sidebar-item">
+
+              {listing.offerprice && (
+                <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
+                    <span aria-hidden="true">💰</span> {t("price") || "Price"}
+                  </div>
+                  <div className="detail-sidebar-value detail-price-value">
+                    {listing.offerprice}
+                  </div>
+                </div>
+              )}
+
+              {listing.status && (
+                <div className="detail-sidebar-item detail-sidebar-item-priority">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">📊</span> {t("status") || "Status"}
                   </div>
                   <div className="detail-sidebar-value">
-                    <a 
-                      href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="detail-social-link"
-                    >
-                      {listing.socialLink}
-                    </a>
+                    <span className={`detail-status-badge ${listing.status === "verified" ? "detail-status-verified" : "detail-status-pending"}`}>
+                      {listing.status === "verified" ? "✅ Verified" : "⏳ Pending"}
+                    </span>
                   </div>
+                </div>
+              )}
+
+              {listing.category && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">{categoryIcons[listing.category] || "📂"}</span> {t("category") || "Category"}
+                  </div>
+                  <div className="detail-sidebar-value">{t(listing.category) || listing.category}</div>
+                </div>
+              )}
+
+              {listing.location && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🌍</span> {t("location") || "Location"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.location}</div>
                 </div>
               )}
 
@@ -466,6 +491,64 @@ export default function ListingDetailClient({ id, initialListing }) {
                     <span aria-hidden="true">📍</span> {t("locationDetails") || "Location Details"}
                   </div>
                   <div className="detail-sidebar-value">{listing.locationExtra}</div>
+                </div>
+              )}
+
+              {listing.socialLink && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🔗</span> {t("socialLink") || "Social Media"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    <a 
+                      href={listing.socialLink.startsWith('http') ? listing.socialLink : `https://${listing.socialLink}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="detail-social-link"
+                    >
+                      {listing.socialLink}
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {listing.tags && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">🏷️</span> {t("tags") || "Tags"}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    {listing.tags.split(',').map((tag, idx) => (
+                      <span key={idx} className="detail-tag">{tag.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(listing.views || listing.views === 0) && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">👁️</span> {t("views") || "Views"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.views || 0}</div>
+                </div>
+              )}
+
+              {(listing.likes || listing.likes === 0) && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.likes || 0}</div>
+                </div>
+              )}
+
+              {listing.plan && (
+                <div className="detail-sidebar-item">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">💎</span> {t("plan") || "Plan"}
+                  </div>
+                  <div className="detail-sidebar-value">{listing.plan}</div>
                 </div>
               )}
 
@@ -498,86 +581,6 @@ export default function ListingDetailClient({ id, initialListing }) {
                       </span>
                     )}
                   </div>
-                </div>
-              )}
-
-              {(listing.views || listing.views === 0) && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">👁️</span> {t("views") || "Views"}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.views || 0}</div>
-                </div>
-              )}
-
-              {(listing.likes || listing.likes === 0) && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">❤️</span> {t("likes") || "Likes"}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.likes || 0}</div>
-                </div>
-              )}
-
-              {listing.userEmail && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">✉️</span> {t("contactEmail") || "Contact Email"}
-                  </div>
-                  <div className="detail-sidebar-value">
-                    <a href={`mailto:${listing.userEmail}`} className="detail-email-link">
-                      {listing.userEmail}
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {listing.plan && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">💎</span> {t("plan") || "Plan"}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.plan}</div>
-                </div>
-              )}
-
-              {listing.pricePaid && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">💰</span> {t("pricePaid") || "Price Paid"}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.pricePaid}</div>
-                </div>
-              )}
-
-              {listing.status && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">📊</span> {t("status") || "Status"}
-                  </div>
-                  <div className="detail-sidebar-value">
-                    <span className={`detail-status-badge ${listing.status === "verified" ? "detail-status-verified" : "detail-status-pending"}`}>
-                      {listing.status === "verified" ? "✅ Verified" : "⏳ Pending"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {listing.category && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">{categoryIcons[listing.category] || "📂"}</span> {t("category") || "Category"}
-                  </div>
-                  <div className="detail-sidebar-value">{t(listing.category) || listing.category}</div>
-                </div>
-              )}
-
-              {listing.location && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">🌍</span> {t("location") || "Location"}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.location}</div>
                 </div>
               )}
             </div>
