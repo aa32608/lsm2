@@ -32,11 +32,11 @@ export default function FirebaseLoader({ children }) {
           setFirebaseReady(true);
         });
 
-        // Safety timeout - don't block forever (max 500ms for faster loading)
+        // Safety timeout - don't block forever (max 300ms for faster loading)
         timeout = setTimeout(() => {
           setFirebaseReady(true);
           if (unsubscribe) unsubscribe();
-        }, 500);
+        }, 300);
       } catch (e) {
         console.warn("Firebase auth check failed:", e);
         setFirebaseReady(true);
@@ -55,7 +55,7 @@ export default function FirebaseLoader({ children }) {
               // If still not available, proceed anyway to prevent infinite loading
               setFirebaseReady(true);
             }
-          }, 50); // Reduced from 100ms
+          }, 30); // Reduced from 50ms
           return;
         }
 
@@ -66,7 +66,7 @@ export default function FirebaseLoader({ children }) {
         // Don't block forever - proceed after short delay
         timeout = setTimeout(() => {
           setFirebaseReady(true);
-        }, 300); // Reduced from 500ms
+        }, 200); // Reduced from 300ms
       }
     };
 
@@ -79,40 +79,58 @@ export default function FirebaseLoader({ children }) {
     };
   }, []);
 
-  // Show loading screen until Firebase is ready
-  if (!firebaseReady) {
-    return (
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'var(--background)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-        flexDirection: 'column',
-        gap: 'var(--spacing-lg)'
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '4px solid var(--border)',
-          borderTopColor: 'var(--primary)',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite'
-        }}></div>
-        <style jsx>{`
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
-  }
+  // Don't block render - show content immediately, Firebase will hydrate in background
+  // Only show loader if Firebase takes too long (after 200ms)
+  const [showLoader, setShowLoader] = useState(false);
+  
+  useEffect(() => {
+    if (!firebaseReady) {
+      // Only show loader after 200ms delay to allow content to render first
+      const timer = setTimeout(() => {
+        if (!firebaseReady) {
+          setShowLoader(true);
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(false);
+    }
+  }, [firebaseReady]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {showLoader && !firebaseReady && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(255, 255, 255, 0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          flexDirection: 'column',
+          gap: 'var(--spacing-lg)'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid var(--border)',
+            borderTopColor: 'var(--primary)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <style jsx>{`
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }
 

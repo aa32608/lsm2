@@ -3,7 +3,9 @@ import LayoutWrapper from '../components/LayoutWrapper';
 import '../App.css';
 import './globals.css';
 
-export const dynamic = 'force-dynamic';
+// Use ISR instead of force-dynamic for better performance
+// Revalidate every 5 minutes, but allow caching
+export const revalidate = 300; // 5 minutes
 
 export const metadata = {
   title: 'BizCall MK',
@@ -18,9 +20,9 @@ export const viewport = {
 
 async function getListings() {
   try {
-    // Aggressive timeout for faster failure - 2 seconds max
+    // Aggressive timeout for faster failure - 1 second max (reduced from 2s)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const timeoutId = setTimeout(() => controller.abort(), 1000);
     
     const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { 
       next: { revalidate: 300 }, // Cache for 5 minutes
@@ -58,13 +60,22 @@ async function getListings() {
 }
 
 export default async function RootLayout({ children }) {
-  const allListings = await getListings();
+  // Don't block page render - fetch listings in parallel or use streaming
+  // For now, make it non-blocking by catching errors quickly
+  let allListings = [];
+  let publicListings = [];
   
-  const now = Date.now();
-  const publicListings = allListings.filter(l => 
-    l.status === "verified" && 
-    (!l.expiresAt || l.expiresAt > now)
-  );
+  try {
+    allListings = await getListings();
+    const now = Date.now();
+    publicListings = allListings.filter(l => 
+      l.status === "verified" && 
+      (!l.expiresAt || l.expiresAt > now)
+    );
+  } catch (error) {
+    // If fetch fails, continue with empty arrays - client will fetch
+    console.warn("Server-side listings fetch failed, using empty arrays:", error);
+  }
 
   return (
     <html lang="sq">
@@ -76,7 +87,8 @@ export default async function RootLayout({ children }) {
         <link rel="preconnect" href="https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app" />
         <link rel="dns-prefetch" href="https://lsm-wozo.onrender.com" />
         <link rel="preconnect" href="https://lsm-wozo.onrender.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onLoad="this.onload=null;this.rel='stylesheet'" />
+        <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" /></noscript>
       </head>
       <body>
         <LayoutWrapper initialListings={allListings} initialPublicListings={publicListings}>
