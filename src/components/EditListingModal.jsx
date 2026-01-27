@@ -184,45 +184,58 @@ const EditListingModal = () => {
 
               <div className="field-group">
                 <label className="field-label">{t("priceRangeLabel") || "Price Range"}</label>
-                <DualRangeSlider
-                  min={0}
-                  max={5000}
-                  value={{ min: Number(editForm.offerMin) || 0, max: Number(editForm.offerMax) || 0 }}
-                  onChange={({ min, max }) => {
-                    const updated = { ...editForm, offerMin: min, offerMax: max };
-                    if (formatOfferPrice) {
-                      updated.offerprice = formatOfferPrice(
-                        min,
-                        max,
-                        updated.offerCurrency || "EUR"
-                      );
-                    }
-                    setEditForm(updated);
-                  }}
-                  currency={editForm.offerCurrency || "EUR"}
-                />
-                <div className="mt-sm">
-                   <select
-                    className="select"
-                    value={editForm.offerCurrency || "EUR"}
-                    onChange={(e) => {
-                      const updated = { ...editForm, offerCurrency: e.target.value };
-                      if (formatOfferPrice) {
-                        updated.offerprice = formatOfferPrice(
-                          updated.offerMin,
-                          updated.offerMax,
-                          updated.offerCurrency
-                        );
-                      }
-                      setEditForm(updated);
-                    }}
-                  >
-                    {(currencyOptions || ["EUR", "USD", "MKD", "ALL"]).map((cur) => (
-                      <option key={cur} value={cur}>
-                        {cur}
-                      </option>
-                    ))}
-                  </select>
+                <div className="modern-price-section">
+                  <div className="price-range-container">
+                    <div className="currency-selector-wrapper">
+                      <label className="currency-label">{t("currency") || "Currency"}</label>
+                      <select
+                        className="select currency-select"
+                        value={editForm.offerCurrency || "EUR"}
+                        onChange={(e) => {
+                          const updated = { ...editForm, offerCurrency: e.target.value };
+                          if (formatOfferPrice) {
+                            updated.offerprice = formatOfferPrice(
+                              updated.offerMin,
+                              updated.offerMax,
+                              updated.offerCurrency
+                            );
+                          }
+                          setEditForm(updated);
+                        }}
+                      >
+                        {(currencyOptions || ["EUR", "USD", "MKD", "ALL"]).map((cur) => (
+                          <option key={cur} value={cur}>
+                            {cur}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="slider-wrapper">
+                      <DualRangeSlider
+                        min={0}
+                        max={5000}
+                        value={{ min: Number(editForm.offerMin) || 0, max: Number(editForm.offerMax) || 0 }}
+                        onChange={({ min, max }) => {
+                          const updated = { ...editForm, offerMin: min, offerMax: max };
+                          if (formatOfferPrice) {
+                            updated.offerprice = formatOfferPrice(
+                              min,
+                              max,
+                              updated.offerCurrency || "EUR"
+                            );
+                          }
+                          setEditForm(updated);
+                        }}
+                        currency={editForm.offerCurrency || "EUR"}
+                      />
+                    </div>
+                    {editForm.offerprice && (
+                      <div className="price-preview">
+                        <span className="price-preview-label">{t("preview") || "Preview"}:</span>
+                        <span className="price-preview-value">{editForm.offerprice}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

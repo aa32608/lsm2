@@ -3388,6 +3388,32 @@ img {
     transform: translate(-50%, -50%);
     margin: 0;
     align-self: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+
+  .header-logo:active {
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+
+  .header-logo .brand-mark {
+    transform: none;
+    transition: transform 0.15s ease;
+  }
+
+  .header-logo:active .brand-mark {
+    transform: scale(0.95);
+  }
+
+  .header-logo span {
+    transform: none;
+    transition: transform 0.15s ease;
+  }
+
+  .header-logo:active span {
+    transform: scale(0.98);
   }
   
   .header-actions {

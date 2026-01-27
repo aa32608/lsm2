@@ -318,6 +318,11 @@ const PostListingDrawer = () => {
                             if (!form.name || !form.category || !form.locationCity)
                             return showMessage(t("fillAllFields"), "error");
                             setForm({ ...form, step: 2 });
+                            // Scroll to top of modal
+                            const modalBody = document.querySelector('.post-form-drawer .modal-body');
+                            if (modalBody) {
+                                modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
                         }}
                         >
                         <div className="field-group">
@@ -423,6 +428,11 @@ const PostListingDrawer = () => {
                             if (!validatePhone(phoneForListing))
                             return showMessage(t("enterValidPhone"), "error");
                             setForm({ ...form, contact: phoneForListing, step: 3 });
+                            // Scroll to top of modal
+                            const modalBody = document.querySelector('.post-form-drawer .modal-body');
+                            if (modalBody) {
+                                modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
                         }}
                         >
                         <div className="field-group">
@@ -462,8 +472,11 @@ const PostListingDrawer = () => {
                                     showMessage(t("phoneSynced"), "success");
                                 } else {
                                     setShowPostForm(false);
-                                    router.push("/account");
                                     showMessage(t("addPhoneInAccount"), "error");
+                                    // Navigate to account page
+                                    setTimeout(() => {
+                                        window.location.href = "/account";
+                                    }, 500);
                                 }
                                 }}
                             >
@@ -472,44 +485,55 @@ const PostListingDrawer = () => {
                             </div>
                         </div>
 
-                        {/* Offer price range + currency */}
+                        {/* Offer price range + currency - Redesigned */}
                         <div className="modern-price-section field-group">
                             <label className="field-label">{t("priceRange") || "Price Range"}</label>
-                            <DualRangeSlider
-                            min={0}
-                            max={5000}
-                            value={{ min: Number(form.offerMin) || 0, max: Number(form.offerMax) || 0 }}
-                            onChange={({ min, max }) => {
-                                const updated = { ...form, offerMin: min, offerMax: max };
-                                updated.offerprice = formatOfferPrice(
-                                min,
-                                max,
-                                updated.offerCurrency
-                                );
-                                setForm(updated);
-                            }}
-                            currency={form.offerCurrency || "EUR"}
-                            />
-                            <div className="price-inputs-row">
-                                <select
-                                className="select currency-select"
-                                value={form.offerCurrency}
-                                onChange={(e) => {
-                                const updated = { ...form, offerCurrency: e.target.value };
-                                updated.offerprice = formatOfferPrice(
-                                    updated.offerMin,
-                                    updated.offerMax,
-                                    updated.offerCurrency
-                                );
-                                setForm(updated);
-                                }}
-                            >
-                                {currencyOptions.map((cur) => (
-                                <option key={cur} value={cur}>
-                                    {cur}
-                                </option>
-                                ))}
-                            </select>
+                            <div className="price-range-container">
+                                <div className="currency-selector-wrapper">
+                                    <label className="currency-label">{t("currency") || "Currency"}</label>
+                                    <select
+                                        className="select currency-select"
+                                        value={form.offerCurrency}
+                                        onChange={(e) => {
+                                            const updated = { ...form, offerCurrency: e.target.value };
+                                            updated.offerprice = formatOfferPrice(
+                                                updated.offerMin,
+                                                updated.offerMax,
+                                                updated.offerCurrency
+                                            );
+                                            setForm(updated);
+                                        }}
+                                    >
+                                        {currencyOptions.map((cur) => (
+                                            <option key={cur} value={cur}>
+                                                {cur}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="slider-wrapper">
+                                    <DualRangeSlider
+                                        min={0}
+                                        max={5000}
+                                        value={{ min: Number(form.offerMin) || 0, max: Number(form.offerMax) || 0 }}
+                                        onChange={({ min, max }) => {
+                                            const updated = { ...form, offerMin: min, offerMax: max };
+                                            updated.offerprice = formatOfferPrice(
+                                                min,
+                                                max,
+                                                updated.offerCurrency
+                                            );
+                                            setForm(updated);
+                                        }}
+                                        currency={form.offerCurrency || "EUR"}
+                                    />
+                                </div>
+                                {form.offerprice && (
+                                    <div className="price-preview">
+                                        <span className="price-preview-label">{t("preview") || "Preview"}:</span>
+                                        <span className="price-preview-value">{form.offerprice}</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -587,7 +611,14 @@ const PostListingDrawer = () => {
                             <button
                             type="button"
                             className="btn btn-ghost"
-                            onClick={() => setForm({ ...form, step: 1 })}
+                            onClick={() => {
+                                setForm({ ...form, step: 1 });
+                                // Scroll to top of modal
+                                const modalBody = document.querySelector('.post-form-drawer .modal-body');
+                                if (modalBody) {
+                                    modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+                                }
+                            }}
                             >
                             {t("back")}
                             </button>
