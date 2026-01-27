@@ -345,9 +345,15 @@ async function sendEmail(to, subject, text, isMarketingEmail = false) {
 
 // Endpoint for feedback/review notifications
 app.post("/api/send-feedback-notification", async (req, res) => {
+  console.log("[API] ========================================");
+  console.log("[API] 📧 Feedback notification request received");
+  console.log("[API] Body:", JSON.stringify(req.body, null, 2));
+  console.log("[API] ========================================");
+  
   const { listingId, listingName, ownerEmail, reviewerName, rating, comment } = req.body;
   
   if (!ownerEmail || !listingId) {
+    console.error("[API] ❌ Missing required fields:", { ownerEmail: !!ownerEmail, listingId: !!listingId });
     return res.status(400).json({ error: "Missing required fields" });
   }
 
@@ -355,6 +361,8 @@ app.post("/api/send-feedback-notification", async (req, res) => {
     const userId = req.body.ownerUserId || null;
     const userLang = userId ? await getUserLanguage(userId) : 'sq';
     const link = `https://bizcall.mk/?listing=${listingId}`;
+    
+    console.log(`[API] User language: ${userLang}, Listing: ${listingName}, Owner: ${ownerEmail}`);
     
     const subject = EMAIL_TRANSLATIONS.listing.feedback_received.subject[userLang] || 
                    EMAIL_TRANSLATIONS.listing.feedback_received.subject.en;
@@ -372,17 +380,25 @@ app.post("/api/send-feedback-notification", async (req, res) => {
       link
     );
 
+    console.log(`[API] Calling sendEmail with subject: ${subject.substring(0, 50)}...`);
     const emailResult = await sendEmail(ownerEmail, subject, text, false);
     
     if (emailResult.ok) {
       console.log(`[API] ✅ Feedback notification sent to ${ownerEmail} for listing ${listingId}. Email ID: ${emailResult.id}`);
       res.json({ success: true, emailId: emailResult.id });
+    } else if (emailResult.skipped) {
+      console.log(`[API] ⏭️ Feedback notification skipped for ${ownerEmail} (cooldown)`);
+      res.json({ success: false, skipped: true, error: emailResult.error });
     } else {
       console.error(`[API] ❌ Failed to send feedback notification:`, emailResult.error);
       res.status(500).json({ error: emailResult.error });
     }
   } catch (err) {
-    console.error("[API] Error sending feedback notification:", err);
+    console.error("[API] ========================================");
+    console.error("[API] ❌ Exception sending feedback notification:");
+    console.error("[API] Error:", err.message);
+    console.error("[API] Stack:", err.stack);
+    console.error("[API] ========================================");
     res.status(500).json({ error: err.message });
   }
 });

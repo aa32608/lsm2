@@ -583,11 +583,14 @@ const AuthModal = () => {
                           </svg>
                           <input
                             className="auth-input"
+                            type="text"
+                            placeholder={t("verificationCodePlaceholder")}
                             value={verificationCode}
                             onChange={(e) =>
                               setVerificationCode(e.target.value.replace(/\D/g, ""))
                             }
                             maxLength="6"
+                            inputMode="numeric"
                           />
                         </div>
                       </div>

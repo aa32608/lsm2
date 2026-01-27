@@ -5291,7 +5291,37 @@ img {
 }
 
 .detail-feedback-section {
-  order: 3; /* Ensure feedback is last */
+  order: 999; /* Ensure feedback is absolutely last */
+}
+
+.detail-footer {
+  order: 1000; /* Footer after feedback */
+}
+
+/* Mobile: Ensure feedback section is last visible element */
+@media (max-width: 768px) {
+  .detail-main-content {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-description-section {
+    order: 1;
+  }
+
+  .detail-ad-section {
+    order: 2;
+  }
+
+  .detail-feedback-section {
+    order: 999; /* Last section on mobile */
+    margin-bottom: 0;
+  }
+
+  .detail-footer {
+    order: 1000;
+    margin-top: 0;
+  }
 }
 
 @media (min-width: 1024px) {

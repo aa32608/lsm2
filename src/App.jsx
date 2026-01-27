@@ -1736,6 +1736,13 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     });
     return map;
   }, [deferredListings]);
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    if (page > 1) {
+      setPage(1);
+    }
+  }, [deferredQ, catFilter, locFilter, sortBy, page, setPage]);
+
   const filtered = useMemo(() => {
     let arr = [...verifiedListings];
     if (deferredQ.trim()) {
@@ -1938,6 +1945,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         const ownerEmail = listing.userEmail;
         if (ownerEmail) {
           try {
+            console.log("[Feedback] Sending notification email to:", ownerEmail);
             const response = await fetch(`${API_BASE}/api/send-feedback-notification`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1953,13 +1961,16 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             });
             if (response.ok) {
               const result = await response.json();
-              console.log("Feedback notification sent:", result);
+              console.log("[Feedback] ✅ Notification email sent successfully:", result);
             } else {
-              console.error("Failed to send feedback notification:", await response.text());
+              const errorText = await response.text();
+              console.error("[Feedback] ❌ Failed to send notification email:", response.status, errorText);
             }
           } catch (err) {
-            console.error("Failed to send feedback notification:", err);
+            console.error("[Feedback] ❌ Error sending notification email:", err);
           }
+        } else {
+          console.warn("[Feedback] ⚠️ No owner email found for listing:", listingId);
         }
       }
 

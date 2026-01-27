@@ -205,7 +205,10 @@ export default function ListingsTab() {
                    <button
                      className="pagination-btn"
                      disabled={page <= 1}
-                     onClick={() => setPage(page - 1)}
+                     onClick={() => {
+                       setPage(page - 1);
+                       window.scrollTo({ top: 0, behavior: 'smooth' });
+                     }}
                      aria-label={t("previousPage")}
                    >
                      ← {t("previous")}
@@ -216,7 +219,10 @@ export default function ListingsTab() {
                    <button
                      className="pagination-btn"
                      disabled={page >= totalPages}
-                     onClick={() => setPage(page + 1)}
+                     onClick={() => {
+                       setPage(page + 1);
+                       window.scrollTo({ top: 0, behavior: 'smooth' });
+                     }}
                      aria-label={t("nextPage")}
                    >
                      {t("next")} →
