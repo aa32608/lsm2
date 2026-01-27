@@ -109,17 +109,26 @@ console.log("Environment Variables Loaded:");
 
 // Initialize Resend lazily to prevent crash if API key is missing during startup
 let resend;
+console.log("[Resend] Checking RESEND_API_KEY...");
 if (process.env.RESEND_API_KEY) {
   try {
-    resend = new Resend(process.env.RESEND_API_KEY);
-    console.log("[Resend] Initialized successfully");
+    const apiKey = process.env.RESEND_API_KEY;
+    console.log(`[Resend] API Key found (length: ${apiKey.length} characters)`);
+    console.log(`[Resend] API Key starts with: ${apiKey.substring(0, 10)}...`);
+    resend = new Resend(apiKey);
+    console.log("[Resend] ✅ Initialized successfully");
+    console.log(`[Resend] Resend object type: ${typeof resend}`);
+    console.log(`[Resend] Has emails.send method: ${!!(resend && resend.emails && resend.emails.send)}`);
   } catch (err) {
-    console.error("[Resend] Failed to initialize:", err);
+    console.error("[Resend] ❌ Failed to initialize:", err);
+    console.error("[Resend] Error message:", err.message);
+    console.error("[Resend] Error stack:", err.stack);
     resend = null;
   }
 } else {
-  console.error("ERROR: RESEND_API_KEY is not set. Email functionality will be disabled.");
+  console.error("❌ ERROR: RESEND_API_KEY is not set. Email functionality will be disabled.");
   console.error("Please set RESEND_API_KEY in your environment variables.");
+  console.error("Current environment variables:", Object.keys(process.env).filter(k => k.includes('RESEND')));
 }
 
 /* -------------------- FIREBASE SETUP (Render-friendly) -------------------- */
@@ -195,20 +204,43 @@ app.use(bodyParser.json());
 
 /* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
 
-async function sendEmail(to, subject, text) {
+// Email cooldown tracking - prevent spam (only for marketing emails, 7 days between marketing emails)
+// Other emails (listing expiry, deletion, etc.) are not subject to cooldown
+const marketingEmailCooldowns = new Map(); // In-memory cache: email -> lastMarketingEmailSentTimestamp
+const MARKETING_EMAIL_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days for marketing emails
+
+async function checkMarketingEmailCooldown(email) {
+  const lastSent = marketingEmailCooldowns.get(email);
+  if (lastSent) {
+    const timeSinceLastEmail = Date.now() - lastSent;
+    if (timeSinceLastEmail < MARKETING_EMAIL_COOLDOWN_MS) {
+      const daysRemaining = Math.ceil((MARKETING_EMAIL_COOLDOWN_MS - timeSinceLastEmail) / (24 * 60 * 60 * 1000));
+      console.log(`[Email Cooldown] Marketing email to ${email} skipped. Last marketing email sent ${Math.floor(timeSinceLastEmail / (24 * 60 * 60 * 1000))} days ago. ${daysRemaining} days remaining.`);
+      return false;
+    }
+  }
+  return true;
+}
+
+function updateMarketingEmailCooldown(email) {
+  marketingEmailCooldowns.set(email, Date.now());
+}
+
+async function sendEmail(to, subject, text, isMarketingEmail = false) {
   if (!to || !subject || !text) {
     console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
     return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
   }
 
-  // Check cooldown
-  if (!(await checkEmailCooldown(to))) {
-    return { error: "Email cooldown active", skipped: true };
+  // Only check cooldown for marketing emails
+  if (isMarketingEmail && !(await checkMarketingEmailCooldown(to))) {
+    return { error: "Marketing email cooldown active", skipped: true };
   }
 
   try {
     if (!resend) {
       console.error("[Email] Resend is not configured. RESEND_API_KEY missing.");
+      console.error("[Email] Check if RESEND_API_KEY environment variable is set.");
       return { error: EMAIL_TRANSLATIONS.errors.resend_not_configured.en };
     }
 
@@ -219,34 +251,74 @@ async function sendEmail(to, subject, text) {
       ? `BizCall MK <notifications@${verifiedDomain}>`
       : "BizCall MK <onboarding@resend.dev>";
 
-    console.log(`[Email] Attempting to send email to ${finalTo} from ${finalFrom}`);
-    console.log(`[Email] Subject: ${subject.substring(0, 50)}...`);
+    console.log(`[Email] ========================================`);
+    console.log(`[Email] Attempting to send email:`);
+    console.log(`[Email] To: ${finalTo}`);
+    console.log(`[Email] From: ${finalFrom}`);
+    console.log(`[Email] Subject: ${subject}`);
+    console.log(`[Email] Text length: ${text.length} characters`);
+    console.log(`[Email] Is Marketing: ${isMarketingEmail}`);
+    console.log(`[Email] Resend initialized: ${!!resend}`);
+    console.log(`[Email] Verified domain: ${verifiedDomain || 'none (using onboarding@resend.dev)'}`);
 
-    const { data, error } = await resend.emails.send({
-      from: finalFrom, 
-      to: [finalTo],
-      subject: subject,
-      text: text,
-    });
+    console.log(`[Email] Calling resend.emails.send...`);
+    const startTime = Date.now();
+    
+    let data, error;
+    try {
+      const response = await resend.emails.send({
+        from: finalFrom, 
+        to: [finalTo],
+        subject: subject,
+        text: text,
+      });
+      data = response.data;
+      error = response.error;
+    } catch (sendErr) {
+      console.error(`[Email] Exception during resend.emails.send call:`, sendErr);
+      error = sendErr;
+      data = null;
+    }
+    
+    const duration = Date.now() - startTime;
+    console.log(`[Email] Resend API call completed in ${duration}ms`);
 
     if (error) {
-      console.error("[Email] Resend API error:", JSON.stringify(error, null, 2));
+      console.error("[Email] ========================================");
+      console.error("[Email] RESEND API ERROR:");
+      console.error("[Email] Error object:", JSON.stringify(error, null, 2));
+      console.error("[Email] Error type:", typeof error);
+      console.error("[Email] ========================================");
       return { error: error.message || JSON.stringify(error) };
     }
 
     if (!data || !data.id) {
-      console.error("[Email] Resend returned no data/id:", data);
+      console.error("[Email] ========================================");
+      console.error("[Email] RESEND RETURNED NO DATA/ID:");
+      console.error("[Email] Data received:", JSON.stringify(data, null, 2));
+      console.error("[Email] ========================================");
       return { error: "No email ID returned from Resend" };
     }
 
-    // Update cooldown on success
-    updateEmailCooldown(to);
+    // Update marketing email cooldown on success (only for marketing emails)
+    if (isMarketingEmail) {
+      updateMarketingEmailCooldown(to);
+    }
     
-    console.log(`[Email] Successfully sent email to ${finalTo}. Email ID: ${data.id}`);
+    console.log(`[Email] ========================================`);
+    console.log(`[Email] ✅ SUCCESS! Email sent successfully`);
+    console.log(`[Email] Email ID: ${data.id}`);
+    console.log(`[Email] To: ${finalTo}`);
+    console.log(`[Email] ========================================`);
     return { ok: true, id: data.id };
   } catch (err) {
-    console.error("[Email] Exception during send:", err);
+    console.error("[Email] ========================================");
+    console.error("[Email] EXCEPTION DURING SEND:");
+    console.error("[Email] Error message:", err.message);
     console.error("[Email] Error stack:", err.stack);
+    console.error("[Email] Error name:", err.name);
+    console.error("[Email] Full error:", err);
+    console.error("[Email] ========================================");
     return { error: err.message || String(err) };
   }
 }
@@ -278,33 +350,61 @@ app.post("/api/test-email", async (req, res) => {
     return res.status(400).json({ error: "testEmail is required" });
   }
   
-  console.log(`[Test] Testing email to ${testEmail}`);
+  console.log(`[Test] ========================================`);
+  console.log(`[Test] Testing email configuration`);
+  console.log(`[Test] Test email address: ${testEmail}`);
+  console.log(`[Test] Resend initialized: ${!!resend}`);
+  console.log(`[Test] RESEND_API_KEY exists: ${!!process.env.RESEND_API_KEY}`);
+  console.log(`[Test] RESEND_DOMAIN: ${process.env.RESEND_DOMAIN || 'not set'}`);
+  console.log(`[Test] ========================================`);
   
   if (!resend) {
     return res.status(500).json({ 
       error: "Resend not configured", 
-      details: "RESEND_API_KEY is missing or invalid" 
+      details: "RESEND_API_KEY is missing or invalid",
+      resendInitialized: false,
+      hasApiKey: !!process.env.RESEND_API_KEY
     });
   }
   
   const result = await sendEmail(
     testEmail,
     "Test Email from BizCall",
-    "This is a test email to verify email configuration is working correctly."
+    "This is a test email to verify email configuration is working correctly.",
+    false // Not a marketing email
   );
   
   if (result.error) {
     return res.status(500).json({ 
       error: result.error,
-      details: "Check server logs for more information"
+      details: "Check server logs for more information",
+      skipped: result.skipped || false
     });
   }
   
   res.json({ 
     success: true, 
     emailId: result.id,
-    message: "Test email sent successfully" 
+    message: "Test email sent successfully",
+    details: "Check your inbox and Resend dashboard"
   });
+});
+
+// Diagnostic endpoint to check email system status
+app.get("/api/email-status", async (req, res) => {
+  const status = {
+    resendInitialized: !!resend,
+    hasApiKey: !!process.env.RESEND_API_KEY,
+    apiKeyLength: process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.length : 0,
+    hasDomain: !!process.env.RESEND_DOMAIN,
+    domain: process.env.RESEND_DOMAIN || null,
+    hasEmailsMethod: !!(resend && resend.emails && resend.emails.send),
+    marketingCooldownsCount: marketingEmailCooldowns.size,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log("[Diagnostic] Email system status:", JSON.stringify(status, null, 2));
+  res.json(status);
 });
 
 
@@ -686,29 +786,47 @@ cron.schedule("0 0 * * *", async () => {
 /* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
 
 async function sendMarketingEmails() {
+  console.log("[Marketing] ========================================");
   console.log("[Marketing] Starting weekly marketing email batch...");
+  console.log("[Marketing] Timestamp:", new Date().toISOString());
+  console.log("[Marketing] ========================================");
+  
   try {
+    if (!isFirebaseInitialized) {
+      console.error("[Marketing] ❌ Firebase not initialized!");
+      throw new Error("Firebase not initialized");
+    }
+
+    console.log("[Marketing] Fetching users from database...");
     const usersRef = db.ref("users");
     const snapshot = await usersRef.once("value");
     const users = snapshot.val();
 
     if (!users) {
-      console.log("[Marketing] No users found in database.");
+      console.log("[Marketing] ⚠️ No users found in database.");
       return { message: EMAIL_TRANSLATIONS.errors.no_users_found.en, sentCount: 0 };
     }
+
+    const userCount = Object.keys(users).length;
+    console.log(`[Marketing] Found ${userCount} total users in database`);
 
     const subscribedUsers = Object.values(users).filter(
       (user) => user.subscribedToMarketing !== false && user.email
     );
 
+    console.log(`[Marketing] Found ${subscribedUsers.length} subscribed users with emails`);
+
     if (subscribedUsers.length === 0) {
-      console.log("[Marketing] No subscribed users found.");
+      console.log("[Marketing] ⚠️ No subscribed users found.");
       return { message: EMAIL_TRANSLATIONS.errors.no_subscribed_users.en, sentCount: 0 };
     }
 
     if (!resend) {
+      console.error("[Marketing] ❌ Resend not initialized!");
       throw new Error(EMAIL_TRANSLATIONS.errors.resend_not_configured_error.en);
     }
+
+    console.log("[Marketing] ✅ Resend initialized, proceeding with email send...");
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
 
@@ -765,33 +883,25 @@ async function sendMarketingEmails() {
         ? `BizCall MK <notifications@${verifiedDomain}>`
         : "BizCall MK <onboarding@resend.dev>";
 
-      // Check cooldown before sending
-      if (!(await checkEmailCooldown(finalTo))) {
-        console.log(`[Marketing] Skipping ${finalTo} due to cooldown`);
+      // Check marketing email cooldown before sending
+      if (!(await checkMarketingEmailCooldown(finalTo))) {
+        console.log(`[Marketing] Skipping ${finalTo} due to marketing email cooldown`);
         results.push({ skipped: true });
         continue;
       }
 
       console.log(`[Marketing] Sending email to ${finalTo}...`);
-      try {
-        const result = await resend.emails.send({
-          from: finalFrom, 
-          to: [finalTo],
-          subject: finalSubject,
-          text: finalText,
-        });
-        
-        if (result.error) {
-          console.error(`[Marketing] Failed to send to ${finalTo}:`, result.error);
-          results.push({ error: result.error });
-        } else {
-          updateEmailCooldown(finalTo);
-          console.log(`[Marketing] Successfully sent to ${finalTo}. Email ID: ${result.data?.id || 'unknown'}`);
-          results.push(result);
-        }
-      } catch (err) {
-        console.error(`[Marketing] Exception sending to ${finalTo}:`, err);
-        results.push({ error: err.message || String(err) });
+      const emailResult = await sendEmail(finalTo, finalSubject, finalText, true); // true = isMarketingEmail
+      
+      if (emailResult.ok) {
+        console.log(`[Marketing] ✅ Successfully sent to ${finalTo}. Email ID: ${emailResult.id}`);
+        results.push({ data: { id: emailResult.id } });
+      } else if (emailResult.skipped) {
+        console.log(`[Marketing] Skipped ${finalTo} due to cooldown`);
+        results.push({ skipped: true });
+      } else {
+        console.error(`[Marketing] ❌ Failed to send to ${finalTo}:`, emailResult.error);
+        results.push({ error: emailResult.error });
       }
 
       // Wait 600ms between emails to respect Resend's 2 requests/second rate limit
@@ -799,11 +909,33 @@ async function sendMarketingEmails() {
     }
 
     const errors = results.filter((r) => r.error);
-    if (errors.length > 0) console.error("[Marketing] Some emails failed:", errors);
+    const skipped = results.filter((r) => r.skipped);
+    const successful = results.filter((r) => r.data && r.data.id);
+    
+    console.log("[Marketing] ========================================");
+    console.log(`[Marketing] Email batch complete:`);
+    console.log(`[Marketing] Total users: ${subscribedUsers.length}`);
+    console.log(`[Marketing] ✅ Successful: ${successful.length}`);
+    console.log(`[Marketing] ⏭️ Skipped (cooldown): ${skipped.length}`);
+    console.log(`[Marketing] ❌ Failed: ${errors.length}`);
+    
+    if (errors.length > 0) {
+      console.error("[Marketing] Failed emails:", errors);
+    }
+    
+    if (successful.length > 0) {
+      console.log("[Marketing] Successful email IDs:", successful.map(r => r.data?.id).filter(Boolean));
+    }
+    
+    console.log("[Marketing] ========================================");
 
-    return { ok: true, sentCount: subscribedUsers.length - errors.length };
+    return { ok: true, sentCount: successful.length, skipped: skipped.length, failed: errors.length };
   } catch (err) {
-    console.error("[Marketing] Batch error:", err);
+    console.error("[Marketing] ========================================");
+    console.error("[Marketing] ❌ BATCH ERROR:");
+    console.error("[Marketing] Error message:", err.message);
+    console.error("[Marketing] Error stack:", err.stack);
+    console.error("[Marketing] ========================================");
     throw err;
   }
 }
@@ -814,11 +946,60 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
     return res.status(401).json({ error: EMAIL_TRANSLATIONS.errors.unauthorized.en });
   }
 
+  console.log("[API] ========================================");
+  console.log("[API] Manual trigger: /api/admin/send-weekly-marketing");
+  console.log("[API] Timestamp:", new Date().toISOString());
+  console.log("[API] ========================================");
+
   try {
     const result = await sendMarketingEmails();
+    console.log(`[API] ✅ Marketing emails sent: ${result.sentCount}`);
+    console.log(`[API] Skipped: ${result.skipped || 0}, Failed: ${result.failed || 0}`);
+    console.log(`[API] ========================================`);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: EMAIL_TRANSLATIONS.errors.failed_to_send_emails.en });
+    console.error("[API] ❌ Marketing email error:", err);
+    console.error("[API] Error message:", err.message);
+    console.error("[API] Error stack:", err.stack);
+    console.log(`[API] ========================================`);
+    res.status(500).json({ 
+      error: EMAIL_TRANSLATIONS.errors.failed_to_send_emails.en,
+      details: err.message 
+    });
+  }
+});
+
+// Immediate test endpoint - no cron delay
+app.post("/api/admin/test-marketing-now", async (req, res) => {
+  const { adminKey } = req.body;
+  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  console.log("[API] ========================================");
+  console.log("[API] 🚀 IMMEDIATE TEST: /api/admin/test-marketing-now");
+  console.log("[API] Timestamp:", new Date().toISOString());
+  console.log("[API] ========================================");
+
+  try {
+    const result = await sendMarketingEmails();
+    console.log(`[API] ✅ Test complete: ${result.sentCount} emails sent`);
+    console.log(`[API] Skipped: ${result.skipped || 0}, Failed: ${result.failed || 0}`);
+    console.log(`[API] ========================================`);
+    res.json({ 
+      success: true, 
+      ...result,
+      message: "Test marketing emails sent immediately"
+    });
+  } catch (err) {
+    console.error("[API] ❌ Test failed:", err);
+    console.error("[API] Error message:", err.message);
+    console.error("[API] Error stack:", err.stack);
+    console.log(`[API] ========================================`);
+    res.status(500).json({ 
+      error: err.message,
+      stack: err.stack
+    });
   }
 });
 
@@ -831,16 +1012,76 @@ app.post("/api/admin/send-weekly-marketing", async (req, res) => {
 // This will send at 7:15 PM during winter (CET) and 8:15 PM during summer (CEST)
 const cronExpression = "15 18 * * 2";
 
-console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC (Cron: ${cronExpression})`);
-console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time due to daylight saving.`);
+// TEMPORARY: Schedule test run in 10 minutes from server start
+// Calculate next 10 minutes
+const now = new Date();
+const testTime = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes from now
+const testMinute = testTime.getUTCMinutes();
+const testHour = testTime.getUTCHours();
+const testCronExpression = `${testMinute} ${testHour} * * *`; // Run once at the calculated time
 
-cron.schedule(cronExpression, async () => {
-  console.log("[Cron] Triggering weekly marketing emails...");
+console.log(`\n\n`);
+console.log(`╔══════════════════════════════════════════════════════════════╗`);
+console.log(`║                    EMAIL SYSTEM STATUS                        ║`);
+console.log(`╚══════════════════════════════════════════════════════════════╝`);
+console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC`);
+console.log(`[Cron] Regular cron expression: ${cronExpression}`);
+console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time`);
+console.log(`\n[Cron] 🧪 TEST MODE: Scheduling test run in 10 minutes`);
+console.log(`[Cron] Current UTC time: ${now.toISOString()}`);
+console.log(`[Cron] Test will run at: ${testTime.toISOString()} (UTC)`);
+console.log(`[Cron] Test cron expression: ${testCronExpression}`);
+console.log(`[Cron] ⚠️  This test will run ONCE, then the regular schedule takes over`);
+console.log(`\n[Cron] 💡 TIP: Use POST /api/admin/test-marketing-now to test immediately`);
+console.log(`╚══════════════════════════════════════════════════════════════╝`);
+console.log(`\n\n`);
+
+// Schedule test run
+const testJob = cron.schedule(testCronExpression, async () => {
+  console.log(`\n\n`);
+  console.log(`╔══════════════════════════════════════════════════════════════╗`);
+  console.log(`║              🧪 TEST RUN: Marketing Emails                  ║`);
+  console.log(`╚══════════════════════════════════════════════════════════════╝`);
+  console.log(`[Cron] Timestamp: ${new Date().toISOString()}`);
+  console.log(`[Cron] ========================================`);
   try {
     const result = await sendMarketingEmails();
-    console.log(`[Cron] Successfully sent ${result.sentCount} marketing emails.`);
+    console.log(`[Cron] ✅ TEST RUN COMPLETE!`);
+    console.log(`[Cron] Sent: ${result.sentCount}, Skipped: ${result.skipped || 0}, Failed: ${result.failed || 0}`);
+    console.log(`[Cron] ========================================`);
+    console.log(`╚══════════════════════════════════════════════════════════════╝`);
+    console.log(`\n\n`);
+    
+    // Stop the test job after it runs once
+    testJob.stop();
+    console.log(`[Cron] Test job stopped. Regular weekly schedule is active.`);
   } catch (err) {
-    console.error("[Cron] Failed to send marketing emails:", err);
+    console.error(`[Cron] ❌ TEST RUN FAILED!`);
+    console.error(`[Cron] Error: ${err.message}`);
+    console.error(`[Cron] Stack: ${err.stack}`);
+    console.log(`╚══════════════════════════════════════════════════════════════╝`);
+    console.log(`\n\n`);
+  }
+}, {
+  scheduled: true,
+  timezone: "UTC"
+});
+
+cron.schedule(cronExpression, async () => {
+  console.log("[Cron] ========================================");
+  console.log("[Cron] 🕐 REGULAR SCHEDULE: Triggering weekly marketing emails...");
+  console.log("[Cron] Timestamp:", new Date().toISOString());
+  console.log("[Cron] ========================================");
+  try {
+    const result = await sendMarketingEmails();
+    console.log(`[Cron] ✅ Successfully sent ${result.sentCount} marketing emails.`);
+    console.log(`[Cron] Skipped: ${result.skipped || 0}, Failed: ${result.failed || 0}`);
+    console.log(`[Cron] ========================================`);
+  } catch (err) {
+    console.error("[Cron] ❌ Failed to send marketing emails:", err);
+    console.error("[Cron] Error message:", err.message);
+    console.error("[Cron] Error stack:", err.stack);
+    console.log(`[Cron] ========================================`);
   }
 });
 
@@ -1126,6 +1367,23 @@ export default app;
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   app.listen(PORT, () => {
+    console.log(`\n\n`);
+    console.log(`╔══════════════════════════════════════════════════════════════╗`);
+    console.log(`║              🚀 SERVER STARTED SUCCESSFULLY                   ║`);
+    console.log(`╚══════════════════════════════════════════════════════════════╝`);
+    console.log(`[Server] Port: ${PORT}`);
+    console.log(`[Server] Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`[Server] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[Server] Resend initialized: ${!!resend}`);
+    console.log(`[Server] Firebase initialized: ${isFirebaseInitialized}`);
+    console.log(`[Server] DodoPayments initialized: ${!!dodoClient}`);
+    console.log(`\n[Server] Available endpoints:`);
+    console.log(`[Server]   - POST /api/test-email (with adminKey)`);
+    console.log(`[Server]   - POST /api/admin/test-marketing-now (with adminKey)`);
+    console.log(`[Server]   - POST /api/admin/send-weekly-marketing (with adminKey)`);
+    console.log(`[Server]   - GET /api/email-status`);
+    console.log(`╚══════════════════════════════════════════════════════════════╝`);
+    console.log(`\n\n`);
     console.log(`Server running on port ${PORT}`);
   });
 }
