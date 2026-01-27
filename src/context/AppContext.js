@@ -161,37 +161,29 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Initialize user from cache immediately (before Firebase loads)
-  const [user, setUser] = useState(() => {
-    if (typeof window === "undefined") return null;
+  // Initialize user from cache - use null on server, load after mount on client to avoid hydration mismatch
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  
+  // Load user from cache after mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     try {
       const cached = localStorage.getItem('firebase_auth_cache');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.user && parsed.timestamp && Date.now() - parsed.timestamp < 3600000) {
-          return parsed.user;
+        const now = Date.now();
+        if (parsed.user && parsed.timestamp && now - parsed.timestamp < 3600000) {
+          setUser(parsed.user);
+        }
+        if (parsed.profile && parsed.timestamp && now - parsed.timestamp < 3600000) {
+          setUserProfile(parsed.profile);
         }
       }
     } catch (e) {
       // Ignore cache errors
     }
-    return null;
-  });
-  const [userProfile, setUserProfile] = useState(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const cached = localStorage.getItem('firebase_auth_cache');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.profile && parsed.timestamp && Date.now() - parsed.timestamp < 3600000) {
-          return parsed.profile;
-        }
-      }
-    } catch (e) {
-      // Ignore cache errors
-    }
-    return null;
-  });
+  }, []);
   // Initialize Firebase ready state immediately if auth is available
   const [firebaseReady, setFirebaseReady] = useState(() => {
     if (typeof window !== "undefined" && auth && auth.currentUser !== undefined) {
@@ -427,17 +419,24 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
 
   /* Dashboard/UI */
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // Set view mode based on screen size - grid for mobile, list for desktop
-  const [viewMode, setViewMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      // Check for user preference first
-      const saved = localStorage.getItem("viewModePreference");
-      if (saved) return saved;
-      // Default to grid view on mobile, list view on desktop
-      return window.innerWidth < 768 ? "grid" : "list";
+  // Set view mode - initialize with consistent default, then load from localStorage after mount
+  const [viewMode, setViewMode] = useState("list"); // Default for SSR/hydration
+
+  // Load view mode preference after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    // Check for user preference first
+    const saved = localStorage.getItem("viewModePreference");
+    if (saved && (saved === "grid" || saved === "list")) {
+      setViewMode(saved);
+      return;
     }
-    return "list"; // Default for SSR
-  });
+    
+    // Default to grid view on mobile, list view on desktop
+    const isMobile = window.innerWidth < 768;
+    setViewMode(isMobile ? "grid" : "list");
+  }, []);
 
   // Save view mode preference when user changes it
   useEffect(() => {

@@ -2,7 +2,7 @@
 
 import { Helmet } from "react-helmet-async";
 import logo from "./assets/logo.png";
-import React, { useCallback, useEffect, useMemo, useState, useDeferredValue, lazy, Suspense } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useDeferredValue, useRef, lazy, Suspense } from "react";
 import { auth, db, createRecaptcha } from "./firebase";
 import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo, limitToLast } from "firebase/database";
 import {
@@ -342,28 +342,38 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     plan: "1",          // "1", "3", "6", "12"
   });
 
-  // Optimize: Read cache once during initialization and reuse
-  const initialCache = (() => {
-    if (initialListings && initialListings.length > 0) return initialListings;
-    if (initialPublicListings && initialPublicListings.length > 0) return initialPublicListings;
-    if (typeof window !== "undefined") {
-      try {
-        const cached = localStorage.getItem("cached_listings");
-        return cached ? JSON.parse(cached) : [];
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  })();
-
-  const [listings, setListings] = useState(initialCache);
-  const [publicListings, setPublicListings] = useState(initialCache);
+  // Use initial props for SSR/hydration, then load from cache after mount
+  const [listings, setListings] = useState(initialListings && initialListings.length > 0 ? initialListings : []);
+  const [publicListings, setPublicListings] = useState(initialPublicListings && initialPublicListings.length > 0 ? initialPublicListings : []);
   const [userListings, setUserListings] = useState([]);
   const [listingsLoading, setListingsLoading] = useState(() => {
-    if (initialListings && initialListings.length > 0) return false;
-    return initialCache.length === 0; // If we have cache, don't show loading spinner initially
+    // Only show loading if we don't have initial data
+    return !(initialListings && initialListings.length > 0) && !(initialPublicListings && initialPublicListings.length > 0);
   });
+
+  // Load from cache after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    // If we already have initial data, don't override it
+    if ((initialListings && initialListings.length > 0) || (initialPublicListings && initialPublicListings.length > 0)) {
+      return;
+    }
+    
+    try {
+      const cached = localStorage.getItem("cached_listings");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.length > 0) {
+          setListings(parsed);
+          setPublicListings(parsed);
+          setListingsLoading(false);
+        }
+      }
+    } catch (e) {
+      // Ignore cache errors
+    }
+  }, [initialListings, initialPublicListings]);
   const deferredListings = useDeferredValue(listings);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "info" });
@@ -829,7 +839,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   }, []);
   
   // Track previous filter values to detect actual changes
-  const prevFiltersRef = React.useRef({ q, catFilter, locFilter, sortBy });
+  const prevFiltersRef = useRef({ q, catFilter, locFilter, sortBy });
   useEffect(() => {
     if (!isMounted) {
       // On mount, just store initial values
