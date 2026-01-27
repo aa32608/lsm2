@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { 
   signInWithEmailAndPassword, 
@@ -48,8 +48,6 @@ const AuthModal = () => {
     countryCodes,
     setShowTerms,
     setShowPrivacy,
-    // Helpers
-    // normalizePhoneForStorage // Wait, I need to check if this is in context. It's not. I'll define it here.
   } = useApp();
 
   // Local Helpers
@@ -72,9 +70,7 @@ const AuthModal = () => {
     if (window.signupRecaptchaVerifier) {
       try {
         window.signupRecaptchaVerifier.clear();
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
       window.signupRecaptchaVerifier = null;
     }
 
@@ -114,7 +110,6 @@ const AuthModal = () => {
     try {
       setPhoneLoading(true);
       const appVerifier = createRecaptcha("recaptcha-container");
-      // Combine country code with phone number
       const raw = phoneNumber.replace(/\D/g, "");
       if (!raw || raw.length < 5) {
         return showMessage(t("enterValidPhone"), "error");
@@ -163,454 +158,534 @@ const AuthModal = () => {
   }, [showAuthModal]);
 
   return (
-    <motion.div
-      className="modal-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => setShowAuthModal(false)}
-    >
-      <motion.div
-        className="modal auth-modal"
-        onClick={(e) => e.stopPropagation()}
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-      >
-        <div className="modal-header">
-          <div className="auth-tabs">
-            <button
-              className={`auth-tab ${authMode === "login" ? "active" : ""}`}
-              onClick={() => setAuthMode("login")}
-            >
-              {t("login")}
-            </button>
-            <button
-              className={`auth-tab ${authMode === "signup" ? "active" : ""}`}
-              onClick={() => setAuthMode("signup")}
-            >
-              {t("signup")}
-            </button>
-          </div>
-          <button
-            className="icon-btn close-btn"
-            onClick={() => setShowAuthModal(false)}
-            aria-label={t("close")}
+    <AnimatePresence>
+      {showAuthModal && (
+        <motion.div
+          className="auth-overlay-new"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowAuthModal(false)}
+        >
+          <motion.div
+            className="auth-container-new"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
-            ✕
-          </button>
-        </div>
-
-        {authMode === "login" && (
-          <>
-            <div className="modal-body">
-              <div className="auth-method-toggle" style={{ marginBottom: '16px', display: 'flex', gap: '10px' }}>
-                 <button 
-                   className={`btn btn-sm ${!isPhoneLogin ? 'btn-primary' : 'btn-outline'}`}
-                   onClick={() => setIsPhoneLogin(false)}
-                 >
-                   📧 {t("email")}
-                 </button>
-                 <button 
-                   className={`btn btn-sm ${isPhoneLogin ? 'btn-primary' : 'btn-outline'}`}
-                   onClick={() => setIsPhoneLogin(true)}
-                 >
-                   📱 {t("phone")}
-                 </button>
+            {/* Header */}
+            <div className="auth-header-new">
+              <div className="auth-tabs-new">
+                <button
+                  className={`auth-tab-new ${authMode === "login" ? "active" : ""}`}
+                  onClick={() => setAuthMode("login")}
+                >
+                  <span className="auth-tab-icon">🔐</span>
+                  <span>{t("login")}</span>
+                </button>
+                <button
+                  className={`auth-tab-new ${authMode === "signup" ? "active" : ""}`}
+                  onClick={() => setAuthMode("signup")}
+                >
+                  <span className="auth-tab-icon">✨</span>
+                  <span>{t("signup")}</span>
+                </button>
               </div>
+              <button
+                className="auth-close-btn"
+                onClick={() => setShowAuthModal(false)}
+                aria-label={t("close")}
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M15 5L5 15M5 5l10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </div>
 
-              <p className="auth-subtitle">
-                  {isPhoneLogin ? t("loginPhoneSubtitle") : t("loginSubtitle")}
-              </p>
-
-              {!isPhoneLogin ? (
-                <>
-                  {/* Email Login */}
-                  <div className="field-group">
-                      <label className="field-label">{t("email")}</label>
-                      <input
-                      className="input"
-                      type="email"
-                      placeholder={t("email")}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      />
+            {/* Body */}
+            <div className="auth-body-new">
+              {authMode === "login" && (
+                <div className="auth-content-new">
+                  {/* Method Toggle */}
+                  <div className="auth-method-switch">
+                    <button 
+                      className={`auth-method-btn ${!isPhoneLogin ? "active" : ""}`}
+                      onClick={() => setIsPhoneLogin(false)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2"/>
+                        <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <span>{t("email")}</span>
+                    </button>
+                    <button 
+                      className={`auth-method-btn ${isPhoneLogin ? "active" : ""}`}
+                      onClick={() => setIsPhoneLogin(true)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                        <line x1="12" y1="18" x2="12" y2="18.01" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <span>{t("phone")}</span>
+                    </button>
                   </div>
 
-                  <div className="field-group">
-                      <label className="field-label">{t("password")}</label>
-                      <input
-                      className="input"
-                      type="password"
-                      placeholder={t("password")}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      />
-                  </div>
+                  <p className="auth-description">{isPhoneLogin ? t("loginPhoneSubtitle") : t("loginSubtitle")}</p>
 
-                  <div className="auth-actions">
+                  {!isPhoneLogin ? (
+                    <>
+                      {/* Email Login */}
+                      <div className="auth-input-group">
+                        <label className="auth-label">{t("email")}</label>
+                        <div className="auth-input-wrapper">
+                          <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2"/>
+                            <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                          <input
+                            className="auth-input"
+                            type="email"
+                            placeholder={t("email")}
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="auth-input-group">
+                        <label className="auth-label">{t("password")}</label>
+                        <div className="auth-input-wrapper">
+                          <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                          <input
+                            className="auth-input"
+                            type="password"
+                            placeholder={t("password")}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
                       <button
-                      className="btn btn-primary full-width"
-                      style={{ width: '100%' }}
-                      onClick={async () => {
+                        className="auth-submit-btn"
+                        onClick={async () => {
                           if (!validateEmail(email))
-                          return showMessage(t("enterValidEmail"), "error");
+                            return showMessage(t("enterValidEmail"), "error");
                           try {
-                          await signInWithEmailAndPassword(auth, email, password);
-                          showMessage(t("signedIn"), "success");
-                          setShowAuthModal(false);
-                          setEmail("");
-                          setPassword("");
+                            await signInWithEmailAndPassword(auth, email, password);
+                            showMessage(t("signedIn"), "success");
+                            setShowAuthModal(false);
+                            setEmail("");
+                            setPassword("");
                           } catch (e) {
-                          // Better error messages for login failures
-                          let errorMsg = e.message;
-                          if (e.code === 'auth/user-not-found') {
-                            errorMsg = t("userNotFound");
-                          } else if (e.code === 'auth/wrong-password') {
-                            errorMsg = t("wrongPassword");
-                          } else if (e.code === 'auth/invalid-email') {
-                            errorMsg = t("enterValidEmail");
-                          } else if (e.code === 'auth/too-many-requests') {
-                            errorMsg = t("tooManyAttempts");
-                          } else if (e.code === 'auth/network-request-failed') {
-                            errorMsg = t("networkError");
+                            let errorMsg = e.message;
+                            if (e.code === 'auth/user-not-found') {
+                              errorMsg = t("userNotFound");
+                            } else if (e.code === 'auth/wrong-password') {
+                              errorMsg = t("wrongPassword");
+                            } else if (e.code === 'auth/invalid-email') {
+                              errorMsg = t("enterValidEmail");
+                            } else if (e.code === 'auth/too-many-requests') {
+                              errorMsg = t("tooManyAttempts");
+                            } else if (e.code === 'auth/network-request-failed') {
+                              errorMsg = t("networkError");
+                            }
+                            showMessage(errorMsg, "error");
                           }
-                          showMessage(errorMsg, "error");
-                          }
-                      }}
+                        }}
                       >
-                      {t("login")}
+                        <span>{t("login")}</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
                       </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Phone Login */}
+                      {!verificationId ? (
+                        <>
+                          <div className="auth-input-group">
+                            <label className="auth-label">{t("phoneNumber")}</label>
+                            <div className="auth-phone-group">
+                              <select
+                                className="auth-country-select"
+                                value={countryCode}
+                                onChange={(e) => setCountryCode(e.target.value)}
+                              >
+                                {countryCodes.map((c) => (
+                                  <option key={c.code} value={c.code}>
+                                    {c.name} {c.code}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="auth-input-wrapper">
+                                <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                                  <line x1="12" y1="18" x2="12" y2="18.01" stroke="currentColor" strokeWidth="2"/>
+                                </svg>
+                                <input
+                                  className="auth-input"
+                                  type="tel"
+                                  placeholder={t("phonePlaceholder")}
+                                  value={phoneNumber}
+                                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                                  maxLength="12"
+                                  inputMode="numeric"
+                                />
+                              </div>
+                            </div>
+                            <div id="recaptcha-container"></div>
+                          </div>
+                          
+                          <button 
+                            className="auth-submit-btn" 
+                            onClick={handleSendOtp}
+                            disabled={phoneLoading}
+                          >
+                            <span>{phoneLoading ? t("sending") : t("sendCode")}</span>
+                            {!phoneLoading && (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="auth-input-group">
+                            <label className="auth-label">{t("verificationCode")}</label>
+                            <div className="auth-input-wrapper">
+                              <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <rect x="3" y="8" width="18" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                                <path d="M7 8V5a5 5 0 0 1 10 0v3" stroke="currentColor" strokeWidth="2"/>
+                              </svg>
+                              <input
+                                className="auth-input"
+                                type="text"
+                                placeholder={t("verificationCodePlaceholder")}
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            className="auth-submit-btn" 
+                            onClick={handleVerifyOtp}
+                            disabled={phoneLoading}
+                          >
+                            <span>{phoneLoading ? t("verifying") : t("verifyAndLogin")}</span>
+                            {!phoneLoading && (
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                <polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </button>
+                          <button 
+                            className="auth-back-btn"
+                            onClick={() => setVerificationId(null)}
+                          >
+                            {t("back")}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {authMode === "signup" && (
+                <div className="auth-content-new">
+                  <p className="auth-description">{t("signupSubtitle")}</p>
+        
+                  <div className="auth-input-group">
+                    <label className="auth-label">{t("signupNameLabel")}</label>
+                    <div className="auth-input-wrapper">
+                      <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <input
+                        className="auth-input"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </>
-              ) : (
-                <>
-                  {/* Phone Login */}
-                  {!verificationId ? (
-                    <div className="field-group">
-                      <label className="field-label">{t("phoneNumber")}</label>
-                      <div className="phone-input-group" style={{ display: 'flex', gap: '0.5rem' }}>
-                        <select
-                          className="select phone-country"
-                          style={{ width: '120px', flexShrink: 0 }}
-                          value={countryCode}
-                          onChange={(e) => setCountryCode(e.target.value)}
-                        >
-                          {countryCodes.map((c) => (
-                            <option key={c.code} value={c.code}>
-                              {c.name} {c.code}
-                            </option>
-                          ))}
-                        </select>
+        
+                  <div className="auth-input-group">
+                    <label className="auth-label">{t("email")}</label>
+                    <div className="auth-input-wrapper">
+                      <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2"/>
+                        <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <input
+                        className="auth-input"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+        
+                  <div className="auth-input-group">
+                    <label className="auth-label">{t("password")}</label>
+                    <div className="auth-input-wrapper">
+                      <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <input
+                        className="auth-input"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+        
+                  <div className="auth-input-group">
+                    <label className="auth-label">{t("repeatNewPassword")}</label>
+                    <div className="auth-input-wrapper">
+                      <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" strokeWidth="2"/>
+                      </svg>
+                      <input
+                        className="auth-input"
+                        type="password"
+                        value={passwordForm?.repeatNewPassword || ""}
+                        onChange={(e) =>
+                          setPasswordForm({ ...passwordForm, repeatNewPassword: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+        
+                  <div className="auth-input-group">
+                    <label className="auth-label">{t("phoneNumber")}</label>
+                    <div className="auth-phone-group">
+                      <select
+                        className="auth-country-select"
+                        value={countryCode}
+                        onChange={(e) => setCountryCode(e.target.value)}
+                      >
+                        {countryCodes.map((c) => (
+                          <option key={c.code} value={c.code}>
+                            {c.name} ({c.code})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="auth-input-wrapper">
+                        <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                          <line x1="12" y1="18" x2="12" y2="18.01" stroke="currentColor" strokeWidth="2"/>
+                        </svg>
                         <input
-                          className="input phone-number"
+                          className="auth-input"
                           type="tel"
-                          placeholder={t("phonePlaceholder")}
                           value={phoneNumber}
-                          onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                          onChange={(e) =>
+                            setPhoneNumber(e.target.value.replace(/\D/g, ""))
+                          }
                           maxLength="12"
                           inputMode="numeric"
-                          style={{ flex: 1 }}
                         />
                       </div>
-                      <div id="recaptcha-container" style={{ marginTop: '10px' }}></div>
-                      
-                      <button 
-                        className="btn btn-primary full-width" 
-                        onClick={handleSendOtp}
-                        disabled={phoneLoading}
-                        style={{ marginTop: '16px', width: '100%' }}
-                      >
-                        {phoneLoading ? t("sending") : t("sendCode")}
-                      </button>
                     </div>
-                  ) : (
-                    <div className="field-group">
-                      <label className="field-label">{t("verificationCode")}</label>
-                      <input
-                        className="input"
-                        type="text"
-                        placeholder={t("verificationCodePlaceholder")}
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
-                      />
-                      <button 
-                        className="btn btn-primary full-width" 
-                        onClick={handleVerifyOtp}
-                        disabled={phoneLoading}
-                        style={{ marginTop: '16px', width: '100%' }}
-                      >
-                        {phoneLoading ? t("verifying") : t("verifyAndLogin")}
-                      </button>
-                      <button 
-                        className="btn btn-ghost full-width"
-                        onClick={() => setVerificationId(null)}
-                        style={{ marginTop: '8px', width: '100%' }}
-                      >
-                        {t("back")}
-                      </button>
-                    </div>
+                  </div>
+        
+                  <div className="auth-checkbox-group-new">
+                    <input 
+                      type="checkbox" 
+                      id="agreeTermsNew" 
+                      checked={agreedToTerms} 
+                      onChange={(e) => setAgreedToTerms(e.target.checked)} 
+                      className="auth-checkbox-new"
+                    />
+                    <label htmlFor="agreeTermsNew" className="auth-checkbox-label">
+                      {t("agreeTo")} <button type="button" className="auth-link-new" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and")} <button type="button" className="auth-link-new" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
+                    </label>
+                  </div>
+
+                  {!confirmationResult && (
+                    <button
+                      className="auth-submit-btn"
+                      disabled={phoneLoading}
+                      onClick={async () => {
+                        if (!agreedToTerms)
+                          return showMessage(t("mustAgreeToTerms"), "error");
+
+                        if (!validateEmail(email))
+                          return showMessage(t("enterValidEmail"), "error");
+                        
+                        if (!displayName.trim())
+                          return showMessage(t("enterName"), "error");
+            
+                        if (password.length < 6)
+                          return showMessage(t("passwordTooShort"), "error");
+            
+                        if (passwordForm?.repeatNewPassword !== password)
+                          return showMessage(t("passwordsDontMatch"), "error");
+            
+                        const raw = phoneNumber.replace(/\D/g, "");
+                        if (!raw || raw.length < 5)
+                          return showMessage(t("enterValidPhone"), "error");
+            
+                        const fullPhone = countryCode + raw;
+                        if (!validatePhone(fullPhone))
+                          return showMessage(t("enterValidPhone"), "error");
+            
+                        setPhoneLoading(true);
+                        try {
+                          const verifier = getSignupRecaptcha();
+                          const confirmation = await signInWithPhoneNumber(
+                            auth,
+                            fullPhone,
+                            verifier
+                          );
+                          setConfirmationResult(confirmation);
+                          showMessage(t("codeSent"), "success");
+                        } catch (err) {
+                          console.error(err);
+                          window.signupRecaptchaVerifier?.clear?.();
+                          window.signupRecaptchaVerifier = null;
+                          showMessage(err, "error");
+                        } finally {
+                          setPhoneLoading(false);
+                        }
+                      }}
+                    >
+                      <span>{t("createAccount")}</span>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="2"/>
+                        <circle cx="8.5" cy="7" r="4" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M20 8v6M23 11h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </button>
                   )}
-                </>
+        
+                  {confirmationResult && (
+                    <>
+                      <div className="auth-input-group">
+                        <label className="auth-label">{t("enterCode")}</label>
+                        <div className="auth-input-wrapper">
+                          <svg className="auth-input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <rect x="3" y="8" width="18" height="14" rx="2" ry="2" stroke="currentColor" strokeWidth="2"/>
+                            <path d="M7 8V5a5 5 0 0 1 10 0v3" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                          <input
+                            className="auth-input"
+                            value={verificationCode}
+                            onChange={(e) =>
+                              setVerificationCode(e.target.value.replace(/\D/g, ""))
+                            }
+                            maxLength="6"
+                          />
+                        </div>
+                      </div>
+        
+                      <button
+                        className="auth-submit-btn"
+                        disabled={phoneLoading}
+                        onClick={async () => {
+                          if (!/^\d{6}$/.test(verificationCode))
+                            return showMessage(t("invalidCode"), "error");
+        
+                          setPhoneLoading(true);
+                          try {
+                            const result = await confirmationResult.confirm(
+                              verificationCode
+                            );
+                            const user = result.user;
+                            const { isNewUser } = getAdditionalUserInfo(result) || {};
+
+                            try {
+                              const emailCred = EmailAuthProvider.credential(
+                                email,
+                                password
+                              );
+                              await linkWithCredential(user, emailCred);
+
+                              if (displayName.trim()) {
+                                await updateProfile(user, { displayName: displayName.trim() });
+                              }
+
+                              await set(dbRef(db, `users/${user.uid}`), {
+                                name: displayName.trim() || null,
+                                email: user.email,
+                                phone: normalizePhoneForStorage(countryCode + phoneNumber),
+                                createdAt: Date.now(),
+                                subscribedToMarketing: true,
+                              });
+
+                              await sendEmailVerification(user);
+
+                              showMessage(t("signupSuccess"), "success");
+
+                              setAuthMode("verify");
+                              setConfirmationResult(null);
+                              setVerificationCode("");
+                            } catch (innerErr) {
+                              console.error("Signup incomplete, rolling back user creation:", innerErr);
+                              
+                              if (isNewUser) {
+                                await user.delete().catch(cleanupErr => console.error("Failed to cleanup user:", cleanupErr));
+                              }
+                              
+                              setConfirmationResult(null);
+                              setVerificationCode("");
+                              if (window.signupRecaptchaVerifier) {
+                                try {
+                                  window.signupRecaptchaVerifier.clear();
+                                } catch (e) {}
+                                window.signupRecaptchaVerifier = null;
+                              }
+                              
+                              throw innerErr;
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            showMessage(err, "error");
+                          } finally {
+                            setPhoneLoading(false);
+                          }
+                        }}
+                      >
+                        <span>{t("verifyPhone")}</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                          <polyline points="20 6 9 17 4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </>
+                  )}
+        
+                  <div id="recaptcha-signup" className="recaptcha" />
+                </div>
+              )}
+
+              {authMode === "verify" && (
+                <div className="auth-verify-content">
+                  <div className="auth-verify-icon">✉️</div>
+                  <h3 className="auth-verify-title">{t("verifyYourEmail")}</h3>
+                  <p className="auth-verify-text">{t("verifyEmailHint")}</p>
+                  <button onClick={() => setShowAuthModal(false)} className="auth-submit-btn">
+                    {t("close")}
+                  </button>
+                </div>
               )}
             </div>
-          </>
-        )}
-
-        {authMode === "signup" && (
-            <div className="modal-body">
-            <p className="auth-subtitle">
-                {t("signupSubtitle")}
-            </p>
-        
-            <div className="field-group">
-                <label className="field-label">{t("signupNameLabel")}</label>
-                <input
-                className="input"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                />
-            </div>
-        
-            {/* EMAIL */}
-            <div className="field-group">
-                <label className="field-label">{t("email")}</label>
-                <input
-                className="input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                />
-            </div>
-        
-            {/* PASSWORD */}
-            <div className="field-group">
-                <label className="field-label">{t("password")}</label>
-                <input
-                className="input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                />
-            </div>
-        
-            {/* REPEAT PASSWORD */}
-            <div className="field-group">
-                <label className="field-label">
-                {t("repeatNewPassword")}
-                </label>
-                <input
-                className="input"
-                type="password"
-                value={passwordForm?.repeatNewPassword || ""}
-                onChange={(e) =>
-                    setPasswordForm({ ...passwordForm, repeatNewPassword: e.target.value })
-                }
-                />
-            </div>
-        
-            {/* PHONE (MANDATORY) */}
-            <div className="field-group">
-                <label className="field-label">{t("phoneNumber")}</label>
-                <div className="phone-input-group" style={{ display: 'flex', gap: '0.5rem' }}>
-                <select
-                    className="select phone-country"
-                    style={{ width: '100px' }}
-                    value={countryCode}
-                    onChange={(e) => setCountryCode(e.target.value)}
-                >
-                    {countryCodes.map((c) => (
-                    <option key={c.code} value={c.code}>
-                        {c.name} ({c.code})
-                    </option>
-                    ))}
-                </select>
-                <input
-                    className="input phone-number"
-                    style={{ flex: 1 }}
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) =>
-                    setPhoneNumber(e.target.value.replace(/\D/g, ""))
-                    }
-                    maxLength="12"
-                    inputMode="numeric"
-                />
-                </div>
-            </div>
-        
-            {/* Checkbox for Terms */}
-            <div className="checkbox-group">
-                <input 
-                type="checkbox" 
-                id="agreeTerms" 
-                checked={agreedToTerms} 
-                onChange={(e) => setAgreedToTerms(e.target.checked)} 
-                className="auth-checkbox"
-                />
-                <label htmlFor="agreeTerms" className="auth-terms-label">
-                {t("agreeTo")} <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and")} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
-                </label>
-            </div>
-
-
-            {/* STEP 1: SEND SMS */}
-            {!confirmationResult && (
-                <button
-                className="btn full-width"
-                disabled={phoneLoading}
-                onClick={async () => {
-                    if (!agreedToTerms)
-                    return showMessage(t("mustAgreeToTerms"), "error");
-
-                    if (!validateEmail(email))
-                    return showMessage(t("enterValidEmail"), "error");
-                    
-                    if (!displayName.trim())
-                    return showMessage(t("enterName"), "error");
-        
-                    if (password.length < 6)
-                    return showMessage(t("passwordTooShort"), "error");
-        
-                    if (passwordForm?.repeatNewPassword !== password)
-                    return showMessage(t("passwordsDontMatch"), "error");
-        
-                    const raw = phoneNumber.replace(/\D/g, "");
-                    if (!raw || raw.length < 5)
-                    return showMessage(t("enterValidPhone"), "error");
-        
-                    const fullPhone = countryCode + raw;
-                    if (!validatePhone(fullPhone))
-                    return showMessage(t("enterValidPhone"), "error");
-        
-                    setPhoneLoading(true);
-                    try {
-                    const verifier = getSignupRecaptcha();
-                    const confirmation = await signInWithPhoneNumber(
-                        auth,
-                        fullPhone,
-                        verifier
-                    );
-                    setConfirmationResult(confirmation);
-                    showMessage(t("codeSent"), "success");
-                    } catch (err) {
-                    console.error(err);
-                    window.signupRecaptchaVerifier?.clear?.();
-                    window.signupRecaptchaVerifier = null;
-                    showMessage(err, "error");
-                    } finally {
-                    setPhoneLoading(false);
-                    }
-                }}
-                >
-                {t("createAccount")}
-                </button>
-            )}
-        
-            {/* STEP 2: VERIFY CODE + LINK EMAIL */}
-            {confirmationResult && (
-                <>
-                <div className="auth-field-group mt-md">
-                    <span className="field-label">{t("enterCode")}</span>
-                    <input
-                    className="input"
-                    value={verificationCode}
-                    onChange={(e) =>
-                        setVerificationCode(e.target.value.replace(/\D/g, ""))
-                    }
-                    maxLength="6"
-                    />
-                </div>
-        
-                <button
-                    className="btn full-width"
-                    disabled={phoneLoading}
-                    onClick={async () => {
-                    if (!/^\d{6}$/.test(verificationCode))
-                        return showMessage(t("invalidCode"), "error");
-        
-                    setPhoneLoading(true);
-                    try {
-                        const result = await confirmationResult.confirm(
-                        verificationCode
-                        );
-                        const user = result.user;
-                        const { isNewUser } = getAdditionalUserInfo(result) || {};
-
-                        try {
-                        const emailCred = EmailAuthProvider.credential(
-                            email,
-                            password
-                        );
-                        await linkWithCredential(user, emailCred);
-
-                        if (displayName.trim()) {
-                            await updateProfile(user, { displayName: displayName.trim() });
-                        }
-
-                        await set(dbRef(db, `users/${user.uid}`), {
-                            name: displayName.trim() || null,
-                            email: user.email,
-                            phone: normalizePhoneForStorage(countryCode + phoneNumber),
-                            createdAt: Date.now(),
-                            subscribedToMarketing: true,
-                        });
-
-                        await sendEmailVerification(user);
-
-                        showMessage(t("signupSuccess"), "success");
-
-                        setAuthMode("verify");
-                        setConfirmationResult(null);
-                        setVerificationCode("");
-                        } catch (innerErr) {
-                        console.error("Signup incomplete, rolling back user creation:", innerErr);
-                        
-                        if (isNewUser) {
-                            await user.delete().catch(cleanupErr => console.error("Failed to cleanup user:", cleanupErr));
-                        }
-                        
-                        setConfirmationResult(null);
-                        setVerificationCode("");
-                        if (window.signupRecaptchaVerifier) {
-                            try {
-                                window.signupRecaptchaVerifier.clear();
-                            } catch (e) {
-                            }
-                            window.signupRecaptchaVerifier = null;
-                        }
-                        
-                        throw innerErr;
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        showMessage(err, "error");
-                    } finally {
-                        setPhoneLoading(false);
-                    }
-                    }}
-                >
-                    {t("verifyPhone")}
-                </button>
-                </>
-            )}
-        
-            <div id="recaptcha-signup" className="recaptcha" />
-            </div>
-        )}
-
-        {/* VERIFY MODE (After signup) */}
-        {authMode === "verify" && (
-             <div className="modal-body auth-body auth-body-card">
-                 <h3>{t("verifyYourEmail")}</h3>
-                 <p>{t("verifyEmailHint")}</p>
-                 <button onClick={() => setShowAuthModal(false)} className="btn btn-primary">{t("close")}</button>
-             </div>
-        )}
-
-      </motion.div>
-    </motion.div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

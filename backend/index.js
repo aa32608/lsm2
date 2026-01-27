@@ -1012,60 +1012,8 @@ app.post("/api/admin/test-marketing-now", async (req, res) => {
 // This will send at 7:15 PM during winter (CET) and 8:15 PM during summer (CEST)
 const cronExpression = "15 18 * * 2";
 
-// TEMPORARY: Schedule test run in 5 minutes from server start
-// Calculate next 5 minutes
-const now = new Date();
-const testTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
-const testMinute = testTime.getUTCMinutes();
-const testHour = testTime.getUTCHours();
-const testCronExpression = `${testMinute} ${testHour} * * *`; // Run once at the calculated time
-
-console.log(`\n\n`);
-console.log(`╔══════════════════════════════════════════════════════════════╗`);
-console.log(`║                    EMAIL SYSTEM STATUS                        ║`);
-console.log(`╚══════════════════════════════════════════════════════════════╝`);
-console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC`);
-console.log(`[Cron] Regular cron expression: ${cronExpression}`);
-console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time`);
-console.log(`\n[Cron] 🧪 TEST MODE: Scheduling test run in 5 minutes`);
-console.log(`[Cron] Current UTC time: ${now.toISOString()}`);
-console.log(`[Cron] Test will run at: ${testTime.toISOString()} (UTC)`);
-console.log(`[Cron] Test cron expression: ${testCronExpression}`);
-console.log(`[Cron] ⚠️  This test will run ONCE, then the regular schedule takes over`);
-console.log(`\n[Cron] 💡 TIP: Use POST /api/admin/test-marketing-now to test immediately`);
-console.log(`╚══════════════════════════════════════════════════════════════╝`);
-console.log(`\n\n`);
-
-// Schedule test run
-const testJob = cron.schedule(testCronExpression, async () => {
-  console.log(`\n\n`);
-  console.log(`╔══════════════════════════════════════════════════════════════╗`);
-  console.log(`║              🧪 TEST RUN: Marketing Emails                  ║`);
-  console.log(`╚══════════════════════════════════════════════════════════════╝`);
-  console.log(`[Cron] Timestamp: ${new Date().toISOString()}`);
-  console.log(`[Cron] ========================================`);
-  try {
-    const result = await sendMarketingEmails();
-    console.log(`[Cron] ✅ TEST RUN COMPLETE!`);
-    console.log(`[Cron] Sent: ${result.sentCount}, Skipped: ${result.skipped || 0}, Failed: ${result.failed || 0}`);
-    console.log(`[Cron] ========================================`);
-    console.log(`╚══════════════════════════════════════════════════════════════╝`);
-    console.log(`\n\n`);
-    
-    // Stop the test job after it runs once
-    testJob.stop();
-    console.log(`[Cron] Test job stopped. Regular weekly schedule is active.`);
-  } catch (err) {
-    console.error(`[Cron] ❌ TEST RUN FAILED!`);
-    console.error(`[Cron] Error: ${err.message}`);
-    console.error(`[Cron] Stack: ${err.stack}`);
-    console.log(`╚══════════════════════════════════════════════════════════════╝`);
-    console.log(`\n\n`);
-  }
-}, {
-  scheduled: true,
-  timezone: "UTC"
-});
+console.log(`[Cron] Marketing emails scheduled for every Tuesday at 7:15 PM CET / 18:15 UTC (Cron: ${cronExpression})`);
+console.log(`[Cron] Note: During summer (CEST), emails will send at 8:15 PM local time due to daylight saving.`);
 
 cron.schedule(cronExpression, async () => {
   console.log("[Cron] ========================================");
