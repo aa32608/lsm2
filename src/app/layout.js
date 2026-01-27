@@ -20,7 +20,8 @@ export const viewport = {
 
 async function getListings() {
   try {
-    // Aggressive timeout for faster failure - 1 second max (reduced from 2s)
+    // OPTIMIZATION: Single fetch with aggressive timeout
+    const now = Date.now();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1000);
     
@@ -31,7 +32,6 @@ async function getListings() {
         'Accept': 'application/json',
         'Cache-Control': 'public, max-age=300',
       },
-      // Use keepalive for faster connection reuse
       keepalive: true,
     });
     
@@ -41,13 +41,21 @@ async function getListings() {
     const data = await res.json();
     if (!data) return [];
     
-    // Optimize data processing
+    // OPTIMIZATION: Filter verified and non-expired listings during processing
     const listings = [];
     for (const key in data) {
       if (data.hasOwnProperty(key)) {
-        listings.push({ id: key, ...data[key] });
+        const listing = { id: key, ...data[key] };
+        // Pre-filter: only include verified, non-expired listings
+        if (listing.status === "verified" && (!listing.expiresAt || listing.expiresAt > now)) {
+          listings.push(listing);
+        }
       }
     }
+    
+    // Sort by date desc
+    listings.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    
     return listings;
   } catch (error) {
     if (error.name === 'AbortError') {

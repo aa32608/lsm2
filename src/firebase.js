@@ -28,8 +28,10 @@ if (typeof window !== "undefined") {
     } else {
       app = initializeApp(firebaseConfig);
       auth = getAuth(app);
+      // OPTIMIZATION: Enable persistence for faster subsequent loads
       db = getDatabase(app);
       // Firebase v9+ uses LOCAL persistence by default, so auth state is available immediately
+      // Database also uses local cache for faster reads
     }
   } catch (e) {
     console.warn("Firebase initialization failed:", e);

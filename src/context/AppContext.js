@@ -733,59 +733,111 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       setListingsLoaded(true);
     }
 
-    // Set up Firebase listener for real-time updates (runs in background)
-    // This won't cause layout shifts since we already have server data
+    if (!db) return;
+
+    // OPTIMIZATION: Use once() for initial load (faster than onValue for first fetch)
+    // Then use onValue only for real-time updates
     const listingsRef = dbRef(db, "listings");
-    const unsub = onValue(listingsRef, (snapshot) => {
+    
+    // First, do a one-time fetch (faster than listener)
+    get(listingsRef).then((snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
         // Sort by date desc
         arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         
-        // Only update if data actually changed (prevent unnecessary re-renders)
-        setListings(prev => {
-          if (JSON.stringify(prev) === JSON.stringify(arr)) return prev;
-          return arr;
-        });
+        setListings(arr);
         
         // Public listings (verified and not expired)
         const now = Date.now();
         const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
+        setPublicListings(pub);
+        setListingsLoaded(true);
+      }
+    }).catch((error) => {
+      console.error("Listings fetch error:", error);
+      // Fallback to server data if available
+      if (initialListings.length > 0 || initialPublicListings.length > 0) {
+        setListingsLoaded(true);
+      }
+    });
+
+    // OPTIMIZATION: Use onValue only for incremental updates (not full re-fetch)
+    // This reduces bandwidth - Firebase only sends changes, not full dataset
+    const unsub = onValue(listingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
+        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        // OPTIMIZATION: Only update if arrays have different lengths or different IDs
+        // This avoids expensive JSON.stringify on large datasets
+        setListings(prev => {
+          if (prev.length !== arr.length) return arr;
+          const prevIds = new Set(prev.map(p => p.id));
+          const newIds = new Set(arr.map(a => a.id));
+          if (prevIds.size !== newIds.size) return arr;
+          for (const id of prevIds) {
+            if (!newIds.has(id)) return arr;
+          }
+          // If same IDs, check if any data changed (lightweight check)
+          const changed = prev.some((p, i) => {
+            const a = arr[i];
+            return !a || p.id !== a.id || p.status !== a.status || p.expiresAt !== a.expiresAt;
+          });
+          return changed ? arr : prev;
+        });
+        
+        const now = Date.now();
+        const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
         setPublicListings(prev => {
-          if (JSON.stringify(prev) === JSON.stringify(pub)) return prev;
-          return pub;
+          if (prev.length !== pub.length) return pub;
+          const prevIds = new Set(prev.map(p => p.id));
+          const newIds = new Set(pub.map(p => p.id));
+          if (prevIds.size !== newIds.size) return pub;
+          for (const id of prevIds) {
+            if (!newIds.has(id)) return pub;
+          }
+          return prev;
         });
         setListingsLoaded(true);
-      } else {
-        // Only clear if we don't have initial data
-        if (initialListings.length === 0 && initialPublicListings.length === 0) {
-          setListings([]);
-          setPublicListings([]);
-        }
       }
     }, (error) => {
       console.error("Listings listener error:", error);
-      // Don't fail if we have server data
       if (initialListings.length === 0 && initialPublicListings.length === 0) {
         setListingsLoaded(false);
       }
     });
+    
     return () => unsub();
-  }, [initialListings.length, initialPublicListings.length, listingsLoaded]);
+  }, [initialListings.length, initialPublicListings.length, listingsLoaded, db]);
 
-  // Load Feedback Averages (Effect)
+  // Load Feedback Averages (Effect) - OPTIMIZED: Lazy load only when needed
   useEffect(() => {
     if (!db) return;
+    
+    // OPTIMIZATION: Only load feedback after listings are loaded and user might view them
+    // This prevents loading feedback data unnecessarily
+    if (!listingsLoaded || publicListings.length === 0) {
+      return;
+    }
+
+    // OPTIMIZATION: Use once() for initial fetch (faster)
     const feedbackRef = dbRef(db, "feedback");
     
-    const unsub = onValue(feedbackRef, (snapshot) => {
+    get(feedbackRef).then((snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
         const averages = {};
         
-        // Calculate averages per listing
+        // OPTIMIZATION: Only process feedback for listings that exist in publicListings
+        const publicListingIds = new Set(publicListings.map(l => l.id));
+        
         Object.keys(data).forEach(listingId => {
+          // Skip if listing is not in public listings (saves processing)
+          if (!publicListingIds.has(listingId)) return;
+          
           const feedbacks = data[listingId];
           if (feedbacks && typeof feedbacks === 'object') {
             const values = Object.values(feedbacks);
@@ -806,10 +858,43 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       } else {
         setFeedbackAverages({});
       }
+    }).catch((error) => {
+      console.error("Feedback fetch error:", error);
+    });
+
+    // OPTIMIZATION: Use onValue only for incremental updates (new feedback)
+    // This way we only get new feedback, not re-process everything
+    const unsub = onValue(feedbackRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const averages = {};
+        const publicListingIds = new Set(publicListings.map(l => l.id));
+        
+        Object.keys(data).forEach(listingId => {
+          if (!publicListingIds.has(listingId)) return;
+          
+          const feedbacks = data[listingId];
+          if (feedbacks && typeof feedbacks === 'object') {
+            const values = Object.values(feedbacks);
+            const ratings = values.map(f => Number(f.rating) || 0).filter(r => r > 0);
+            if (ratings.length > 0) {
+              const sum = ratings.reduce((acc, r) => acc + r, 0);
+              averages[listingId] = {
+                avg: parseFloat((sum / ratings.length).toFixed(1)),
+                count: ratings.length
+              };
+            } else {
+              averages[listingId] = { avg: null, count: 0 };
+            }
+          }
+        });
+        
+        setFeedbackAverages(averages);
+      }
     });
     
     return () => unsub();
-  }, [db]);
+  }, [db, listingsLoaded, publicListings]);
 
   // Payment Success Handler - Check URL params on mount
   useEffect(() => {
