@@ -1386,13 +1386,13 @@ body {
 
 /* =============== INPUTS / BUTTONS =============== */
 
-.lang-select,
+/* .lang-select,
 .btn,
 .select,
 /* ========== BEGINNER-FRIENDLY INPUTS ========== */
-.field-group {
+/* .field-group {
   margin-bottom: var(--spacing-lg);
-}
+} */
 
 .field-label {
   display: block;
