@@ -32,11 +32,11 @@ export default function FirebaseLoader({ children }) {
           setFirebaseReady(true);
         });
 
-        // Safety timeout - don't block forever (max 1 second for faster loading)
+        // Safety timeout - don't block forever (max 500ms for faster loading)
         timeout = setTimeout(() => {
           setFirebaseReady(true);
           if (unsubscribe) unsubscribe();
-        }, 1000);
+        }, 500);
       } catch (e) {
         console.warn("Firebase auth check failed:", e);
         setFirebaseReady(true);

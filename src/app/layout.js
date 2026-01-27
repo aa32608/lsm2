@@ -18,16 +18,19 @@ export const viewport = {
 
 async function getListings() {
   try {
-    // Optimize fetch with timeout for faster failure handling
+    // Aggressive timeout for faster failure - 2 seconds max
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
     
     const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json', { 
-      next: { revalidate: 60 },
+      next: { revalidate: 300 }, // Cache for 5 minutes
       signal: controller.signal,
       headers: {
         'Accept': 'application/json',
-      }
+        'Cache-Control': 'public, max-age=300',
+      },
+      // Use keepalive for faster connection reuse
+      keepalive: true,
     });
     
     clearTimeout(timeoutId);
@@ -36,10 +39,14 @@ async function getListings() {
     const data = await res.json();
     if (!data) return [];
     
-    return Object.keys(data).map(key => ({
-      id: key,
-      ...data[key]
-    }));
+    // Optimize data processing
+    const listings = [];
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        listings.push({ id: key, ...data[key] });
+      }
+    }
+    return listings;
   } catch (error) {
     if (error.name === 'AbortError') {
       console.warn("Listings fetch timeout, using empty array");

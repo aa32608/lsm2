@@ -76,9 +76,10 @@ const ListingCard = React.memo(({
   const listingUrl = `/listings/${encodeURIComponent(String(listingId))}`;
 
   const handleCardClick = () => {
-    // Save current scroll position before navigating
+    // Save current page URL and scroll position before navigating
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('listingsScrollPosition', String(window.scrollY || window.pageYOffset));
+      sessionStorage.setItem('previousPageUrl', window.location.pathname + window.location.search);
+      sessionStorage.setItem('previousScrollPosition', String(window.scrollY || window.pageYOffset));
     }
   };
 

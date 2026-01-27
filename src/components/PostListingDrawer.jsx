@@ -197,15 +197,19 @@ const PostListingDrawer = () => {
         const data = await res.json();
         
         if (data.success && data.isFreeTrial) {
-            showMessage(t("listingCreatedSuccess"), "success");
+            showMessage(t("listingCreatedSuccess") || "Listing created successfully! Free trial activated.", "success");
             setShowPostForm(false);
             window.location.reload(); 
             return;
         }
 
         if (data.checkoutUrl) {
+            // Show notification before redirecting
+            showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
             // Redirect immediately without delay
-            window.location.href = data.checkoutUrl;
+            setTimeout(() => {
+              window.location.href = data.checkoutUrl;
+            }, 100);
             return; 
         } else {
             throw new Error("Payment initialization failed: No checkout URL");
@@ -213,10 +217,10 @@ const PostListingDrawer = () => {
       } catch (paymentErr) {
           if (paymentErr.name === 'AbortError') {
             console.error("Payment request timeout:", paymentErr);
-            showMessage("Payment request timed out. Please try again.", "error");
+            showMessage(t("paymentTimeout") || "Payment request timed out. Please try again.", "error");
           } else {
             console.error("Payment error:", paymentErr);
-            showMessage("Listing saved but payment failed. Please try again from My Listings.", "error");
+            showMessage(t("listingSavedUnpaid") || "Listing saved but payment failed. Please try again from My Listings.", "error");
           }
       }
       

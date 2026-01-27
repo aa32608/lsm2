@@ -262,7 +262,20 @@ const AuthModal = () => {
                           setEmail("");
                           setPassword("");
                           } catch (e) {
-                          showMessage(e.message, "error");
+                          // Better error messages for login failures
+                          let errorMsg = e.message;
+                          if (e.code === 'auth/user-not-found') {
+                            errorMsg = t("userNotFound") || "No account found with this email address.";
+                          } else if (e.code === 'auth/wrong-password') {
+                            errorMsg = t("wrongPassword") || "Incorrect password. Please try again.";
+                          } else if (e.code === 'auth/invalid-email') {
+                            errorMsg = t("enterValidEmail") || "Please enter a valid email address.";
+                          } else if (e.code === 'auth/too-many-requests') {
+                            errorMsg = t("tooManyAttempts") || "Too many failed attempts. Please try again later.";
+                          } else if (e.code === 'auth/network-request-failed') {
+                            errorMsg = t("networkError") || "Network error. Please check your connection.";
+                          }
+                          showMessage(errorMsg, "error");
                           }
                       }}
                       >

@@ -189,7 +189,21 @@ export default function ListingDetailClient({ id, initialListing }) {
     return (
       <div className="container" style={{ padding: "4rem", textAlign: "center" }}>
         <h2 className="text-h2">{t("listingNotFound") || "Listing not found"}</h2>
-        <button className="btn btn-secondary" onClick={() => router.push("/listings")}>
+        <button className="btn btn-secondary" onClick={() => {
+          const previousPage = sessionStorage.getItem('previousPageUrl') || '/listings';
+          const scrollPosition = sessionStorage.getItem('previousScrollPosition');
+          router.push(previousPage);
+          if (scrollPosition) {
+            setTimeout(() => {
+              window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
+              setTimeout(() => {
+                window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
+                sessionStorage.removeItem('previousScrollPosition');
+                sessionStorage.removeItem('previousPageUrl');
+              }, 200);
+            }, 50);
+          }
+        }}>
           {t("back")}
         </button>
       </div>
@@ -225,9 +239,14 @@ export default function ListingDetailClient({ id, initialListing }) {
         <button 
           className="detail-back-btn" 
           onClick={() => {
-            router.push("/listings");
+            // Get the previous page URL and scroll position
+            const previousPage = sessionStorage.getItem('previousPageUrl') || '/listings';
+            const scrollPosition = sessionStorage.getItem('previousScrollPosition');
+            
+            // Navigate back to previous page
+            router.push(previousPage);
+            
             // Restore scroll position after navigation
-            const scrollPosition = sessionStorage.getItem('listingsScrollPosition');
             if (scrollPosition) {
               // Wait for navigation to complete
               setTimeout(() => {
@@ -235,12 +254,17 @@ export default function ListingDetailClient({ id, initialListing }) {
                 // Try again after a short delay in case page is still loading
                 setTimeout(() => {
                   window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
-                  sessionStorage.removeItem('listingsScrollPosition');
+                  sessionStorage.removeItem('previousScrollPosition');
+                  sessionStorage.removeItem('previousPageUrl');
                 }, 200);
               }, 50);
+            } else {
+              // If no scroll position saved, just clear the storage
+              sessionStorage.removeItem('previousScrollPosition');
+              sessionStorage.removeItem('previousPageUrl');
             }
           }}
-          aria-label={t("back") || "Back to listings"}
+          aria-label={t("back") || "Back"}
         >
           <span aria-hidden="true">←</span> {t("back") || "Back"}
          </button>

@@ -811,6 +811,32 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return () => unsub();
   }, [db]);
 
+  // Payment Success Handler - Check URL params on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    const listingId = params.get("listingId");
+    const type = params.get("type"); // 'create' or 'extend'
+
+    if (paymentStatus === "success" && listingId) {
+      // Clear params from URL
+      window.history.replaceState({}, "", window.location.pathname);
+      
+      // Show success notification
+      if (type === 'extend') {
+        showMessage(t("listingExtendedSuccess") || "Listing extended successfully!", "success");
+      } else {
+        showMessage(t("paymentSuccess") || "Payment successful! Your listing has been activated.", "success");
+      }
+    } else if (paymentStatus === "failed" || paymentStatus === "cancel") {
+      // Show failure notification
+      showMessage(t("paymentFailed") || "Payment was cancelled or failed. Your listing has been saved.", "error");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []); // Run once on mount
+
   // Filter user listings
   useEffect(() => {
     if (user && listings.length > 0) {
@@ -940,15 +966,19 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       
       const data = await res.json();
       if (data.checkoutUrl) {
+          // Show notification before redirecting
+          showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
           // Redirect immediately without delay
-          window.location.href = data.checkoutUrl;
+          setTimeout(() => {
+            window.location.href = data.checkoutUrl;
+          }, 100);
       } else {
         throw new Error("No checkout URL returned");
       }
     } catch (err) {
       if (err.name === 'AbortError') {
         console.error("Payment request timeout:", err);
-        showMessage("Payment request timed out. Please try again.", "error");
+        showMessage(t("paymentTimeout") || "Payment request timed out. Please try again.", "error");
       } else {
         console.error(err);
         showMessage(t("paymentError") || "Payment initialization failed", "error");

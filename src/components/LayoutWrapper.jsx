@@ -8,7 +8,7 @@ import PostListingDrawer from "./PostListingDrawer";
 import ExtendListingModal from "./ExtendListingModal";
 import EditListingModal from "./EditListingModal";
 import ReportModal from "./ReportModal";
-import Toast from "./Toast";
+import NotificationToast from "./NotificationToast";
 import { TermsModal, PrivacyModal } from "./LegalModals";
 import CookieConsent from "./CookieConsent";
 import FirebaseLoader from "./FirebaseLoader";
@@ -16,7 +16,7 @@ import { AnimatePresence } from "framer-motion";
 
 // Helper component to consume context
 const LayoutContent = ({ children }) => {
-  const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal } = useApp();
+  const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal, message, setMessage } = useApp();
 
   return (
     <div className="app-container">
@@ -51,7 +51,11 @@ const LayoutContent = ({ children }) => {
       <ExtendListingModal />
       <EditListingModal />
       <ReportModal />
-      <Toast />
+      <NotificationToast 
+        message={message?.text} 
+        type={message?.type} 
+        onClose={() => setMessage?.({ text: "", type: "info" })} 
+      />
       
       {showTerms && <TermsModal onClose={() => setShowTerms(false)} t={t} />}
       {showPrivacy && <PrivacyModal onClose={() => setShowPrivacy(false)} t={t} />}
