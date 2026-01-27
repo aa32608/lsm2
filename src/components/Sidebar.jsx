@@ -103,7 +103,7 @@ const Sidebar = ({ onClose, isOpen }) => {
           </div>
         )}
         <div className="text-xs text-muted text-center mt-4">
-          © {new Date().getFullYear()} BizCall
+          © 2025 BizCall
         </div>
       </div>
     </aside>

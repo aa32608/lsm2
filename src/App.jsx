@@ -298,14 +298,19 @@ const Header = React.memo(({
 
 export default function App({ initialListings = [], initialPublicListings = [] }) {
   /* i18n */
-  const [lang, setLang] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("lang") || "sq";
-    }
-    return "sq";
-  });
+  const [lang, setLang] = useState("sq"); // Consistent default for SSR/hydration
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+
+  // Load language preference after mount to avoid hydration mismatch
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("lang");
+      if (stored && (stored === "sq" || stored === "en" || stored === "mk")) {
+        setLang(stored);
+      }
+    }
+  }, []);
 
   const t = useCallback(
     (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
@@ -313,7 +318,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   );
 
   useEffect(() => {
-    localStorage.setItem("lang", lang);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lang", lang);
+    }
     if (user) {
       update(dbRef(db, `users/${user.uid}`), { language: lang }).catch(err => {
         console.warn("Failed to sync language to profile:", err);
@@ -4996,7 +5003,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
         {/* FOOTER */}
         <footer className="footer">
-          <p>© 2024 {t("appName")} • {t("bizCall")}</p>
+          <p>© 2025 {t("appName")} • {t("bizCall")}</p>
         </footer>
         <div id="recaptcha-signup" style={{ display: "none" }} />
         <div id="recaptcha-container" style={{ display: "none" }} />

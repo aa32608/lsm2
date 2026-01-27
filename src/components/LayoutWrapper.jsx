@@ -61,7 +61,7 @@ const LayoutContent = ({ children }) => {
           <span className="separator">•</span>
           <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy")}</button>
         </div>
-        <p>© {new Date().getFullYear()} {t("appName")} • {t("bizCall")}</p>
+        <p>© 2025 {t("appName")} • {t("bizCall")}</p>
       </footer>
 
       <Suspense fallback={null}>
