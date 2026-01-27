@@ -45,19 +45,21 @@ const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
   // Commit Input Changes (Blur/Enter)
   const commitMinInput = () => {
     let val = Number(minInput);
-    if (isNaN(val) || minInput === "") val = min;
-    // Clamp
-    val = Math.max(min, Math.min(val, value.max - 1));
+    if (isNaN(val) || minInput === "" || val < min) val = min;
+    // Clamp to ensure it's within bounds and less than max
+    val = Math.max(min, Math.min(val, Math.max(min, value.max - 1)));
     setMinInput(val);
+    minValRef.current = val;
     onChange({ min: val, max: value.max });
   };
 
   const commitMaxInput = () => {
     let val = Number(maxInput);
-    if (isNaN(val) || maxInput === "") val = max;
-    // Clamp
-    val = Math.min(max, Math.max(val, value.min + 1));
+    if (isNaN(val) || maxInput === "" || val > max) val = max;
+    // Clamp to ensure it's within bounds and greater than min
+    val = Math.min(max, Math.max(val, Math.min(max, value.min + 1)));
     setMaxInput(val);
+    maxValRef.current = val;
     onChange({ min: value.min, max: val });
   };
 
@@ -78,6 +80,8 @@ const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
                 <span className="currency-prefix">{currency}</span>
                 <input
                 type="number"
+                min={min}
+                max={max}
                 value={minInput}
                 onChange={handleMinInputChange}
                 onBlur={commitMinInput}
@@ -93,6 +97,8 @@ const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
                 <span className="currency-prefix">{currency}</span>
                 <input
                 type="number"
+                min={min}
+                max={max}
                 value={maxInput}
                 onChange={handleMaxInputChange}
                 onBlur={commitMaxInput}
@@ -108,24 +114,27 @@ const DualRangeSlider = ({ min, max, value, onChange, currency = "EUR" }) => {
           type="range"
           min={min}
           max={max}
-          value={value.min}
+          value={Math.max(min, Math.min(value.min, value.max - 1))}
           onChange={(event) => {
-            const val = Math.min(Number(event.target.value), value.max - 1);
-            onChange({ min: val, max: value.max });
+            const newMin = Math.max(min, Math.min(Number(event.target.value), value.max - 1));
+            minValRef.current = newMin;
+            onChange({ min: newMin, max: value.max });
           }}
           className="thumb thumb--left"
-          style={{ zIndex: value.min > max - 100 && "5" }}
+          style={{ zIndex: value.min > max - 100 ? 5 : 3 }}
         />
         <input
           type="range"
           min={min}
           max={max}
-          value={value.max}
+          value={Math.min(max, Math.max(value.max, value.min + 1))}
           onChange={(event) => {
-            const val = Math.max(Number(event.target.value), value.min + 1);
-            onChange({ min: value.min, max: val });
+            const newMax = Math.min(max, Math.max(Number(event.target.value), value.min + 1));
+            maxValRef.current = newMax;
+            onChange({ min: value.min, max: newMax });
           }}
           className="thumb thumb--right"
+          style={{ zIndex: 4 }}
         />
 
         <div className="slider">
