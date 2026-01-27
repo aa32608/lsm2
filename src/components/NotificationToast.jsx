@@ -50,60 +50,28 @@ export default function NotificationToast({ message, type = "info", onClose }) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: -100, scale: 0.9 }}
+          initial={{ opacity: 0, y: -50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -50, scale: 0.9 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="notification-toast"
-          style={{
-            position: "fixed",
-            top: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10000,
-            minWidth: "320px",
-            maxWidth: "90vw",
-            background: colors[type]?.bg || colors.info.bg,
-            color: "white",
-            padding: "1rem 1.5rem",
-            borderRadius: "12px",
-            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1)",
-            border: `2px solid ${colors[type]?.border || colors.info.border}`,
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-            fontWeight: 600,
-            fontSize: "0.9375rem",
-            backdropFilter: "blur(10px)",
-          }}
+          exit={{ opacity: 0, y: -30, scale: 0.95 }}
+          transition={{ type: "spring", damping: 20, stiffness: 300 }}
+          className={`notification-toast notification-toast-${type}`}
         >
-          <span style={{ fontSize: "1.25rem", flexShrink: 0 }}>
-            {icons[type] || icons.info}
-          </span>
-          <span style={{ flex: 1, lineHeight: 1.5 }}>{message}</span>
-          <button
-            onClick={() => {
-              setIsVisible(false);
-              setTimeout(() => onClose?.(), 300);
-            }}
-            style={{
-              background: "rgba(255, 255, 255, 0.2)",
-              border: "none",
-              borderRadius: "6px",
-              color: "white",
-              cursor: "pointer",
-              padding: "0.25rem 0.5rem",
-              fontSize: "1.125rem",
-              lineHeight: 1,
-              flexShrink: 0,
-              transition: "background 0.2s",
-            }}
-            onMouseEnter={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.3)")}
-            onMouseLeave={(e) => (e.target.style.background = "rgba(255, 255, 255, 0.2)")}
-            aria-label={t("closeNotification")}
-          >
-            ×
-          </button>
+          <div className="notification-toast-content">
+            <span className="notification-toast-icon">
+              {icons[type] || icons.info}
+            </span>
+            <span className="notification-toast-message">{message}</span>
+            <button
+              onClick={() => {
+                setIsVisible(false);
+                setTimeout(() => onClose?.(), 300);
+              }}
+              className="notification-toast-close"
+              aria-label={t("closeNotification")}
+            >
+              ×
+            </button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
