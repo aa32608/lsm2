@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import Filtersheet from './Filtersheet';
 import MyListingCard from './MyListingCard';
@@ -41,6 +41,32 @@ export default function MyListingsTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [expiryFilter, setExpiryFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+
+  // Restore scroll position when component mounts
+  useEffect(() => {
+    const scrollPosition = sessionStorage.getItem('previousScrollPosition');
+    if (scrollPosition) {
+      const scrollPos = parseInt(scrollPosition, 10);
+      
+      // Multiple attempts for reliability
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+      });
+      
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+      }, 100);
+      
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+      }, 300);
+      
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+        sessionStorage.removeItem('previousScrollPosition');
+      }, 600);
+    }
+  }, []);
 
   // Derived Data
   const myListings = useMemo(() => {

@@ -123,6 +123,11 @@ const MyListingCard = React.memo(({
               <button
                 className="btn btn-primary btn-sm"
                 onClick={() => {
+                  // Save current page URL and scroll position before navigating
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.setItem('previousPageUrl', window.location.pathname + window.location.search);
+                    sessionStorage.setItem('previousScrollPosition', String(window.scrollY || window.pageYOffset));
+                  }
                   router.push(`/listings/${l.id}`);
                 }}
                 aria-label={`${t("view") || "View"} listing: ${l.name}`}

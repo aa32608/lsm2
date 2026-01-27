@@ -44,13 +44,27 @@ export default function ListingsTab() {
 
   // Restore scroll position when component mounts
   useEffect(() => {
-    const scrollPosition = sessionStorage.getItem('listingsScrollPosition');
+    const scrollPosition = sessionStorage.getItem('previousScrollPosition');
     if (scrollPosition) {
-      // Wait for page to render
+      const scrollPos = parseInt(scrollPosition, 10);
+      
+      // Multiple attempts for reliability
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+      });
+      
       setTimeout(() => {
-        window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
-        sessionStorage.removeItem('listingsScrollPosition');
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
       }, 100);
+      
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+      }, 300);
+      
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPos, behavior: 'instant' });
+        sessionStorage.removeItem('previousScrollPosition');
+      }, 600);
     }
   }, []);
 

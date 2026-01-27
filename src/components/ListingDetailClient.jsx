@@ -243,25 +243,36 @@ export default function ListingDetailClient({ id, initialListing }) {
             const previousPage = sessionStorage.getItem('previousPageUrl') || '/listings';
             const scrollPosition = sessionStorage.getItem('previousScrollPosition');
             
+            // Clear storage immediately to prevent conflicts
+            sessionStorage.removeItem('previousScrollPosition');
+            sessionStorage.removeItem('previousPageUrl');
+            
             // Navigate back to previous page
             router.push(previousPage);
             
-            // Restore scroll position after navigation
+            // Restore scroll position after navigation - use multiple attempts for reliability
             if (scrollPosition) {
-              // Wait for navigation to complete
+              const scrollPos = parseInt(scrollPosition, 10);
+              
+              // Immediate attempt
+              requestAnimationFrame(() => {
+                window.scrollTo({ top: scrollPos, behavior: 'instant' });
+              });
+              
+              // After a short delay
               setTimeout(() => {
-                window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
-                // Try again after a short delay in case page is still loading
-                setTimeout(() => {
-                  window.scrollTo({ top: parseInt(scrollPosition, 10), behavior: 'instant' });
-                  sessionStorage.removeItem('previousScrollPosition');
-                  sessionStorage.removeItem('previousPageUrl');
-                }, 200);
-              }, 50);
-            } else {
-              // If no scroll position saved, just clear the storage
-              sessionStorage.removeItem('previousScrollPosition');
-              sessionStorage.removeItem('previousPageUrl');
+                window.scrollTo({ top: scrollPos, behavior: 'instant' });
+              }, 100);
+              
+              // Final attempt after page load
+              setTimeout(() => {
+                window.scrollTo({ top: scrollPos, behavior: 'instant' });
+              }, 300);
+              
+              // Last resort after longer delay
+              setTimeout(() => {
+                window.scrollTo({ top: scrollPos, behavior: 'instant' });
+              }, 600);
             }
           }}
           aria-label={t("back") || "Back"}
