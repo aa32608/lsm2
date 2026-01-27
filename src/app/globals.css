@@ -6376,9 +6376,18 @@ img {
     line-height: 1.7;
   }
 
-  /* Feedback Section Mobile */
+  /* Feedback Section Mobile - Ensure it's last */
   .detail-feedback-section {
     padding: var(--spacing-lg);
+    order: 999 !important; /* Force feedback to be last on mobile */
+  }
+
+  .detail-description-section {
+    order: 1;
+  }
+
+  .detail-ad-section {
+    order: 2;
   }
 
   .detail-feedback-form {

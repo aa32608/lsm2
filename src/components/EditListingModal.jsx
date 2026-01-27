@@ -213,7 +213,7 @@ const EditListingModal = () => {
                     <div className="slider-wrapper">
                       <DualRangeSlider
                         min={0}
-                        max={5000}
+                        max={20000}
                         value={{ min: Number(editForm.offerMin) || 0, max: Number(editForm.offerMax) || 0 }}
                         onChange={({ min, max }) => {
                           const updated = { ...editForm, offerMin: min, offerMax: max };

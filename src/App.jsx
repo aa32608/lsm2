@@ -3361,7 +3361,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           <label className="field-label">{t("priceRange") || "Price Range"}</label>
                           <DualRangeSlider
                             min={0}
-                            max={5000}
+                            max={20000}
                             value={{ min: Number(form.offerMin) || 0, max: Number(form.offerMax) || 0 }}
                             onChange={({ min, max }) => {
                               const updated = { ...form, offerMin: min, offerMax: max };

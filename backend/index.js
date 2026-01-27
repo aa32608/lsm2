@@ -19,6 +19,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Pre-initialize DodoPayments client at startup for faster payment processing
 let dodoClient = null;
+let productCache = {}; // Cache for preloaded products
+
 if (process.env.DODO_PAYMENTS_API_KEY) {
   try {
     dodoClient = new DodoPayments({
@@ -26,6 +28,57 @@ if (process.env.DODO_PAYMENTS_API_KEY) {
       environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
     });
     console.log('[DodoPayments] Client pre-initialized successfully');
+    
+    // Preload all 4 products at startup - cache product IDs and warm up HTTP connections
+    const preloadProducts = async () => {
+      const products = [
+        { id: '1', envKey: 'DODO_PRODUCT_1_MONTH' },
+        { id: '3', envKey: 'DODO_PRODUCT_3_MONTHS' },
+        { id: '6', envKey: 'DODO_PRODUCT_6_MONTHS' },
+        { id: '12', envKey: 'DODO_PRODUCT_12_MONTHS' }
+      ];
+      
+      // Cache all product IDs
+      for (const product of products) {
+        const productId = process.env[product.envKey] || process.env.DODO_PAYMENTS_PRODUCT_ID;
+        if (productId) {
+          productCache[product.id] = productId;
+          console.log(`[DodoPayments] Cached product ${product.id}: ${productId}`);
+        }
+      }
+      
+      // Pre-warm HTTP connections by making lightweight API calls
+      // This establishes TCP connections to Dodo API servers for faster subsequent requests
+      const preloadPromises = products.map(async (product) => {
+        const productId = productCache[product.id];
+        if (productId && dodoClient) {
+          try {
+            // Try to retrieve product info to warm up the connection
+            // This is a lightweight GET request that won't create any sessions
+            if (dodoClient.products && typeof dodoClient.products.retrieve === 'function') {
+              await dodoClient.products.retrieve(productId).catch(() => {
+                // Silently fail - we're just warming up connections
+              });
+            }
+            console.log(`[DodoPayments] Pre-warmed connection for product ${product.id}`);
+          } catch (err) {
+            // Silently continue - preloading is optional
+            // The connection will still be faster on first real use due to DNS/connection caching
+          }
+        }
+      });
+      
+      // Wait for all preloads to complete (or fail silently)
+      await Promise.allSettled(preloadPromises);
+      console.log('[DodoPayments] Product preloading completed - connections ready');
+    };
+    
+    // Preload products asynchronously after a short delay to not block startup
+    setTimeout(() => {
+      preloadProducts().catch(err => {
+        console.warn('[DodoPayments] Product preloading failed:', err.message);
+      });
+    }, 2000);
   } catch (err) {
     console.error('[DodoPayments] Pre-initialization failed:', err);
   }
