@@ -4,7 +4,7 @@ import React, { createContext, useContext, useCallback, useEffect, useState, use
 import { useQueryClient } from '@tanstack/react-query';
 import { usePublicListings, useUserListings } from '../hooks/useListings';
 import { auth, db, createRecaptcha } from "../firebase";
-import { ref as dbRef, update, onValue, get, query, orderByChild, equalTo, remove, set, push } from "firebase/database";
+import { ref as dbRef, update, onValue, get, query, orderByChild, equalTo, limitToLast, remove, set, push } from "firebase/database";
 import {
   signInWithEmailAndPassword,
   signInWithEmailLink,
