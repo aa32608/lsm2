@@ -11,9 +11,13 @@ const container = document.getElementById('root');
 const initialData = window.__INITIAL_DATA__ || {};
 
 // Pre-populate React Query cache with initial data for instant rendering
+// This ensures pages load instantly with cached data
+if (initialData.publicListings && initialData.publicListings.length > 0) {
+  queryClient.setQueryData(['listings', 'public'], initialData.publicListings);
+}
 if (initialData.listings && initialData.listings.length > 0) {
-  queryClient.setQueryData(['listings', 'public'], initialData.publicListings || []);
-  queryClient.setQueryData(['listings', 'all'], initialData.listings || []);
+  // Store all listings for merged view
+  queryClient.setQueryData(['listings', 'all'], initialData.listings);
 }
 
 if (container.hasChildNodes() && Object.keys(initialData).length > 0) {

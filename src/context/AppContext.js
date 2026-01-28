@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useCallback, useEffect, useState, useMemo, useDeferredValue } from "react";
+import { useQueryClient } from '@tanstack/react-query';
+import { usePublicListings, useUserListings } from '../hooks/useListings';
 import { auth, db, createRecaptcha } from "../firebase";
 import { ref as dbRef, update, onValue, get, query, orderByChild, equalTo, remove, set, push } from "firebase/database";
 import {
@@ -280,13 +282,31 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     plan: "1",
   });
 
-  // Use server-side data immediately - no waiting for Firebase
+  // React Query for listings - optimized for 20k+ listings
+  const queryClient = useQueryClient();
+  
+  // Use React Query hooks with initial data for instant loading
+  const { 
+    data: publicListings = [], 
+    isLoading: publicListingsLoading,
+    isFetching: publicListingsFetching 
+  } = usePublicListings(initialPublicListings);
+  
+  const { 
+    data: userListingsData = [], 
+    isLoading: userListingsLoading 
+  } = useUserListings(user?.uid, []);
+  
+  // Derived state from React Query
   const [listings, setListings] = useState(initialListings);
-  const [publicListings, setPublicListings] = useState(initialPublicListings);
   const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
-  // Mark as loaded immediately if we have server data
-  const [listingsLoaded, setListingsLoaded] = useState(initialListings.length > 0 || initialPublicListings.length > 0);
+  
+  // Data is loaded if we have any listings OR React Query has finished initial load
+  const listingsLoaded = useMemo(() => {
+    return publicListings.length > 0 || listings.length > 0 || (!publicListingsLoading && !userListingsLoading);
+  }, [publicListings.length, listings.length, publicListingsLoading, userListingsLoading]);
+  
   const [message, setMessage] = useState({ text: "", type: "info" });
   
   const showMessage = useCallback((text, type = "info") => {
@@ -799,195 +819,60 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Load Listings Logic (Effect) - INSTANT LOADING with localStorage cache
+  // Real-time Firebase listener for public listings - updates React Query cache
+  // React Query handles the initial fetch, this keeps data in sync
   useEffect(() => {
-    // STEP 1: Load from localStorage INSTANTLY (no waiting)
-    if (typeof window !== 'undefined') {
-      try {
-        const cachedListings = localStorage.getItem('listings_cache');
-        const cachedPublicListings = localStorage.getItem('public_listings_cache');
-        const cacheTimestamp = localStorage.getItem('listings_cache_timestamp');
-        
-        // Use cache if it's less than 10 minutes old
-        const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp, 10) : Infinity;
-        const isCacheValid = cacheAge < 10 * 60 * 1000; // 10 minutes
-        
-        if (isCacheValid && cachedListings) {
-          try {
-            const parsed = JSON.parse(cachedListings);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setListings(parsed);
-              setListingsLoaded(true);
-            }
-          } catch (e) {
-            console.warn('Failed to parse cached listings:', e);
-          }
-        }
-        
-        if (isCacheValid && cachedPublicListings) {
-          try {
-            const parsed = JSON.parse(cachedPublicListings);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setPublicListings(parsed);
-              setListingsLoaded(true);
-            }
-          } catch (e) {
-            console.warn('Failed to parse cached public listings:', e);
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load listings from cache:', e);
-      }
-    }
+    if (!db || !firebaseReady) return;
 
-    // STEP 2: Use server data if available and no cache
-    if ((initialListings.length > 0 || initialPublicListings.length > 0) && !listingsLoaded) {
-      if (initialListings.length > 0) setListings(initialListings);
-      if (initialPublicListings.length > 0) setPublicListings(initialPublicListings);
-      setListingsLoaded(true);
-    }
+    const verifiedQuery = query(
+      dbRef(db, "listings"),
+      orderByChild("status"),
+      equalTo("verified"),
+      limitToLast(1000)
+    );
 
-    if (!db) return;
-
-    // STEP 3: Fetch fresh data from Firebase in background (update cache)
-    const listingsRef = dbRef(db, "listings");
-    
-    get(listingsRef).then((snapshot) => {
+    // Real-time listener updates React Query cache silently
+    const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
-        // Sort by date desc
-        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const val = snapshot.val() || {};
+        const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
         
-        setListings(arr);
-        
-        // Public listings (verified and not expired)
+        // Filter expired listings
         const now = Date.now();
-        const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
-        setPublicListings(pub);
-        setListingsLoaded(true);
+        const filtered = arr.filter(l => !l.expiresAt || l.expiresAt > now);
         
-        // Save to localStorage for next load
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('listings_cache', JSON.stringify(arr));
-            localStorage.setItem('public_listings_cache', JSON.stringify(pub));
-            localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-          } catch (e) {
-            console.warn('Failed to save listings to cache:', e);
-          }
-        }
-      }
-    }).catch((error) => {
-      console.error("Listings fetch error:", error);
-      // Keep cached data if fetch fails
-      if (initialListings.length > 0 || initialPublicListings.length > 0) {
-        setListingsLoaded(true);
-      }
-    });
-
-    // OPTIMIZATION: Use onValue only for incremental updates (not full re-fetch)
-    // This reduces bandwidth - Firebase only sends changes, not full dataset
-    const unsub = onValue(listingsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
-        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        // Sort by creation date (newest first)
+        filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         
-        // OPTIMIZATION: Only update if arrays have different lengths or different IDs
-        // This avoids expensive JSON.stringify on large datasets
-        setListings(prev => {
-          if (prev.length !== arr.length) {
-            // Update cache when data changes
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('listings_cache', JSON.stringify(arr));
-                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-              } catch (e) {}
-            }
-            return arr;
-          }
-          const prevIds = new Set(prev.map(p => p.id));
-          const newIds = new Set(arr.map(a => a.id));
-          if (prevIds.size !== newIds.size) {
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('listings_cache', JSON.stringify(arr));
-                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-              } catch (e) {}
-            }
-            return arr;
-          }
-          for (const id of prevIds) {
-            if (!newIds.has(id)) {
-              if (typeof window !== 'undefined') {
-                try {
-                  localStorage.setItem('listings_cache', JSON.stringify(arr));
-                  localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-                } catch (e) {}
-              }
-              return arr;
-            }
-          }
-          // If same IDs, check if any data changed (lightweight check)
-          const changed = prev.some((p, i) => {
-            const a = arr[i];
-            return !a || p.id !== a.id || p.status !== a.status || p.expiresAt !== a.expiresAt;
-          });
-          if (changed && typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('listings_cache', JSON.stringify(arr));
-              localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-            } catch (e) {}
-          }
-          return changed ? arr : prev;
-        });
-        
-        const now = Date.now();
-        const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
-        setPublicListings(prev => {
-          if (prev.length !== pub.length) {
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('public_listings_cache', JSON.stringify(pub));
-                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-              } catch (e) {}
-            }
-            return pub;
-          }
-          const prevIds = new Set(prev.map(p => p.id));
-          const newIds = new Set(pub.map(p => p.id));
-          if (prevIds.size !== newIds.size) {
-            if (typeof window !== 'undefined') {
-              try {
-                localStorage.setItem('public_listings_cache', JSON.stringify(pub));
-                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-              } catch (e) {}
-            }
-            return pub;
-          }
-          for (const id of prevIds) {
-            if (!newIds.has(id)) {
-              if (typeof window !== 'undefined') {
-                try {
-                  localStorage.setItem('public_listings_cache', JSON.stringify(pub));
-                  localStorage.setItem('listings_cache_timestamp', Date.now().toString());
-                } catch (e) {}
-              }
-              return pub;
-            }
-          }
-          return prev;
-        });
-        setListingsLoaded(true);
+        // Update React Query cache silently (no refetch trigger)
+        queryClient.setQueryData(['listings', 'public'], filtered);
       }
     }, (error) => {
-      console.error("Listings listener error:", error);
-      // Don't clear loaded state on error - keep showing cached data
+      console.error("Public listings listener error:", error);
     });
     
-    return () => unsub();
-  }, [initialListings.length, initialPublicListings.length, listingsLoaded, db]);
+    return () => unsubscribe();
+  }, [db, firebaseReady, queryClient]);
+
+  // Real-time Firebase listener for all listings (for merged view)
+  useEffect(() => {
+    if (!db || !firebaseReady) return;
+
+    const listingsRef = dbRef(db, "listings");
+    
+    const unsubscribe = onValue(listingsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
+        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setListings(arr);
+      }
+    }, (error) => {
+      console.error("All listings listener error:", error);
+    });
+    
+    return () => unsubscribe();
+  }, [db, firebaseReady]);
 
   // Load Feedback Averages (Effect) - OPTIMIZED: Lazy load only when needed
   useEffect(() => {
@@ -1099,50 +984,42 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   }, []); // Run once on mount
 
   // Filter user listings
-  // Filter user listings - WITH INSTANT CACHE LOADING
+  // Update user listings from React Query data
   useEffect(() => {
-    // Load from cache instantly if available
-    if (user && typeof window !== 'undefined') {
-      try {
-        const cachedUserListings = localStorage.getItem(`user_listings_cache_${user.uid}`);
-        const cacheTimestamp = localStorage.getItem(`user_listings_cache_timestamp_${user.uid}`);
-        
-        if (cachedUserListings && cacheTimestamp) {
-          const cacheAge = Date.now() - parseInt(cacheTimestamp, 10);
-          if (cacheAge < 10 * 60 * 1000) { // 10 minutes
-            try {
-              const parsed = JSON.parse(cachedUserListings);
-              if (Array.isArray(parsed)) {
-                setUserListings(parsed);
-              }
-            } catch (e) {
-              console.warn('Failed to parse cached user listings:', e);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to load user listings from cache:', e);
-      }
-    }
-    
-    // Then update from current listings
-    if (user && listings.length > 0) {
-      const filtered = listings.filter(l => l.userId === user.uid);
-      setUserListings(filtered);
-      
-      // Save to cache
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(`user_listings_cache_${user.uid}`, JSON.stringify(filtered));
-          localStorage.setItem(`user_listings_cache_timestamp_${user.uid}`, Date.now().toString());
-        } catch (e) {
-          console.warn('Failed to save user listings to cache:', e);
-        }
-      }
+    if (user && userListingsData.length > 0) {
+      setUserListings(userListingsData);
     } else {
       setUserListings([]);
     }
-  }, [user, listings]);
+  }, [user, userListingsData]);
+
+  // Real-time Firebase listener for user listings - updates React Query cache
+  useEffect(() => {
+    if (!db || !firebaseReady || !user) return;
+
+    const userQuery = query(
+      dbRef(db, "listings"),
+      orderByChild("userId"),
+      equalTo(user.uid)
+    );
+
+    const unsubscribe = onValue(userQuery, (snapshot) => {
+      if (snapshot.exists()) {
+        const val = snapshot.val() || {};
+        const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
+        
+        // Sort by creation date (newest first)
+        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        
+        // Update React Query cache silently
+        queryClient.setQueryData(['listings', 'user', user.uid], arr);
+      }
+    }, (error) => {
+      console.error("User listings listener error:", error);
+    });
+    
+    return () => unsubscribe();
+  }, [db, firebaseReady, user, queryClient]);
 
   const getDaysUntilExpiry = (expiresAt) => {
     if (!expiresAt) return 0;
@@ -1382,6 +1259,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     saveEdit,
     myListingsRaw,
     verifiedListings,
+    publicListings, // From React Query
     allLocations,
     extendModalOpen, setExtendModalOpen,
     extendTarget, setExtendTarget,

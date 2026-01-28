@@ -1,10 +1,11 @@
-// React Query hooks for Firebase listings with smart caching
+// React Query hooks for Firebase listings - optimized for 20k+ listings
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ref as dbRef, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
 import { db } from '../firebase';
 
 // Fetch verified listings with React Query caching
-export function usePublicListings() {
+// Optimized for large datasets (20k+ listings)
+export function usePublicListings(initialData = []) {
   return useQuery({
     queryKey: ['listings', 'public'],
     queryFn: async () => {
@@ -12,7 +13,7 @@ export function usePublicListings() {
         dbRef(db, 'listings'),
         orderByChild('status'),
         equalTo('verified'),
-        limitToLast(500)
+        limitToLast(1000) // Increased limit for 20k listings
       );
       
       const snapshot = await get(verifiedQuery);
@@ -21,17 +22,29 @@ export function usePublicListings() {
       
       // Filter expired listings
       const now = Date.now();
-      return arr.filter(l => !l.expiresAt || l.expiresAt > now);
+      const filtered = arr.filter(l => !l.expiresAt || l.expiresAt > now);
+      
+      // Sort by creation date (newest first)
+      filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      
+      return filtered;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes - listings update frequently
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchOnWindowFocus: true, // Refresh when user returns to tab
-    refetchOnReconnect: true, // Refresh when connection restored
+    // Use initial data for instant loading (from SSR or previous cache)
+    initialData: initialData.length > 0 ? initialData : undefined,
+    // Use cached data immediately while fetching
+    placeholderData: (previousData) => previousData || initialData,
+    // Cache settings optimized for large datasets
+    staleTime: 5 * 60 * 1000, // 5 minutes - listings don't change that often
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
+    // Don't refetch unnecessarily
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
 // Fetch user's listings
-export function useUserListings(userId) {
+export function useUserListings(userId, initialData = []) {
   return useQuery({
     queryKey: ['listings', 'user', userId],
     queryFn: async () => {
@@ -45,11 +58,23 @@ export function useUserListings(userId) {
       
       const snapshot = await get(userQuery);
       const val = snapshot.val() || {};
-      return Object.entries(val).map(([id, data]) => ({ id, ...data }));
+      const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
+      
+      // Sort by creation date (newest first)
+      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      
+      return arr;
     },
     enabled: !!userId, // Only run if userId exists
-    staleTime: 1 * 60 * 1000, // 1 minute - user listings change less frequently
-    gcTime: 5 * 60 * 1000,
+    // Use initial data for instant loading
+    initialData: initialData.length > 0 ? initialData : undefined,
+    placeholderData: (previousData) => previousData || initialData,
+    // Cache settings
+    staleTime: 3 * 60 * 1000, // 3 minutes - user listings change less frequently
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
