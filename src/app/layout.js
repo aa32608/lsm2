@@ -1,9 +1,5 @@
-'use client';
-
 import React from 'react';
-import { QueryClientProvider } from '@tanstack/react-query';
-import { queryClient } from '../lib/queryClient';
-import LayoutWrapper from '../components/LayoutWrapper';
+import ClientLayout from './ClientLayout';
 import '../App.css';
 import './globals.css';
 
@@ -55,11 +51,9 @@ export default function RootLayout({ children }) {
         <meta httpEquiv="Cache-Control" content="public, max-age=300" />
       </head>
       <body>
-        <QueryClientProvider client={queryClient}>
-          <LayoutWrapper initialListings={allListings} initialPublicListings={publicListings}>
-            {children}
-          </LayoutWrapper>
-        </QueryClientProvider>
+        <ClientLayout initialListings={allListings} initialPublicListings={publicListings}>
+          {children}
+        </ClientLayout>
       </body>
     </html>
   );
