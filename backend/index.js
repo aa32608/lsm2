@@ -297,7 +297,7 @@ async function waitForEmailRateLimit() {
   lastEmailSentTime = Date.now();
 }
 
-async function sendEmail(to, subject, text, isMarketingEmail = false) {
+async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = null) {
   if (!to || !subject || !text) {
     console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
     return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
@@ -340,12 +340,20 @@ async function sendEmail(to, subject, text, isMarketingEmail = false) {
     
     let data, error;
     try {
-      const response = await resend.emails.send({
+      const emailOptions = {
         from: finalFrom, 
         to: [finalTo],
         subject: subject,
         text: text,
-      });
+      };
+      
+      // Add reply-to if provided (useful for contact forms)
+      if (replyTo) {
+        emailOptions.replyTo = replyTo;
+        console.log(`[Email] Reply-To: ${replyTo}`);
+      }
+      
+      const response = await resend.emails.send(emailOptions);
       data = response.data;
       error = response.error;
     } catch (sendErr) {
@@ -458,9 +466,9 @@ app.post("/api/send-feedback-notification", async (req, res) => {
 });
 
 app.post("/api/send-email", async (req, res) => {
-  const { to, subject, text } = req.body;
+  const { to, subject, text, replyTo } = req.body;
   console.log(`[API] /api/send-email called for ${to}`);
-  const result = await sendEmail(to, subject, text, false);
+  const result = await sendEmail(to, subject, text, false, replyTo);
   if (result.error && !result.skipped) {
     console.error(`[API] Email send failed:`, result.error);
     return res.status(500).json({ error: result.error });
