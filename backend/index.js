@@ -36,6 +36,47 @@ dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/* ----------------------- SITE URL HELPERS ----------------------- */
+// Centralize all URLs used in emails/payments so they are always valid.
+// Configure in production with SITE_URL="https://www.bizcall.mk"
+const DEFAULT_SITE_URL = "https://www.bizcall.mk";
+const SITE_URL = (() => {
+  const raw =
+    process.env.SITE_URL ||
+    process.env.PUBLIC_SITE_URL ||
+    process.env.FRONTEND_URL ||
+    DEFAULT_SITE_URL;
+
+  try {
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const u = new URL(withProto);
+    u.pathname = "/";
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return DEFAULT_SITE_URL;
+  }
+})();
+
+function buildSiteUrl(pathname = "/", queryParams = null) {
+  const u = new URL(SITE_URL);
+  u.pathname = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (queryParams && typeof queryParams === "object") {
+    for (const [k, v] of Object.entries(queryParams)) {
+      if (v === undefined || v === null || v === "") continue;
+      u.searchParams.set(k, String(v));
+    }
+  }
+  return u.toString();
+}
+
+function listingPublicUrl(listingId) {
+  return buildSiteUrl(`/listings/${encodeURIComponent(String(listingId || ""))}`);
+}
+
+function myListingsUrl() {
+  return buildSiteUrl("/mylistings");
+}
+
 // Pre-initialize DodoPayments client at startup for faster payment processing
 let dodoClient = null;
 let productCache = {}; // Cache for preloaded products
@@ -360,7 +401,7 @@ app.post("/api/send-feedback-notification", async (req, res) => {
   try {
     const userId = req.body.ownerUserId || null;
     const userLang = userId ? await getUserLanguage(userId) : 'sq';
-    const link = `https://bizcall.mk/?listing=${listingId}`;
+    const link = listingPublicUrl(listingId);
     
     console.log(`[API] User language: ${userLang}, Listing: ${listingName}, Owner: ${ownerEmail}`);
     
@@ -598,7 +639,8 @@ app.post("/api/create-payment", async (req, res) => {
         name: customerName || EMAIL_TRANSLATIONS.errors.guest_user.en
       },
       metadata: { listingId, type, plan },
-      return_url: `${req.headers.origin || 'https://bizcall.mk'}/?payment=success&listingId=${listingId}&type=${type}&plan=${plan}`,
+      // Always return to the real site (never the backend origin)
+      return_url: buildSiteUrl("/", { payment: "success", listingId, type, plan }),
     });
 
     res.json({ checkoutUrl: session.checkout_url });
@@ -671,7 +713,7 @@ app.post("/api/webhook", async (req, res) => {
         // Send Notification Email
         const userEmail = listing.userEmail || listing.email; 
         if (userEmail) {
-            const link = `https://bizcall.mk/?listing=${listingId}`;
+            const link = listingPublicUrl(listingId);
             const expiryDate = new Date(type === 'create' ? (now + durationMs) : (updates[`listings/${listingId}/expiresAt`])).toLocaleDateString();
             
             // Get user language preference
@@ -747,7 +789,7 @@ cron.schedule("0 0 * * *", async () => {
                             const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
                             const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
                             const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
-                            const link = "https://bizcall.mk/my-listings";
+                            const link = myListingsUrl();
                             
                             const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject[userLang] || 
                                           EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en;
@@ -772,7 +814,7 @@ cron.schedule("0 0 * * *", async () => {
                         if (email) {
                              const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
                              const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
-                             const link = `https://bizcall.mk/?listing=${id}`; // Or renewal link
+                             const link = myListingsUrl(); // renew/manage listing
                              
                              const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject[userLang] || 
                                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en;
@@ -819,7 +861,7 @@ cron.schedule("0 0 * * *", async () => {
                 if (item.reason === "expired" && item.email && item.userId) {
                     const userLang = await getUserLanguage(item.userId);
                     const listingName = item.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
-                    const link = "https://bizcall.mk/add-listing";
+                    const link = buildSiteUrl("/"); // valid entry point (create listing UI is on home)
                     
                     const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject[userLang] || 
                                    EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en;
@@ -909,7 +951,7 @@ async function sendMarketingEmails() {
 
     const verifiedDomain = process.env.RESEND_DOMAIN;
 
-    const websiteUrl = "https://bizcall.mk";
+    const websiteUrl = buildSiteUrl("/");
 
     const templates = [
       {
@@ -1142,7 +1184,7 @@ cron.schedule("0 9 * * *", async () => {
     for (const [id, listing] of Object.entries(listings)) {
       if (listing.status === "verified" && (listing.userEmail || listing.email)) {
         const userEmail = listing.userEmail || listing.email;
-        const link = `https://bizcall.mk/?listing=${id}`;
+        const link = myListingsUrl(); // renew/manage listing
         const expiryDate = new Date(listing.expiresAt).toLocaleDateString();
         
         // Get user language preference
@@ -1209,7 +1251,7 @@ cron.schedule("0 0 * * *", async () => {
              if (userEmail) {
                 const userLang = listing.userId ? await getUserLanguage(listing.userId) : 'sq';
                 const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
-                const link = `https://bizcall.mk/?listing=${id}`;
+                const link = myListingsUrl(); // renew/manage listing
                 
                 const subject = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject[userLang] || 
                                EMAIL_TRANSLATIONS.listing.pre_deletion_warning.subject.en;
@@ -1234,7 +1276,7 @@ cron.schedule("0 0 * * *", async () => {
              if (userEmail && listing.userId) {
                  const userLang = await getUserLanguage(listing.userId);
                  const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
-                 const link = `https://bizcall.mk/create`;
+                 const link = buildSiteUrl("/"); // valid entry point to create a new listing
                  
                  const subject = EMAIL_TRANSLATIONS.listing.expired_deleted.subject[userLang] || 
                                 EMAIL_TRANSLATIONS.listing.expired_deleted.subject.en;
