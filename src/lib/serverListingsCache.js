@@ -1,7 +1,17 @@
 // Server-side listings cache with real-time Firebase sync
 // Fetches once, caches in memory, syncs updates immediately when Firebase changes
 
+import { db as adminDb } from './firebaseAdmin';
+
 const FIREBASE_DB_URL = 'https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app';
+
+// Check if Firebase Admin SDK is properly initialized (not mock)
+function isAdminSDKAvailable() {
+  return adminDb && 
+         adminDb.ref && 
+         typeof adminDb.ref === 'function' &&
+         adminDb.ref('test').orderByChild !== undefined; // Check if real SDK methods exist
+}
 
 // In-memory cache (shared across all server requests)
 let listingsCache = {
@@ -10,10 +20,8 @@ let listingsCache = {
   lastFetch: 0,
   isInitialized: false,
   isSyncing: false,
+  listener: null, // Firebase Admin listener
 };
-
-// Cache TTL: 10 minutes (fallback if sync fails)
-const CACHE_TTL = 10 * 60 * 1000;
 
 // Initialize cache and set up real-time sync
 async function initializeCache() {
@@ -26,10 +34,8 @@ async function initializeCache() {
   // Initial fetch
   await fetchAndUpdateCache();
   
-  // Set up real-time sync using Firebase REST API with polling
-  // Since we can't use Firebase Admin SDK listeners in Next.js easily,
-  // we'll poll for changes every 5 seconds
-  startSyncInterval();
+  // Set up real-time sync
+  startRealtimeSync();
 }
 
 // Fetch listings from Firebase and update cache
@@ -41,7 +47,35 @@ async function fetchAndUpdateCache() {
   try {
     listingsCache.isSyncing = true;
 
-    // Fetch verified listings
+    // Try Firebase Admin SDK first (faster, real-time)
+    if (isAdminSDKAvailable()) {
+      try {
+        const verifiedRef = adminDb.ref('listings')
+          .orderByChild('status')
+          .equalTo('verified')
+          .limitToLast(1000);
+        
+        const snapshot = await verifiedRef.once('value');
+        const verifiedData = snapshot.val() || {};
+        
+        // Convert to array and filter expired
+        const now = Date.now();
+        const publicListings = Object.entries(verifiedData)
+          .map(([id, data]) => ({ id, ...data }))
+          .filter(l => !l.expiresAt || l.expiresAt > now)
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        listingsCache.publicListings = publicListings;
+        listingsCache.lastFetch = Date.now();
+        
+        console.log(`[Server Cache] Updated ${publicListings.length} verified listings (Admin SDK)`);
+        return;
+      } catch (adminError) {
+        console.warn('[Server Cache] Admin SDK failed, falling back to REST API:', adminError.message);
+      }
+    }
+
+    // Fallback: Use REST API
     const verifiedUrl = `${FIREBASE_DB_URL}/listings.json?orderBy="status"&equalTo="verified"&limitToLast=1000`;
     const verifiedResponse = await fetch(verifiedUrl, {
       headers: { 'Accept': 'application/json' },
@@ -64,7 +98,7 @@ async function fetchAndUpdateCache() {
     listingsCache.publicListings = publicListings;
     listingsCache.lastFetch = Date.now();
     
-    console.log(`[Server Cache] Updated ${publicListings.length} verified listings`);
+    console.log(`[Server Cache] Updated ${publicListings.length} verified listings (REST API)`);
   } catch (error) {
     console.error('[Server Cache] Error fetching listings:', error);
     // Keep existing cache on error
@@ -73,20 +107,62 @@ async function fetchAndUpdateCache() {
   }
 }
 
-// Start sync interval - checks for changes every 5 seconds
+// Set up real-time Firebase listener for immediate updates
+function startRealtimeSync() {
+  // Try Firebase Admin SDK listener first (real-time, immediate updates)
+  if (isAdminSDKAvailable()) {
+    try {
+      const verifiedRef = adminDb.ref('listings')
+        .orderByChild('status')
+        .equalTo('verified')
+        .limitToLast(1000);
+      
+      // Real-time listener - updates cache immediately when Firebase changes
+      listingsCache.listener = verifiedRef.on('value', (snapshot) => {
+        if (snapshot.exists()) {
+          const verifiedData = snapshot.val() || {};
+          
+          // Convert to array and filter expired
+          const now = Date.now();
+          const publicListings = Object.entries(verifiedData)
+            .map(([id, data]) => ({ id, ...data }))
+            .filter(l => !l.expiresAt || l.expiresAt > now)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+          // Update cache immediately
+          listingsCache.publicListings = publicListings;
+          listingsCache.lastFetch = Date.now();
+          
+          console.log(`[Server Cache] Real-time sync: Updated ${publicListings.length} listings`);
+        }
+      }, (error) => {
+        console.error('[Server Cache] Real-time listener error:', error);
+        // Fallback to polling if listener fails
+        startPollingSync();
+      });
+      
+      console.log('[Server Cache] Real-time Firebase listener started (immediate updates)');
+      return;
+    } catch (error) {
+      console.warn('[Server Cache] Failed to start Admin SDK listener, using polling:', error.message);
+    }
+  }
+  
+  // Fallback: Use polling if Admin SDK not available
+  startPollingSync();
+}
+
+// Fallback: Efficient polling sync (checks every 2 seconds for changes)
 let syncInterval = null;
-function startSyncInterval() {
+function startPollingSync() {
   if (syncInterval) return; // Already started
 
   syncInterval = setInterval(async () => {
-    // Only sync if cache is older than 30 seconds (avoid too frequent checks)
-    const cacheAge = Date.now() - listingsCache.lastFetch;
-    if (cacheAge > 30000) {
-      await fetchAndUpdateCache();
-    }
-  }, 5000); // Check every 5 seconds
+    // Sync updates every 2 seconds - catches changes ASAP
+    await fetchAndUpdateCache();
+  }, 2000); // Check every 2 seconds
 
-  console.log('[Server Cache] Real-time sync started (5s interval)');
+  console.log('[Server Cache] Polling sync started (2s interval - updates sync ASAP)');
 }
 
 // Get cached listings (instant, no fetch)
