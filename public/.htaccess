@@ -1,0 +1,22 @@
+# HTTP Caching Headers for optimal performance
+# This file is used by Apache servers
+
+<IfModule mod_headers.c>
+  # Cache static assets for 1 year (immutable)
+  <FilesMatch "\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  
+  # Cache HTML for 5 minutes with stale-while-revalidate
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "public, max-age=300, s-maxage=300, stale-while-revalidate=60"
+  </FilesMatch>
+  
+  # Preconnect to Firebase
+  Header set Link "<https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app>; rel=preconnect, <https://firebasestorage.googleapis.com>; rel=preconnect"
+</IfModule>
+
+# Enable compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>

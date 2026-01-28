@@ -10,6 +10,41 @@ const nextConfig = {
       },
     ],
   },
+  // HTTP Caching Headers for optimal performance
+  async headers() {
+    return [
+      {
+        // Cache static assets aggressively
+        source: '/:path*(.js|.css|.png|.jpg|.jpeg|.gif|.svg|.ico|.woff|.woff2|.ttf|.eot)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Cache HTML with shorter duration (5 minutes)
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=300, s-maxage=300, stale-while-revalidate=60',
+          },
+        ],
+      },
+      {
+        // Preconnect to Firebase for faster connections
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Link',
+            value: '<https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app>; rel=preconnect, <https://firebasestorage.googleapis.com>; rel=preconnect',
+          },
+        ],
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.VITE_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.VITE_FIREBASE_AUTH_DOMAIN,

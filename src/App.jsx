@@ -3,6 +3,7 @@
 import { Helmet } from "react-helmet-async";
 import logo from "./assets/logo.png";
 import React, { useCallback, useEffect, useMemo, useState, useDeferredValue, useRef, lazy, Suspense } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { auth, db, createRecaptcha } from "./firebase";
 import { ref as dbRef, set, update, onValue, remove, push, get, query, orderByChild, equalTo, limitToLast } from "firebase/database";
 import {
@@ -297,6 +298,18 @@ const Header = React.memo(({
 ));
 
 export default function App({ initialListings = [], initialPublicListings = [] }) {
+  // React Query client for smart caching
+  const queryClient = useQueryClient();
+  
+  // Pre-populate React Query cache with initial data for instant rendering
+  useEffect(() => {
+    if (initialPublicListings && initialPublicListings.length > 0) {
+      queryClient.setQueryData(['listings', 'public'], initialPublicListings);
+    }
+    if (initialListings && initialListings.length > 0) {
+      queryClient.setQueryData(['listings', 'all'], initialListings);
+    }
+  }, [initialListings, initialPublicListings, queryClient]);
   /* i18n */
   const [lang, setLang] = useState("sq"); // Consistent default for SSR/hydration
   const [user, setUser] = useState(null);
@@ -1056,6 +1069,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       
       // Always update data (this is the source of truth)
       setPublicListings(activeArr);
+      // Also update React Query cache for cross-component sharing
+      queryClient.setQueryData(['listings', 'public'], activeArr);
       setListingsLoading(false);
       setIsRefreshing(false);
     }).catch(err => {
@@ -1079,6 +1094,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const activeArr = arr.filter(l => !l.expiresAt || l.expiresAt > now);
       
       setPublicListings(activeArr);
+      // Also update React Query cache silently
+      queryClient.setQueryData(['listings', 'public'], activeArr);
       setIsRefreshing(false);
     }, (err) => {
       console.error("Public listener error:", err);
@@ -1086,7 +1103,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     });
 
     return () => unsubscribe();
-  }, []); // Empty deps - only run once on mount, data persists in React state
+  }, [queryClient]); // Include queryClient for React Query cache updates
 
   // 2. User listings - Run when user changes
   useEffect(() => {
@@ -1105,10 +1122,12 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const val = snapshot.val() || {};
       const arr = Object.keys(val).map((k) => ({ id: k, ...val[k] }));
       setUserListings(arr);
+      // Also update React Query cache
+      queryClient.setQueryData(['listings', 'user', user.uid], arr);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, queryClient]);
 
   useEffect(() => {
     if (!selectedListing) {

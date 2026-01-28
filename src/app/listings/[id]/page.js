@@ -2,6 +2,10 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import ListingDetailClient from '../../../components/ListingDetailClient';
 
+// Disable static generation for this route to prevent build issues
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // Helper to fetch listing data for metadata
 async function getListing(id) {
   try {
@@ -12,7 +16,8 @@ async function getListing(id) {
     }
 
     const res = await fetch(`https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings/${cleanId}.json`, {
-      next: { revalidate: 60 }, // Revalidate every 60 seconds
+      // No caching - force fresh fetch to avoid stale data
+      cache: 'no-store',
       headers: {
         'Accept': 'application/json',
       }

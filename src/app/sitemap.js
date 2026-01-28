@@ -1,5 +1,7 @@
 export default async function sitemap() {
-  // Base routes
+  // Base routes only - dynamic listings are too large for build-time fetching
+  // Individual listing pages are still accessible via direct URLs
+  // For better SEO, consider generating sitemap dynamically via API route
   const routes = [
     {
       url: 'https://bizcall.mk',
@@ -15,31 +17,12 @@ export default async function sitemap() {
     },
   ];
 
-  // Fetch dynamic listing routes
-  // Note: For build time, this fetches from the live DB. 
-  // Ensure the fetch URL is correct or use an environment variable.
-  try {
-    const res = await fetch('https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app/listings.json');
-    const data = await res.json();
-    
-    if (data) {
-      const listingUrls = Object.keys(data)
-        .filter(id => {
-          const l = data[id];
-          // Only index verified and non-expired listings
-          return l.status === 'verified' && (!l.expiresAt || l.expiresAt > Date.now());
-        })
-        .map((id) => ({
-          url: `https://bizcall.mk/listings/${id}`,
-          lastModified: new Date(data[id].updatedAt || data[id].createdAt || Date.now()),
-          changeFrequency: 'weekly',
-          priority: 0.7,
-        }));
-      return [...routes, ...listingUrls];
-    }
-  } catch (e) {
-    console.error('Sitemap generation error:', e);
-  }
+  // Removed listings fetch - dataset too large (17MB) causes build failures
+  // Listings are discoverable via the /listings page and search functionality
+  // For full sitemap with all listings, consider:
+  // 1. API route that generates sitemap on-demand
+  // 2. Static generation with pagination
+  // 3. Incremental static regeneration
 
   return routes;
 }
