@@ -289,7 +289,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const { 
     data: publicListings = [], 
     isLoading: publicListingsLoading,
-    isFetching: publicListingsFetching 
+    isFetching: publicListingsFetching,
+    isSuccess: publicListingsSuccess
   } = usePublicListings(initialPublicListings);
   
   const { 
@@ -302,10 +303,24 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
   
-  // Data is loaded if we have any listings OR React Query has finished initial load
+  // Data is loaded only when React Query has finished loading
+  // This ensures skeleton shows until we know for sure data is loaded
   const listingsLoaded = useMemo(() => {
-    return publicListings.length > 0 || listings.length > 0 || (!publicListingsLoading && !userListingsLoading);
-  }, [publicListings.length, listings.length, publicListingsLoading, userListingsLoading]);
+    // Check if we have initial data from server (instant load)
+    const hasInitialData = initialPublicListings.length > 0 || initialListings.length > 0;
+    
+    // If we have initial data, mark as loaded immediately
+    if (hasInitialData) {
+      return true;
+    }
+    
+    // Otherwise, wait for React Query to finish loading
+    // Mark as loaded only when React Query has finished (not loading anymore)
+    // This ensures skeleton shows until data is confirmed loaded
+    const hasFinishedLoading = !publicListingsLoading && !userListingsLoading;
+    
+    return hasFinishedLoading;
+  }, [publicListings.length, listings.length, publicListingsLoading, userListingsLoading, initialPublicListings.length, initialListings.length]);
   
   const [message, setMessage] = useState({ text: "", type: "info" });
   

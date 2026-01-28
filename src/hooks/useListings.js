@@ -32,17 +32,20 @@ export function usePublicListings(initialData = []) {
       return filtered;
     },
     // Use initial data for instant loading (from server fetch)
-    // This makes React Query use server data immediately, no client fetch needed
+    // Only use initialData if it has items, otherwise let React Query fetch
     initialData: initialData.length > 0 ? initialData : undefined,
     // Use cached data immediately while fetching (fallback)
-    placeholderData: (previousData) => previousData || initialData,
+    placeholderData: (previousData) => previousData || (initialData.length > 0 ? initialData : undefined),
+    // If no initial data, ensure React Query fetches
+    enabled: true, // Always enabled - will use initialData if provided, otherwise fetch
     // Cache settings optimized for large datasets
     staleTime: 5 * 60 * 1000, // 5 minutes - listings don't change that often
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
     // Don't refetch unnecessarily - server already provided data, real-time listener syncs updates
+    // But if no initial data, we need to fetch on mount
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    refetchOnMount: false,
+    refetchOnMount: initialData.length === 0, // Only refetch on mount if no initial data
   });
 }
 
