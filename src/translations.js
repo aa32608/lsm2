@@ -1126,6 +1126,7 @@ export const TRANSLATIONS = {
     bizCall: "BizCall",
     browseListingsHint: "Shfletoni të gjitha listimet",
     browseMarketplace: "Shfletoni tregun",
+    extend: "Zgjat",
     call: "Telefono",
     categorySpotlight: "Kategoritë e njohura",
     changeEmail: "Ndrysho email-in",
