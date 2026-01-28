@@ -1,12 +1,13 @@
 import React from 'react';
 import ClientLayout from './ClientLayout';
+import { getServerListings } from '../lib/serverListings';
 import '../App.css';
 import './globals.css';
 
-// Force dynamic to prevent caching large datasets
-// Client-side fetching is more efficient for 20k+ listings
+// Force dynamic to prevent caching large datasets in Next.js
+// We fetch on each request but don't cache in Next.js - React Query handles caching
 export const dynamic = 'force-dynamic';
-export const revalidate = 0; // No caching - client handles it
+export const revalidate = 0; // No Next.js caching - React Query handles it
 
 export const metadata = {
   title: 'BizCall MK',
@@ -19,17 +20,16 @@ export const viewport = {
   maximumScale: 1,
 };
 
-// Removed SSR listings fetch - data is too large (17MB) for Next.js cache
-// Client-side fetching with React Query is faster and more efficient
-// This prevents:
-// - Next.js cache errors (2MB limit exceeded)
-// - Build timeouts
-// - SSR rendering errors
-export default function RootLayout({ children }) {
-  // Always use empty arrays - client will fetch with React Query
-  // This ensures instant page loads and proper client-side caching
-  const allListings = [];
-  const publicListings = [];
+// Server-side fetch: Get listings on server, pass to client as initial data
+// Benefits:
+// - Reduces client-side Firebase downloads
+// - Instant loading with React Query cache
+// - Only updates sync after initial fetch
+// - No Next.js cache (avoids 2MB limit)
+export default async function RootLayout({ children }) {
+  // Fetch listings on server - this happens on each request (not cached by Next.js)
+  // React Query will cache it client-side for instant subsequent loads
+  const { publicListings, allListings } = await getServerListings();
 
   return (
     <html lang="sq">

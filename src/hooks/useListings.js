@@ -5,10 +5,12 @@ import { db } from '../firebase';
 
 // Fetch verified listings with React Query caching
 // Optimized for large datasets (20k+ listings)
+// If initialData is provided (from server), uses it instantly - real-time listener syncs updates
 export function usePublicListings(initialData = []) {
   return useQuery({
     queryKey: ['listings', 'public'],
     queryFn: async () => {
+      // Fallback fetch if no initial data (shouldn't happen with server fetch)
       const verifiedQuery = query(
         dbRef(db, 'listings'),
         orderByChild('status'),
@@ -29,14 +31,15 @@ export function usePublicListings(initialData = []) {
       
       return filtered;
     },
-    // Use initial data for instant loading (from SSR or previous cache)
+    // Use initial data for instant loading (from server fetch)
+    // This makes React Query use server data immediately, no client fetch needed
     initialData: initialData.length > 0 ? initialData : undefined,
-    // Use cached data immediately while fetching
+    // Use cached data immediately while fetching (fallback)
     placeholderData: (previousData) => previousData || initialData,
     // Cache settings optimized for large datasets
     staleTime: 5 * 60 * 1000, // 5 minutes - listings don't change that often
     gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
-    // Don't refetch unnecessarily
+    // Don't refetch unnecessarily - server already provided data, real-time listener syncs updates
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,

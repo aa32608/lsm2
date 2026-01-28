@@ -819,8 +819,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Real-time Firebase listener for public listings - updates React Query cache
-  // React Query handles the initial fetch, this keeps data in sync
+  // Real-time Firebase listener for public listings - ONLY syncs updates
+  // Server already fetched initial data, this only updates changes (not full refetch)
   useEffect(() => {
     if (!db || !firebaseReady) return;
 
@@ -831,7 +831,9 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       limitToLast(1000)
     );
 
-    // Real-time listener updates React Query cache silently
+    // Real-time listener ONLY syncs updates - no initial fetch needed
+    // Server already provided initial data, this just keeps it in sync
+    let isFirstSync = true;
     const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       if (snapshot.exists()) {
         const val = snapshot.val() || {};
@@ -844,15 +846,28 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         // Sort by creation date (newest first)
         filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         
+        // Skip first sync if we have initial data (server already provided it)
+        if (isFirstSync && publicListings.length > 0) {
+          isFirstSync = false;
+          // Only update if there are actual changes (compare lengths/IDs)
+          const currentIds = new Set(publicListings.map(l => l.id));
+          const newIds = new Set(filtered.map(l => l.id));
+          if (currentIds.size === newIds.size && 
+              [...currentIds].every(id => newIds.has(id))) {
+            return; // No changes, skip update
+          }
+        }
+        
         // Update React Query cache silently (no refetch trigger)
         queryClient.setQueryData(['listings', 'public'], filtered);
+        isFirstSync = false;
       }
     }, (error) => {
       console.error("Public listings listener error:", error);
     });
     
     return () => unsubscribe();
-  }, [db, firebaseReady, queryClient]);
+  }, [db, firebaseReady, queryClient, publicListings.length]);
 
   // Real-time Firebase listener for all listings (for merged view)
   useEffect(() => {
