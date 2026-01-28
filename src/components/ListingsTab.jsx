@@ -244,6 +244,7 @@ export default function ListingsTab(props = {}) {
                      onClick={() => {
                        setPage(page + 1);
                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                       window.scrollTo({ top: 0, behavior: 'smooth' });
                      }}
                      aria-label={t("nextPage")}
                    >
@@ -305,6 +306,7 @@ export default function ListingsTab(props = {}) {
         categories={categories}
         categoryIcons={categoryIcons}
         allLocations={allLocations}
+        setPage={setPage}
       />
     </div>
   );

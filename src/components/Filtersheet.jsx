@@ -16,6 +16,7 @@ const Filtersheet = React.memo(({
   categories,
   categoryIcons,
   allLocations,
+  setPage, // Add setPage to reset page when filters change
   // Optional filters for My Listings
   statusFilter,
   setStatusFilter,
@@ -34,16 +35,35 @@ const Filtersheet = React.memo(({
   useEffect(() => { setLocalLoc(locFilter); }, [locFilter]);
   useEffect(() => { setLocalSort(sortBy); }, [sortBy]);
 
-  // Debounce all filters
+  // Debounce all filters and reset page to 1 when filters change
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (localSearch !== q) setQ(localSearch);
-      if (localCat !== catFilter) setCatFilter(localCat);
-      if (localLoc !== locFilter) setLocFilter(localLoc);
-      if (localSort !== sortBy) setSortBy(localSort);
+      let filtersChanged = false;
+      
+      if (localSearch !== q) {
+        setQ(localSearch);
+        filtersChanged = true;
+      }
+      if (localCat !== catFilter) {
+        setCatFilter(localCat);
+        filtersChanged = true;
+      }
+      if (localLoc !== locFilter) {
+        setLocFilter(localLoc);
+        filtersChanged = true;
+      }
+      if (localSort !== sortBy) {
+        setSortBy(localSort);
+        filtersChanged = true;
+      }
+      
+      // Reset page to 1 when any filter changes
+      if (filtersChanged && setPage) {
+        setPage(1);
+      }
     }, 400); // 400ms debounce for smoother experience
     return () => clearTimeout(timer);
-  }, [localSearch, localCat, localLoc, localSort, q, catFilter, locFilter, sortBy, setQ, setCatFilter, setLocFilter, setSortBy]);
+  }, [localSearch, localCat, localLoc, localSort, q, catFilter, locFilter, sortBy, setQ, setCatFilter, setLocFilter, setSortBy, setPage]);
 
   if (!filtersOpen) return null;
 

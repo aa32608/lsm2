@@ -251,50 +251,92 @@ img {
 }
 
 .header-logo {
-  font-weight: 900;
+  font-weight: 700;
   font-size: 1.5rem;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 0.75rem;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-lg);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
   position: relative;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   align-self: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
 }
 
 .header-logo::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--primary-light) 0%, rgba(255, 255, 255, 0.8) 100%);
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.05) 100%);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
   z-index: -1;
 }
 
 .header-logo:hover {
-  transform: translateY(-2px) scale(1.02);
+  transform: translateY(-1px);
+  color: var(--primary);
 }
 
 .header-logo:hover::before {
   opacity: 1;
 }
 
+.header-logo:active {
+  transform: translateY(0);
+}
+
+.header-logo .brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
 .header-logo .brand-logo {
-  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
-  transition: filter 0.3s ease;
+  height: 32px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .header-logo:hover .brand-logo {
-  filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));
+  transform: scale(1.05);
+}
+
+.header-logo:active .brand-logo {
+  transform: scale(0.98);
+}
+
+.header-logo span {
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s ease;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-logo:hover span {
+  background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* Desktop Navigation - Completely Redesigned */
@@ -3394,12 +3436,19 @@ img {
     touch-action: manipulation;
   }
 
+  .header-logo:hover {
+    transform: translate(-50%, -50%) translateY(-1px);
+  }
+
   .header-logo:active {
-    transform: translate(-50%, -50%) scale(0.98);
+    transform: translate(-50%, -50%) scale(0.97);
   }
 
   .header-logo .brand-mark {
-    transform: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
     transition: transform 0.15s ease;
   }
 
@@ -3407,8 +3456,25 @@ img {
     transform: scale(0.95);
   }
 
+  .header-logo .brand-logo {
+    height: 28px !important;
+    width: auto !important;
+    display: block !important;
+    transition: transform 0.15s ease;
+  }
+
+  .header-logo:hover .brand-logo {
+    transform: scale(1.05);
+  }
+
+  .header-logo:active .brand-logo {
+    transform: scale(0.95);
+  }
+
   .header-logo span {
-    transform: none;
+    display: inline !important;
+    font-size: 0.9rem;
+    position: relative;
     transition: transform 0.15s ease;
   }
 
