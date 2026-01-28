@@ -199,7 +199,7 @@ export default function ListingsTab(props = {}) {
            )}
 
            {/* LISTINGS GRID/LIST */}
-           {!listingsLoaded && pagedFiltered.length === 0 ? (
+           {!listingsLoaded ? (
              <ListingsSkeleton count={pageSize} viewMode={viewMode} />
            ) : pagedFiltered.length > 0 ? (
              <>
