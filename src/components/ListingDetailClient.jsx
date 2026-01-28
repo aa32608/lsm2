@@ -623,7 +623,7 @@ export default function ListingDetailClient({ id, initialListing }) {
 
             {/* Ad in Sidebar */}
             <div className="detail-sidebar-ad">
-              <GoogleAd style={{ minHeight: '250px' }} />
+              <GoogleAd slot="2843434842" style={{ minHeight: '250px' }} />
             </div>
           </div>
         </aside>
@@ -644,7 +644,7 @@ export default function ListingDetailClient({ id, initialListing }) {
 
           {/* AdSense Unit */}
           <div className="detail-ad-section">
-            <GoogleAd style={{ minHeight: '120px' }} />
+            <GoogleAd slot="1802538697" style={{ minHeight: '120px' }} />
           </div>
 
           {/* Feedback Section */}

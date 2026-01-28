@@ -6,66 +6,131 @@ const GoogleAd = ({ className, style, slot }) => {
   const { t } = useApp();
   const adRef = useRef(null);
   const adPushed = useRef(false);
+  const [adLoaded, setAdLoaded] = React.useState(false);
 
   useEffect(() => {
-    if (!adRef.current || adPushed.current) return;
+    // Reset state when slot changes
+    adPushed.current = false;
+    setAdLoaded(false);
+
+    if (!adRef.current) return;
+
+    let checkInterval = null;
+    let timeoutId = null;
+    let observer = null;
 
     // Function to initialize the ad - matches Google's exact code structure
     const initAd = () => {
       try {
-        if (typeof window === "undefined") return;
+        if (typeof window === "undefined") return false;
         
         const adElement = adRef.current?.querySelector('.adsbygoogle');
-        if (!adElement) return;
+        if (!adElement) return false;
 
         // Check if already initialized
-        if (adElement.dataset.adsbygoogleStatus === 'done') {
-          return;
+        const status = adElement.dataset.adsbygoogleStatus;
+        if (status === 'done' || status === 'filled') {
+          adPushed.current = true;
+          setAdLoaded(true);
+          return true;
+        }
+
+        // Don't re-initialize if already pushed
+        if (adPushed.current) {
+          return false;
         }
 
         // Wait for AdSense script to be loaded
         if (!window.adsbygoogle) {
-          return;
+          return false; // Not ready yet
         }
 
         // Initialize exactly as Google's code: (adsbygoogle = window.adsbygoogle || []).push({});
+        // Each ad unit needs its own push call
+        // Make sure the element is in the DOM and has all attributes before pushing
         try {
+          // Verify element is ready
+          if (!adElement.parentElement) {
+            return false;
+          }
+          
+          // Push to AdSense queue
           (window.adsbygoogle = window.adsbygoogle || []).push({});
           adPushed.current = true;
+          
+          // Monitor when ad loads
+          observer = new MutationObserver(() => {
+            const currentStatus = adElement.dataset.adsbygoogleStatus;
+            if (currentStatus === 'done' || currentStatus === 'filled') {
+              setAdLoaded(true);
+              if (observer) {
+                observer.disconnect();
+                observer = null;
+              }
+            }
+          });
+          observer.observe(adElement, { 
+            attributes: true, 
+            attributeFilter: ['data-adsbygoogle-status'] 
+          });
+          
+          // Also check periodically in case MutationObserver doesn't fire
+          setTimeout(() => {
+            const currentStatus = adElement.dataset.adsbygoogleStatus;
+            if (currentStatus === 'done' || currentStatus === 'filled') {
+              setAdLoaded(true);
+            }
+          }, 2000);
+          
+          return true; // Successfully initialized
         } catch (e) {
           console.error('[GoogleAd] Error pushing ad:', e);
+          return false;
         }
       } catch (e) {
         console.error('[GoogleAd] Init error:', e);
+        return false;
       }
     };
 
-    // Try immediately if script is loaded
-    if (typeof window !== "undefined" && window.adsbygoogle) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(initAd, 50);
-      return () => clearTimeout(timer);
-    }
-
-    // Wait for script to load
-    let attempts = 0;
-    const maxAttempts = 50;
-    
-    const checkScript = setInterval(() => {
-      attempts++;
-      
+    // Wait for DOM to be ready, then try to initialize
+    timeoutId = setTimeout(() => {
+      // Try immediately if script is loaded
       if (typeof window !== "undefined" && window.adsbygoogle) {
-        clearInterval(checkScript);
-        setTimeout(initAd, 100);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkScript);
+        if (initAd()) {
+          return; // Successfully initialized
+        }
       }
-    }, 200);
+
+      // Wait for script to load
+      let attempts = 0;
+      const maxAttempts = 150; // Increased attempts for slower connections
+      
+      checkInterval = setInterval(() => {
+        attempts++;
+        
+        if (typeof window !== "undefined" && window.adsbygoogle) {
+          if (initAd()) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+          }
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          checkInterval = null;
+          console.warn('[GoogleAd] AdSense script not loaded after maximum attempts');
+        }
+      }, 100); // Check every 100ms
+    }, 300); // Initial delay to ensure DOM is ready
 
     return () => {
-      clearInterval(checkScript);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (checkInterval) clearInterval(checkInterval);
+      if (observer) {
+        observer.disconnect();
+        observer = null;
+      }
     };
-  }, []);
+  }, [slot]); // Re-run if slot changes
 
   return (
     <div 
@@ -96,23 +161,26 @@ const GoogleAd = ({ className, style, slot }) => {
           data-ad-slot={slot || "1802538697"}
           data-ad-format="auto"
           data-full-width-responsive="true"
+          key={slot || "1802538697"}
        ></ins>
        {/* Placeholder - will be hidden when ad loads */}
-       <div 
-         className="ad-placeholder"
-         style={{ 
-           position: 'absolute', 
-           pointerEvents: 'none', 
-           color: '#cbd5e1', 
-           fontSize: '0.75rem', 
-           zIndex: 1,
-           top: '50%',
-           left: '50%',
-           transform: 'translate(-50%, -50%)'
-         }}
-       >
-         {t("advertisement")}
-       </div>
+       {!adLoaded && (
+         <div 
+           className="ad-placeholder"
+           style={{ 
+             position: 'absolute', 
+             pointerEvents: 'none', 
+             color: '#cbd5e1', 
+             fontSize: '0.75rem', 
+             zIndex: 1,
+             top: '50%',
+             left: '50%',
+             transform: 'translate(-50%, -50%)'
+           }}
+         >
+           {t("advertisement")}
+         </div>
+       )}
     </div>
   );
 };

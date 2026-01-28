@@ -277,16 +277,16 @@ export default function ListingsTab(props = {}) {
         {/* SIDEBAR */}
         <aside className="listings-sidebar" aria-label={t("sidebar")}>
           <div className="sidebar-ad">
-            <GoogleAd style={{ minHeight: '250px' }} />
+            <GoogleAd slot="1802538697" style={{ minHeight: '250px' }} />
           </div>
           <div className="sidebar-ad">
-            <GoogleAd style={{ minHeight: '250px' }} />
+            <GoogleAd slot="9192821398" style={{ minHeight: '250px' }} />
           </div>
           <div className="sidebar-ad sticky-ad">
-            <GoogleAd style={{ minHeight: '600px' }} />
+            <GoogleAd slot="7424444157" style={{ minHeight: '600px' }} />
           </div>
           <div className="sidebar-ad">
-            <GoogleAd style={{ minHeight: '250px' }} />
+            <GoogleAd slot="8095761529" style={{ minHeight: '250px' }} />
           </div>
         </aside>
       </div>
