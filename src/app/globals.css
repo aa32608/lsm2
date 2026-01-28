@@ -5364,9 +5364,19 @@ img {
   order: 1000; /* Footer after feedback */
 }
 
-/* Mobile: Ensure feedback section is last visible element */
+/* Mobile: Reorder sections - Additional Info first, then Description, then Feedback */
 @media (max-width: 768px) {
+  .detail-bottom-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-sidebar {
+    order: 1; /* Additional Info appears first */
+  }
+
   .detail-main-content {
+    order: 2; /* Description and Feedback appear after Additional Info */
     display: flex;
     flex-direction: column;
   }
@@ -5380,12 +5390,12 @@ img {
   }
 
   .detail-feedback-section {
-    order: 999; /* Last section on mobile */
+    order: 3; /* Feedback appears after Additional Info and Description */
     margin-bottom: 0;
   }
 
   .detail-footer {
-    order: 1000;
+    order: 4;
     margin-top: 0;
   }
 }

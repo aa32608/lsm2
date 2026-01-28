@@ -243,6 +243,19 @@ app.use(
 
 app.use(bodyParser.json());
 
+/* ----------------------- HEALTH CHECK ENDPOINT ----------------------- */
+// Health check endpoint to wake up backend and preload services
+app.get("/api/health", async (req, res) => {
+  // This endpoint wakes up the backend and ensures Dodo Payments is initialized
+  // It's called from frontend on website visit to preload connections
+  res.json({ 
+    status: "ok", 
+    timestamp: Date.now(),
+    dodoPaymentsReady: !!dodoClient,
+    firebaseReady: isFirebaseInitialized
+  });
+});
+
 /* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
 
 // Email cooldown tracking - prevent spam (only for marketing emails, 7 days between marketing emails)

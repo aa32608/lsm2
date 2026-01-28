@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { db } from "../firebase";
+import { ref as dbRef, update } from "firebase/database";
 
 const API_BASE =
   (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
@@ -152,43 +154,76 @@ const MyListingCard = React.memo(({
               </button>
               
               {(l.status === "pending" || l.status === "unpaid") ? (
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => {
-                    // For pending/unpaid listings, redirect to payment
-                    const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-                      ? "http://localhost:5000"
-                      : "https://lsm-wozo.onrender.com");
-                    
-                    fetch(`${API_BASE}/api/create-payment`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        listingId: l.id,
-                        type: "create",
-                        customerEmail: l.userEmail,
-                        customerName: l.name,
-                        plan: l.plan || "1"
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                  <select
+                    className="btn btn-sm"
+                    value={l.plan || "1"}
+                    onChange={(e) => {
+                      const newPlan = e.target.value;
+                      // Update listing plan in Firebase
+                      update(dbRef(db, `listings/${l.id}`), { plan: newPlan })
+                        .then(() => {
+                          showMessage(t("planUpdated") || "Plan updated successfully", "success");
+                        })
+                        .catch(err => {
+                          console.error(err);
+                          showMessage(t("error") || "Error updating plan", "error");
+                        });
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ 
+                      padding: '0.5rem', 
+                      borderRadius: 'var(--radius-md)', 
+                      border: '1px solid var(--border)',
+                      background: 'var(--surface)',
+                      color: 'var(--text-main)',
+                      cursor: 'pointer'
+                    }}
+                    aria-label={t("selectPlan") || "Select payment plan"}
+                  >
+                    <option value="1">{t("plan1Month") || "1 Month"}</option>
+                    <option value="3">{t("plan3Months") || "3 Months"}</option>
+                    <option value="6">{t("plan6Months") || "6 Months"}</option>
+                    <option value="12">{t("plan12Months") || "12 Months"}</option>
+                  </select>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      // For pending/unpaid listings, redirect to payment
+                      const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+                        ? "http://localhost:5000"
+                        : "https://lsm-wozo.onrender.com");
+                      
+                      fetch(`${API_BASE}/api/create-payment`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          listingId: l.id,
+                          type: "create",
+                          customerEmail: l.userEmail,
+                          customerName: l.name,
+                          plan: l.plan || "1"
+                        })
                       })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.checkoutUrl) {
-                        window.location.href = data.checkoutUrl;
-                      } else {
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.checkoutUrl) {
+                          window.location.href = data.checkoutUrl;
+                        } else {
+                          showMessage(t("paymentError"), "error");
+                        }
+                      })
+                      .catch(err => {
+                        console.error(err);
                         showMessage(t("paymentError"), "error");
-                      }
-                    })
-                    .catch(err => {
-                      console.error(err);
-                      showMessage(t("paymentError"), "error");
-                    });
-                  }}
-                  aria-label={`${t("proceedToPayment")}: ${l.name}`}
-                >
-                  <span aria-hidden="true">💳</span>
-                  <span className="btn-text">{t("proceedToPayment")}</span>
-                </button>
+                      });
+                    }}
+                    aria-label={`${t("proceedToPayment")}: ${l.name}`}
+                  >
+                    <span aria-hidden="true">💳</span>
+                    <span className="btn-text">{t("proceedToPayment")}</span>
+                  </button>
+                </div>
               ) : (
                 <button
                   className="btn btn-sm btn-extend"

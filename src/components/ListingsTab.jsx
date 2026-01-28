@@ -229,7 +229,12 @@ export default function ListingsTab(props = {}) {
                      disabled={page <= 1}
                      onClick={() => {
                        setPage(page - 1);
-                       window.scrollTo({ top: 0, behavior: 'smooth' });
+                       // Use requestAnimationFrame to ensure scroll happens after state update
+                       requestAnimationFrame(() => {
+                         window.scrollTo({ top: 0, behavior: 'smooth' });
+                       });
+                       // Also try immediate scroll as fallback
+                       window.scrollTo({ top: 0, behavior: 'instant' });
                      }}
                      aria-label={t("previousPage")}
                    >
@@ -243,8 +248,12 @@ export default function ListingsTab(props = {}) {
                      disabled={page >= totalPages}
                      onClick={() => {
                        setPage(page + 1);
-                       window.scrollTo({ top: 0, behavior: 'smooth' });
-                       window.scrollTo({ top: 0, behavior: 'smooth' });
+                       // Use requestAnimationFrame to ensure scroll happens after state update
+                       requestAnimationFrame(() => {
+                         window.scrollTo({ top: 0, behavior: 'smooth' });
+                       });
+                       // Also try immediate scroll as fallback
+                       window.scrollTo({ top: 0, behavior: 'instant' });
                      }}
                      aria-label={t("nextPage")}
                    >

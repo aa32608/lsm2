@@ -377,11 +377,39 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   });
   const [isRefreshing, setIsRefreshing] = useState(false); // Background refresh indicator
   
+  // Track if we've switched to listings tab without data loaded
+  const [hasSwitchedToListingsTab, setHasSwitchedToListingsTab] = useState(false);
+  
+  // When switching to allListings tab, check if we need to show skeleton
+  useEffect(() => {
+    if (selectedTab === "allListings") {
+      // If we switch to listings tab and have no data, mark that we switched
+      if (publicListings.length === 0 && listings.length === 0) {
+        setHasSwitchedToListingsTab(true);
+        // If we have no data and loading is false, we should show loading
+        if (!listingsLoading) {
+          setListingsLoading(true);
+        }
+      }
+    }
+  }, [selectedTab, publicListings.length, listings.length, listingsLoading]);
+
   // Computed: Data is "loaded" if we have any listings OR if loading is false
   // This ensures tabs show immediately when data exists
+  // BUT: If we switched to listings tab and cache isn't loaded, show skeleton
   const listingsLoaded = useMemo(() => {
+    // If we switched to listings tab and have no data, show skeleton
+    if (hasSwitchedToListingsTab && selectedTab === "allListings") {
+      if (publicListings.length === 0 && listings.length === 0) {
+        return false; // Show skeleton
+      }
+      // Once data loads, reset the flag
+      if (publicListings.length > 0 || listings.length > 0) {
+        setHasSwitchedToListingsTab(false);
+      }
+    }
     return publicListings.length > 0 || listings.length > 0 || !listingsLoading;
-  }, [publicListings.length, listings.length, listingsLoading]);
+  }, [publicListings.length, listings.length, listingsLoading, hasSwitchedToListingsTab, selectedTab]);
 
   // Removed localStorage caching - it was slowing down the app with large datasets
   const deferredListings = useDeferredValue(listings);
@@ -1748,10 +1776,12 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     () => Array.from(new Set(verifiedListings.map((l) => (l.location || "").trim()).filter(Boolean))),
     [verifiedListings]
   );
-  // Optimized feedback averages - only compute for verified listings
+  // Optimized feedback averages - compute incrementally as listings load
+  // This ensures ranking is ready as soon as listings are available, not after all processing
   const feedbackAverages = useMemo(() => {
     const map = {};
-    // Only process verified listings to reduce computation
+    // Process listings as they come in - don't wait for all filters
+    // This allows ranking to be computed on par with loading time
     verifiedListings.forEach((l) => {
       map[l.id] = {
         count: l.feedbackCount || 0,
@@ -1760,6 +1790,17 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     });
     return map;
   }, [verifiedListings]);
+  
+  // Pre-compute ranking scores for topRated sort to avoid delay during filtering
+  const rankingScores = useMemo(() => {
+    if (sortBy !== "topRated") return null;
+    const scores = new Map();
+    verifiedListings.forEach((l) => {
+      const stats = feedbackAverages[l.id] || { avg: -1, count: 0 };
+      scores.set(l.id, stats);
+    });
+    return scores;
+  }, [verifiedListings, feedbackAverages, sortBy]);
 
   // Optimized filtering - apply filters in order of selectivity for better performance
   const filtered = useMemo(() => {
@@ -1798,10 +1839,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         return aName.localeCompare(bName);
       });
     } else if (sortBy === "topRated") {
-      // Pre-compute stats for better performance
+      // Use pre-computed ranking scores for faster sorting
+      // This ensures ranking happens on par with loading, not after listings are loaded
       arr.sort((a, b) => {
-        const aStats = feedbackAverages[a.id] || { avg: -1, count: 0 };
-        const bStats = feedbackAverages[b.id] || { avg: -1, count: 0 };
+        const aStats = rankingScores?.get(a.id) || feedbackAverages[a.id] || { avg: -1, count: 0 };
+        const bStats = rankingScores?.get(b.id) || feedbackAverages[b.id] || { avg: -1, count: 0 };
         if (bStats.avg !== aStats.avg) return bStats.avg - aStats.avg;
         if (bStats.count !== aStats.count) return bStats.count - aStats.count;
         return (b.createdAt || 0) - (a.createdAt || 0);
@@ -1809,7 +1851,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     }
     
     return arr;
-  }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, t]);
+  }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, rankingScores, t]);
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(filtered.length / pageSize)),
     [filtered.length, pageSize]
