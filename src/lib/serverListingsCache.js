@@ -185,6 +185,16 @@ export async function refreshCache() {
 }
 
 // Initialize cache on module load (server-side only)
+// Use try-catch to prevent errors during AdSense preview or other edge cases
+// Delay initialization to avoid blocking module load
 if (typeof window === 'undefined') {
-  initializeCache();
+  // Use setTimeout to defer initialization and prevent blocking
+  setTimeout(() => {
+    try {
+      initializeCache();
+    } catch (error) {
+      console.error('[Server Cache] Initialization error (non-fatal):', error);
+      // Continue without cache - client will fetch
+    }
+  }, 0);
 }
