@@ -783,7 +783,10 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       setShowAuthModal(true);
       return;
     }
-    if (!rating) return;
+    const safeRating = Math.min(Math.max(Number(rating) || 0, 1), 5);
+    const safeComment = (comment || "").trim();
+    if (!safeRating) return false;
+    if (!safeComment) return false;
     
     try {
       setFeedbackSaving(true);
@@ -793,13 +796,50 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         listingId,
         userId: user.uid,
         userName: userProfile?.name || user.displayName || "Anonymous",
-        rating: Number(rating),
-        comment: stripDangerous(comment),
+        rating: safeRating,
+        comment: stripDangerous(safeComment),
         createdAt: Date.now()
       });
       
-      // Also update the listing's feedback count/avg if possible, but cloud functions usually handle this.
-      // We will trust the onValue listener to pick up the new feedback.
+      // Notify listing owner via backend API (so email logic stays server-side)
+      try {
+        const listing = listings.find((l) => l.id === listingId);
+        const ownerEmail = listing?.userEmail;
+
+        if (ownerEmail) {
+          const reviewerName =
+            userProfile?.name ||
+            user.displayName ||
+            (user.email ? user.email.split("@")[0] : "User");
+
+          console.log("[Feedback] Sending notification email to:", ownerEmail);
+          const response = await fetch(`${API_BASE}/api/send-feedback-notification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              listingId,
+              listingName: listing?.name,
+              ownerEmail,
+              ownerUserId: listing?.userId,
+              reviewerName,
+              rating: safeRating,
+              comment: safeComment,
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log("[Feedback] ✅ Notification email sent successfully:", result);
+          } else {
+            const errorText = await response.text();
+            console.error("[Feedback] ❌ Failed to send notification email:", response.status, errorText);
+          }
+        } else {
+          console.warn("[Feedback] ⚠️ No owner email found for listing:", listingId);
+        }
+      } catch (err) {
+        console.error("[Feedback] ❌ Error sending notification email:", err);
+      }
       
       showMessage(t("feedbackSaved"), "success");
       return true;
