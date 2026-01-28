@@ -8,39 +8,62 @@ const GoogleAd = ({ className, style, slot }) => {
   const adPushed = useRef(false);
 
   useEffect(() => {
-    // Wait for AdSense script to load
+    if (!adRef.current || adPushed.current) return;
+
+    // Function to initialize the ad - matches Google's exact code structure
     const initAd = () => {
       try {
-        if (typeof window !== "undefined" && window.adsbygoogle && !adPushed.current && adRef.current) {
-          // Check if this ad unit hasn't been initialized
-          const adElement = adRef.current.querySelector('.adsbygoogle');
-          if (adElement && !adElement.dataset.adsbygoogleStatus) {
-            (window.adsbygoogle = window.adsbygoogle || []).push({});
-            adPushed.current = true;
-          }
+        if (typeof window === "undefined") return;
+        
+        const adElement = adRef.current?.querySelector('.adsbygoogle');
+        if (!adElement) return;
+
+        // Check if already initialized
+        if (adElement.dataset.adsbygoogleStatus === 'done') {
+          return;
+        }
+
+        // Wait for AdSense script to be loaded
+        if (!window.adsbygoogle) {
+          return;
+        }
+
+        // Initialize exactly as Google's code: (adsbygoogle = window.adsbygoogle || []).push({});
+        try {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          adPushed.current = true;
+        } catch (e) {
+          console.error('[GoogleAd] Error pushing ad:', e);
         }
       } catch (e) {
-        console.error("AdSense push error:", e);
+        console.error('[GoogleAd] Init error:', e);
       }
     };
 
-    // Try immediately
-    initAd();
+    // Try immediately if script is loaded
+    if (typeof window !== "undefined" && window.adsbygoogle) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(initAd, 50);
+      return () => clearTimeout(timer);
+    }
 
-    // Also try after a short delay in case script is still loading
-    const timer = setTimeout(initAd, 100);
-
-    // Listen for AdSense script load
-    const checkAdSense = setInterval(() => {
-      if (window.adsbygoogle && !adPushed.current) {
-        initAd();
-        clearInterval(checkAdSense);
+    // Wait for script to load
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    const checkScript = setInterval(() => {
+      attempts++;
+      
+      if (typeof window !== "undefined" && window.adsbygoogle) {
+        clearInterval(checkScript);
+        setTimeout(initAd, 100);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkScript);
       }
     }, 200);
 
     return () => {
-      clearTimeout(timer);
-      clearInterval(checkAdSense);
+      clearInterval(checkScript);
     };
   }, []);
 
@@ -61,25 +84,33 @@ const GoogleAd = ({ className, style, slot }) => {
         minHeight: style?.minHeight || '250px'
       }}
     >
+       {/* Google's exact ad unit structure */}
        <ins 
           className="adsbygoogle"
-          style={{ display: "block", width: "100%", height: "100%", minHeight: style?.minHeight || '250px' }}
+          style={{ 
+            display: "block", 
+            width: "100%", 
+            minHeight: style?.minHeight || '250px'
+          }}
           data-ad-client="ca-pub-8385998516338936"
           data-ad-slot={slot || "1802538697"}
           data-ad-format="auto"
           data-full-width-responsive="true"
        ></ins>
-       {/* Placeholder text visible only when ad script not loaded/blocked */}
-       <div style={{ 
-         position: 'absolute', 
-         pointerEvents: 'none', 
-         color: '#cbd5e1', 
-         fontSize: '0.75rem', 
-         zIndex: 0,
-         top: '50%',
-         left: '50%',
-         transform: 'translate(-50%, -50%)'
-       }}>
+       {/* Placeholder - will be hidden when ad loads */}
+       <div 
+         className="ad-placeholder"
+         style={{ 
+           position: 'absolute', 
+           pointerEvents: 'none', 
+           color: '#cbd5e1', 
+           fontSize: '0.75rem', 
+           zIndex: 1,
+           top: '50%',
+           left: '50%',
+           transform: 'translate(-50%, -50%)'
+         }}
+       >
          {t("advertisement")}
        </div>
     </div>
