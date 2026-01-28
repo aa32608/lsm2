@@ -6,39 +6,61 @@ import { useApp } from "../context/AppContext";
 import GoogleAd from "./GoogleAd";
 import ListingsSkeleton from "./ListingsSkeleton";
 
-export default function ListingsTab({
-  t,
-  viewMode,
-  setViewMode,
-  q,
-  setQ,
-  catFilter,
-  setCatFilter,
-  locFilter,
-  setLocFilter,
-  sortBy,
-  setSortBy,
-  pagedFiltered,
-  page,
-  totalPages,
-  setPage,
-  pageSize,
-  setPageSize,
-  categoryIcons,
-  feedbackAverages,
-  filtersOpen,
-  setFiltersOpen,
-  categories,
-  allLocations,
-  getDescriptionPreview,
-  getListingStats,
-  handleShareListing,
-  showMessage,
-  toggleFav,
-  favorites,
-  listingsLoaded = true, // Default to true - show data immediately if available
-  isRefreshing = false // Background refresh indicator
-}) {
+export default function ListingsTab(props = {}) {
+  // Get all values from context if props not provided (Next.js route usage)
+  let context;
+  try {
+    context = useApp();
+  } catch (error) {
+    // Context not available - return loading state
+    console.warn('ListingsTab: AppContext not available, showing loading state');
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="spinner" style={{ margin: '0 auto' }}></div>
+        <p>Loading listings...</p>
+      </div>
+    );
+  }
+  
+  // Safety: Ensure t is always a function
+  const safeT = (key) => {
+    if (props.t && typeof props.t === 'function') return props.t(key);
+    if (context?.t && typeof context.t === 'function') return context.t(key);
+    return key; // Fallback to key if no translation function available
+  };
+  
+  // Use props if provided, otherwise fall back to context with safe defaults
+  const t = safeT;
+  const viewMode = props.viewMode ?? context.viewMode ?? "list";
+  const setViewMode = props.setViewMode || context.setViewMode || (() => {});
+  const q = props.q ?? context.q ?? "";
+  const setQ = props.setQ || context.setQ || (() => {});
+  const catFilter = props.catFilter ?? context.catFilter ?? "";
+  const setCatFilter = props.setCatFilter || context.setCatFilter || (() => {});
+  const locFilter = props.locFilter ?? context.locFilter ?? "";
+  const setLocFilter = props.setLocFilter || context.setLocFilter || (() => {});
+  const sortBy = props.sortBy ?? context.sortBy ?? "topRated";
+  const setSortBy = props.setSortBy || context.setSortBy || (() => {});
+  const pagedFiltered = props.pagedFiltered ?? context.pagedFiltered ?? [];
+  const page = props.page ?? context.page ?? 1;
+  const totalPages = props.totalPages ?? context.totalPages ?? 1;
+  const setPage = props.setPage || context.setPage || (() => {});
+  const pageSize = props.pageSize ?? context.pageSize ?? 24;
+  const setPageSize = props.setPageSize || context.setPageSize || (() => {});
+  const categoryIcons = props.categoryIcons || context.categoryIcons || {};
+  const feedbackAverages = props.feedbackAverages ?? context.feedbackAverages ?? {};
+  const filtersOpen = props.filtersOpen ?? context.filtersOpen ?? false;
+  const setFiltersOpen = props.setFiltersOpen || context.setFiltersOpen || (() => {});
+  const categories = props.categories ?? context.categories ?? [];
+  const allLocations = props.allLocations ?? context.allLocations ?? [];
+  const getDescriptionPreview = props.getDescriptionPreview || context.getDescriptionPreview || ((desc) => desc);
+  const getListingStats = props.getListingStats || context.getListingStats || (() => ({ avgRating: 0, feedbackCount: 0 }));
+  const handleShareListing = props.handleShareListing || context.handleShareListing || (() => {});
+  const showMessage = props.showMessage || context.showMessage || (() => {});
+  const toggleFav = props.toggleFav || context.toggleFav || (() => {});
+  const favorites = props.favorites ?? context.favorites ?? [];
+  const listingsLoaded = props.listingsLoaded ?? context.listingsLoaded ?? true;
+  const isRefreshing = props.isRefreshing ?? false;
 
   const hasActiveFilters = catFilter || locFilter || q;
 
