@@ -216,6 +216,7 @@ export default function ListingDetailClient({ id, initialListing }) {
   // Helper to format dates
   const formatDate = (timestamp) => {
     if (!timestamp) return null;
+    if (typeof window === 'undefined') return '—';
     return new Date(timestamp).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'long',

@@ -6,6 +6,7 @@ import ErrorBoundary from '../../components/ErrorBoundary';
 
 // Client component to prevent SSR issues with large datasets
 // Listings are fetched client-side with React Query for better performance
+// SEO: Metadata is handled in layout.js (server component)
 export default function ListingsPage() {
   return (
     <ErrorBoundary>

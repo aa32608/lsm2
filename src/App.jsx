@@ -2591,7 +2591,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 icon: "📅", 
                                 label: t("memberSince"), 
                                 value: user?.metadata?.creationTime
-                                  ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                                  ? (typeof window !== 'undefined' ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2025')
                                   : "—",
                                 hint: t("accountSince"),
                                 color: "purple"
@@ -2722,11 +2722,15 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                     <p className="account-info-label">{t("accountSince")}</p>
                                     <p className="account-info-value">
                                       {user?.metadata?.creationTime
-                                        ? new Date(user.metadata.creationTime).toLocaleDateString(lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US', { 
-                                            year: 'numeric', 
-                                            month: 'long', 
-                                            day: 'numeric' 
-                                          })
+                                        ? (() => {
+                                            if (typeof window === 'undefined') return '2025';
+                                            const locale = lang === 'sq' ? 'sq-AL' : lang === 'mk' ? 'mk-MK' : 'en-US';
+                                            return new Date(user.metadata.creationTime).toLocaleDateString(locale, { 
+                                              year: 'numeric', 
+                                              month: 'long', 
+                                              day: 'numeric' 
+                                            });
+                                          })()
                                         : "—"}
                                     </p>
                                   </div>
@@ -4536,7 +4540,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             {selectedListing.status === "verified" ? "✅ " + t("verified") : "⏳ " + t("pending")}
                           </span>
                           {selectedListing.expiresAt && (
-                            <span className="small-muted">{t("expires")}: {new Date(selectedListing.expiresAt).toLocaleDateString()}</span>
+                            <span className="small-muted">{t("expires")}: {typeof window !== 'undefined' ? new Date(selectedListing.expiresAt).toLocaleDateString() : '—'}</span>
                           )}
                           <span className="rating-chip">
                             ⭐ {feedbackStats.avg ?? "–"} / 5
@@ -4756,7 +4760,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         <p className="sidebar-title">{t("quickFacts")}</p>
                         <ul className="fact-list">
                           <li><span>{t("statusLabel")}</span><strong>{selectedListing.status === "verified" ? t("verified") : t("pendingVerification")}</strong></li>
-                          <li><span>{t("listedOn")}</span><strong>{selectedListing.createdAt ? new Date(selectedListing.createdAt).toLocaleDateString() : t("unspecified")}</strong></li>
+                          <li><span>{t("listedOn")}</span><strong>{selectedListing.createdAt ? (typeof window !== 'undefined' ? new Date(selectedListing.createdAt).toLocaleDateString() : '—') : t("unspecified")}</strong></li>
                           <li><span>{t("locationLabelFull")}</span><strong>{selectedListing.location || t("unspecified")}</strong></li>
                           <li><span>{t("pricing")}</span><strong>{selectedListing.offerprice || t("unspecified")}</strong></li>
                         </ul>
@@ -4853,7 +4857,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 )}
                                 <div className="feedback-meta">
                                   <span className="pill pill-soft">{entry.rating}/5</span>
-                                  <span className="small-muted">{new Date(entry.createdAt).toLocaleDateString()}</span>
+                                  <span className="small-muted">{typeof window !== 'undefined' ? new Date(entry.createdAt).toLocaleDateString() : '—'}</span>
                                 </div>
                                 {entry.comment && <p className="feedback-comment">{entry.comment}</p>}
                               </div>

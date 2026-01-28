@@ -2,5 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /dashboard
+Disallow: /account
+Disallow: /mylistings
 
+# Dynamic sitemap with all listings
 Sitemap: https://bizcall.mk/sitemap.xml

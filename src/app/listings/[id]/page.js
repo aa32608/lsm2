@@ -64,13 +64,41 @@ export async function generateMetadata({ params }) {
     };
   }
 
+  const description = listing.description 
+    ? listing.description.substring(0, 160).replace(/\s+/g, ' ').trim()
+    : `Check out ${listing.name} on BizCall MK.`;
+  
+  const location = listing.location 
+    ? `${listing.location.city || ''}${listing.location.city && listing.location.extra ? ' - ' : ''}${listing.location.extra || ''}`.trim()
+    : 'North Macedonia';
+
   return {
     title: `${listing.name} - ${listing.category} | BizCall MK`,
-    description: listing.description ? listing.description.substring(0, 160) : `Check out ${listing.name} on BizCall MK.`,
+    description,
+    keywords: `${listing.name}, ${listing.category}, ${location}, North Macedonia, services, listings`,
     openGraph: {
       title: listing.name,
-      description: listing.description ? listing.description.substring(0, 160) : `Check out ${listing.name} on BizCall MK.`,
+      description,
+      type: 'website',
+      url: `https://bizcall.mk/listings/${encodeURIComponent(listingId)}`,
+      siteName: 'BizCall MK',
+      images: listing.images && listing.images.length > 0 
+        ? listing.images.slice(0, 4).map(img => ({
+            url: img,
+            width: 1200,
+            height: 630,
+            alt: listing.name,
+          }))
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: listing.name,
+      description,
       images: listing.images && listing.images.length > 0 ? [listing.images[0]] : [],
+    },
+    alternates: {
+      canonical: `https://bizcall.mk/listings/${encodeURIComponent(listingId)}`,
     },
   };
 }
@@ -96,8 +124,60 @@ export default async function ListingPage({ params }) {
   console.log('ListingPage: Fetching listing with ID:', listingId);
   const listing = await getListing(listingId);
 
+  // Generate structured data for SEO (JSON-LD)
+  const structuredData = listing ? {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: listing.name,
+    description: listing.description || '',
+    image: listing.images && listing.images.length > 0 ? listing.images : undefined,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: listing.location?.city || '',
+      addressRegion: 'North Macedonia',
+      addressCountry: 'MK',
+    },
+    ...(listing.location?.city && {
+      areaServed: {
+        '@type': 'City',
+        name: listing.location.city,
+      },
+    }),
+    ...(listing.category && {
+      category: listing.category,
+    }),
+    ...(listing.phone && {
+      telephone: listing.phone,
+    }),
+    ...(listing.email && {
+      email: listing.email,
+    }),
+    url: `https://bizcall.mk/listings/${encodeURIComponent(listingId)}`,
+    ...(listing.feedback && listing.feedback.length > 0 && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: (
+          listing.feedback.reduce((sum, f) => sum + (f.rating || 0), 0) / listing.feedback.length
+        ).toFixed(1),
+        reviewCount: listing.feedback.length,
+      },
+    }),
+  } : null;
+
   // If server fetch fails, we pass null to client component
   // to attempt client-side fetch or handle the error gracefully
   // instead of showing a hard 404 page immediately.
-  return <ListingDetailClient id={listingId} initialListing={listing} />;
+  return (
+    <>
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
+      )}
+      <ListingDetailClient id={listingId} initialListing={listing} />
+    </>
+  );
 }

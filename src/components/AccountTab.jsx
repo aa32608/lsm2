@@ -272,7 +272,7 @@ const AccountTab = () => {
     {
       label: t("accountSince"),
       value: user?.metadata?.creationTime
-        ? new Date(user.metadata.creationTime).getFullYear()
+        ? (typeof window !== 'undefined' ? new Date(user.metadata.creationTime).getFullYear() : 2025)
         : "—",
       hint: t("accountSince"),
       color: "purple"

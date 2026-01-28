@@ -799,20 +799,59 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Load Listings Logic (Effect) - Use server data immediately, sync with Firebase in background
+  // Load Listings Logic (Effect) - INSTANT LOADING with localStorage cache
   useEffect(() => {
-    // Server data is already set in state, mark as loaded immediately
+    // STEP 1: Load from localStorage INSTANTLY (no waiting)
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedListings = localStorage.getItem('listings_cache');
+        const cachedPublicListings = localStorage.getItem('public_listings_cache');
+        const cacheTimestamp = localStorage.getItem('listings_cache_timestamp');
+        
+        // Use cache if it's less than 10 minutes old
+        const cacheAge = cacheTimestamp ? Date.now() - parseInt(cacheTimestamp, 10) : Infinity;
+        const isCacheValid = cacheAge < 10 * 60 * 1000; // 10 minutes
+        
+        if (isCacheValid && cachedListings) {
+          try {
+            const parsed = JSON.parse(cachedListings);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setListings(parsed);
+              setListingsLoaded(true);
+            }
+          } catch (e) {
+            console.warn('Failed to parse cached listings:', e);
+          }
+        }
+        
+        if (isCacheValid && cachedPublicListings) {
+          try {
+            const parsed = JSON.parse(cachedPublicListings);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setPublicListings(parsed);
+              setListingsLoaded(true);
+            }
+          } catch (e) {
+            console.warn('Failed to parse cached public listings:', e);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load listings from cache:', e);
+      }
+    }
+
+    // STEP 2: Use server data if available and no cache
     if ((initialListings.length > 0 || initialPublicListings.length > 0) && !listingsLoaded) {
+      if (initialListings.length > 0) setListings(initialListings);
+      if (initialPublicListings.length > 0) setPublicListings(initialPublicListings);
       setListingsLoaded(true);
     }
 
     if (!db) return;
 
-    // OPTIMIZATION: Use once() for initial load (faster than onValue for first fetch)
-    // Then use onValue only for real-time updates
+    // STEP 3: Fetch fresh data from Firebase in background (update cache)
     const listingsRef = dbRef(db, "listings");
     
-    // First, do a one-time fetch (faster than listener)
     get(listingsRef).then((snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -827,10 +866,21 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
         setPublicListings(pub);
         setListingsLoaded(true);
+        
+        // Save to localStorage for next load
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('listings_cache', JSON.stringify(arr));
+            localStorage.setItem('public_listings_cache', JSON.stringify(pub));
+            localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+          } catch (e) {
+            console.warn('Failed to save listings to cache:', e);
+          }
+        }
       }
     }).catch((error) => {
       console.error("Listings fetch error:", error);
-      // Fallback to server data if available
+      // Keep cached data if fetch fails
       if (initialListings.length > 0 || initialPublicListings.length > 0) {
         setListingsLoaded(true);
       }
@@ -847,30 +897,85 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         // OPTIMIZATION: Only update if arrays have different lengths or different IDs
         // This avoids expensive JSON.stringify on large datasets
         setListings(prev => {
-          if (prev.length !== arr.length) return arr;
+          if (prev.length !== arr.length) {
+            // Update cache when data changes
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('listings_cache', JSON.stringify(arr));
+                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+              } catch (e) {}
+            }
+            return arr;
+          }
           const prevIds = new Set(prev.map(p => p.id));
           const newIds = new Set(arr.map(a => a.id));
-          if (prevIds.size !== newIds.size) return arr;
+          if (prevIds.size !== newIds.size) {
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('listings_cache', JSON.stringify(arr));
+                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+              } catch (e) {}
+            }
+            return arr;
+          }
           for (const id of prevIds) {
-            if (!newIds.has(id)) return arr;
+            if (!newIds.has(id)) {
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('listings_cache', JSON.stringify(arr));
+                  localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+                } catch (e) {}
+              }
+              return arr;
+            }
           }
           // If same IDs, check if any data changed (lightweight check)
           const changed = prev.some((p, i) => {
             const a = arr[i];
             return !a || p.id !== a.id || p.status !== a.status || p.expiresAt !== a.expiresAt;
           });
+          if (changed && typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('listings_cache', JSON.stringify(arr));
+              localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+            } catch (e) {}
+          }
           return changed ? arr : prev;
         });
         
         const now = Date.now();
         const pub = arr.filter(l => l.status === "verified" && (!l.expiresAt || l.expiresAt > now));
         setPublicListings(prev => {
-          if (prev.length !== pub.length) return pub;
+          if (prev.length !== pub.length) {
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('public_listings_cache', JSON.stringify(pub));
+                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+              } catch (e) {}
+            }
+            return pub;
+          }
           const prevIds = new Set(prev.map(p => p.id));
           const newIds = new Set(pub.map(p => p.id));
-          if (prevIds.size !== newIds.size) return pub;
+          if (prevIds.size !== newIds.size) {
+            if (typeof window !== 'undefined') {
+              try {
+                localStorage.setItem('public_listings_cache', JSON.stringify(pub));
+                localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+              } catch (e) {}
+            }
+            return pub;
+          }
           for (const id of prevIds) {
-            if (!newIds.has(id)) return pub;
+            if (!newIds.has(id)) {
+              if (typeof window !== 'undefined') {
+                try {
+                  localStorage.setItem('public_listings_cache', JSON.stringify(pub));
+                  localStorage.setItem('listings_cache_timestamp', Date.now().toString());
+                } catch (e) {}
+              }
+              return pub;
+            }
           }
           return prev;
         });
@@ -878,9 +983,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       }
     }, (error) => {
       console.error("Listings listener error:", error);
-      if (initialListings.length === 0 && initialPublicListings.length === 0) {
-        setListingsLoaded(false);
-      }
+      // Don't clear loaded state on error - keep showing cached data
     });
     
     return () => unsub();
@@ -996,9 +1099,46 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   }, []); // Run once on mount
 
   // Filter user listings
+  // Filter user listings - WITH INSTANT CACHE LOADING
   useEffect(() => {
+    // Load from cache instantly if available
+    if (user && typeof window !== 'undefined') {
+      try {
+        const cachedUserListings = localStorage.getItem(`user_listings_cache_${user.uid}`);
+        const cacheTimestamp = localStorage.getItem(`user_listings_cache_timestamp_${user.uid}`);
+        
+        if (cachedUserListings && cacheTimestamp) {
+          const cacheAge = Date.now() - parseInt(cacheTimestamp, 10);
+          if (cacheAge < 10 * 60 * 1000) { // 10 minutes
+            try {
+              const parsed = JSON.parse(cachedUserListings);
+              if (Array.isArray(parsed)) {
+                setUserListings(parsed);
+              }
+            } catch (e) {
+              console.warn('Failed to parse cached user listings:', e);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load user listings from cache:', e);
+      }
+    }
+    
+    // Then update from current listings
     if (user && listings.length > 0) {
-      setUserListings(listings.filter(l => l.userId === user.uid));
+      const filtered = listings.filter(l => l.userId === user.uid);
+      setUserListings(filtered);
+      
+      // Save to cache
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`user_listings_cache_${user.uid}`, JSON.stringify(filtered));
+          localStorage.setItem(`user_listings_cache_timestamp_${user.uid}`, Date.now().toString());
+        } catch (e) {
+          console.warn('Failed to save user listings to cache:', e);
+        }
+      }
     } else {
       setUserListings([]);
     }
