@@ -349,14 +349,26 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     plan: "1",          // "1", "3", "6", "12"
   });
 
-  // Use initial props for SSR/hydration, then load from cache after mount
+  // In-memory cache: Keep data in state for instant tab switching
+  // Data persists across navigation - never cleared unless explicitly needed
   const [listings, setListings] = useState(initialListings && initialListings.length > 0 ? initialListings : []);
   const [publicListings, setPublicListings] = useState(initialPublicListings && initialPublicListings.length > 0 ? initialPublicListings : []);
   const [userListings, setUserListings] = useState([]);
+  
+  // Separate loading states: initial load vs background refresh
+  // Smart loading states: Only show loading if we truly have no data
   const [listingsLoading, setListingsLoading] = useState(() => {
-    // Only show loading if we don't have initial data
-    return !(initialListings && initialListings.length > 0) && !(initialPublicListings && initialPublicListings.length > 0);
+    // Only show loading spinner if we have NO data at all (initial load only)
+    return !(initialListings && initialListings.length > 0) && 
+           !(initialPublicListings && initialPublicListings.length > 0);
   });
+  const [isRefreshing, setIsRefreshing] = useState(false); // Background refresh indicator
+  
+  // Computed: Data is "loaded" if we have any listings OR if loading is false
+  // This ensures tabs show immediately when data exists
+  const listingsLoaded = useMemo(() => {
+    return publicListings.length > 0 || listings.length > 0 || !listingsLoading;
+  }, [publicListings.length, listings.length, listingsLoading]);
 
   // Removed localStorage caching - it was slowing down the app with large datasets
   const deferredListings = useDeferredValue(listings);
@@ -966,7 +978,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     return "";
   }, [userProfile, user]);
 
-  // Optimized merged listings - use Map for O(1) lookups, only update if changed
+  // Optimized merged listings - instant updates, data stays in memory
   useEffect(() => {
     if (userListings.length === 0) {
       // Fast path: no user listings, just use public listings
@@ -975,7 +987,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         if (prev.length === publicListings.length && prev.length > 0) {
           if (prev[0]?.id === publicListings[0]?.id && 
               prev[prev.length - 1]?.id === publicListings[publicListings.length - 1]?.id) {
-            return prev; // Likely unchanged
+            return prev; // Likely unchanged - keep existing reference
           }
         }
         // Only sort if we need to update
@@ -984,10 +996,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     } else {
       // Merge user and public listings efficiently
       const merged = new Map();
-      // Add public listings first
       publicListings.forEach((l) => merged.set(l.id, l));
-      // User listings override public ones (if same ID)
-      userListings.forEach((l) => merged.set(l.id, l));
+      userListings.forEach((l) => merged.set(l.id, l)); // User listings override
       
       const combined = Array.from(merged.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       
@@ -996,7 +1006,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         if (prev.length === combined.length && prev.length > 0) {
           if (prev[0]?.id === combined[0]?.id && 
               prev[prev.length - 1]?.id === combined[combined.length - 1]?.id) {
-            return prev;
+            return prev; // Keep existing reference
           }
         }
         return combined;
@@ -1006,72 +1016,77 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
   // Removed localStorage caching - it was causing performance issues with large datasets
 
-  // 1. Public listings (verified) - Optimized for 20k+ listings per month
-  // Strategy: Fetch most recent 500 verified listings, filter expired client-side
-  // This balances performance with data freshness
+  // 1. Public listings (verified) - Smart in-memory caching
+  // Strategy: Data stays in state forever, show instantly on tab switch
+  // Background refresh happens silently without blocking UI
   useEffect(() => {
     const verifiedQuery = query(
       dbRef(db, "listings"),
       orderByChild("status"),
       equalTo("verified"),
-      limitToLast(500) // Optimized limit for 20k+ listings - shows most recent active ones
+      limitToLast(500) // Optimized limit for 20k+ listings
     );
 
     let isFirstLoad = true;
+    // Check if we already have data in memory (from previous visit)
+    const hasExistingData = publicListings.length > 0;
+
+    // Only show loading spinner if we have NO data at all
+    if (!hasExistingData) {
+      setListingsLoading(true);
+    } else {
+      // We have cached data - refresh in background silently
+      setIsRefreshing(true);
+    }
+
     const startTime = Date.now();
 
-    // 1a. Initial Get - optimized for performance
+    // 1a. Initial Get - fetch fresh data, but UI shows cached data immediately
     get(verifiedQuery).then((snapshot) => {
       const duration = Date.now() - startTime;
       if (duration > 2000) {
-        console.warn(`[Performance] Initial get() took ${duration}ms. Consider optimizing Firebase rules or network.`);
+        console.warn(`[Performance] Fetch took ${duration}ms.`);
       }
       const val = snapshot.val() || {};
-      // Optimize: use Object.entries for better performance than Object.keys + map
       const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
       
-      // Filter expired listings immediately to reduce data size
+      // Filter expired listings immediately
       const now = Date.now();
       const activeArr = arr.filter(l => !l.expiresAt || l.expiresAt > now);
       
-      setPublicListings(prev => {
-        // Quick check before full comparison
-        if (prev.length === activeArr.length && prev.length > 0) {
-          if (prev[0]?.id === activeArr[0]?.id) return prev;
-        }
-        return activeArr;
-      });
+      // Always update data (this is the source of truth)
+      setPublicListings(activeArr);
       setListingsLoading(false);
+      setIsRefreshing(false);
     }).catch(err => {
-      console.error("Initial fetch error:", err);
+      console.error("Fetch error:", err);
       setListingsLoading(false);
+      setIsRefreshing(false);
+      // Don't clear existing data on error - keep showing cached data
     });
 
-    // 1b. Real-time listener - only for updates after initial load
+    // 1b. Real-time listener - silent background updates (no loading states)
     const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       if (isFirstLoad) {
         isFirstLoad = false;
         return; // Skip first trigger, get() already handled it
       }
+      
+      // Silent background update - data updates without any loading indicators
       const val = snapshot.val() || {};
       const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
-      
-      // Filter expired listings
       const now = Date.now();
       const activeArr = arr.filter(l => !l.expiresAt || l.expiresAt > now);
       
-      setPublicListings(prev => {
-        if (prev.length === activeArr.length && prev.length > 0) {
-          if (prev[0]?.id === activeArr[0]?.id) return prev;
-        }
-        return activeArr;
-      });
+      setPublicListings(activeArr);
+      setIsRefreshing(false);
     }, (err) => {
       console.error("Public listener error:", err);
+      setIsRefreshing(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, []); // Empty deps - only run once on mount, data persists in React state
 
   // 2. User listings - Run when user changes
   useEffect(() => {
@@ -3005,11 +3020,13 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         handleShareListing={handleShareListing}
                         showMessage={showMessage}
                         toggleFav={toggleFav}
-            favorites={favorites}
-            categories={categories}
-            allLocations={mkSpotlightCities}
-          />
-        )}
+                        favorites={favorites}
+                        categories={categories}
+                        allLocations={mkSpotlightCities}
+                        listingsLoaded={listingsLoaded}
+                        isRefreshing={isRefreshing}
+                      />
+                    )}
 
                     {selectedTab === "allListings" && (
                       <Filtersheet

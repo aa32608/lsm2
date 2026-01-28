@@ -6,39 +6,39 @@ import { useApp } from "../context/AppContext";
 import GoogleAd from "./GoogleAd";
 import ListingsSkeleton from "./ListingsSkeleton";
 
-export default function ListingsTab() {
-  const {
-    t,
-    viewMode,
-    setViewMode,
-    q,
-    setQ,
-    catFilter,
-    setCatFilter,
-    locFilter,
-    setLocFilter,
-    sortBy,
-    setSortBy,
-    pagedFiltered,
-    page,
-    totalPages,
-    setPage,
-    pageSize,
-    setPageSize,
-    categoryIcons,
-    feedbackAverages,
-    filtersOpen,
-    setFiltersOpen,
-    categories,
-    allLocations,
-    getDescriptionPreview,
-    getListingStats,
-    handleShareListing,
-    showMessage,
-    toggleFav,
-    favorites,
-    listingsLoaded
-  } = useApp();
+export default function ListingsTab({
+  t,
+  viewMode,
+  setViewMode,
+  q,
+  setQ,
+  catFilter,
+  setCatFilter,
+  locFilter,
+  setLocFilter,
+  sortBy,
+  setSortBy,
+  pagedFiltered,
+  page,
+  totalPages,
+  setPage,
+  pageSize,
+  setPageSize,
+  categoryIcons,
+  feedbackAverages,
+  filtersOpen,
+  setFiltersOpen,
+  categories,
+  allLocations,
+  getDescriptionPreview,
+  getListingStats,
+  handleShareListing,
+  showMessage,
+  toggleFav,
+  favorites,
+  listingsLoaded = true, // Default to true - show data immediately if available
+  isRefreshing = false // Background refresh indicator
+}) {
 
   const hasActiveFilters = catFilter || locFilter || q;
 
@@ -177,7 +177,7 @@ export default function ListingsTab() {
            )}
 
            {/* LISTINGS GRID/LIST */}
-           {!listingsLoaded ? (
+           {!listingsLoaded && pagedFiltered.length === 0 ? (
              <ListingsSkeleton count={pageSize} viewMode={viewMode} />
            ) : pagedFiltered.length > 0 ? (
              <>
