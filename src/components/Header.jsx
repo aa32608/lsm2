@@ -34,6 +34,7 @@ const Header = ({ onMenuOpen }) => {
   const navItems = [
     { path: "/", label: t("homepage"), icon: "🏠" },
     { path: "/listings", label: t("explore"), icon: "🧭", badge: verifiedListings?.length || 0 },
+    { path: "/contact", label: t("contactUs"), icon: "✉️" },
     // Show user nav items immediately if user exists (from cache or Firebase)
     // This prevents the buttons from appearing mid-page load
     ...(user

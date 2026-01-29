@@ -23,6 +23,7 @@ const Sidebar = ({ onClose, isOpen }) => {
   const navItems = [
     { path: "/", label: t("homepage"), icon: "🏠" },
     { path: "/listings", label: t("explore"), icon: "🧭" },
+    { path: "/contact", label: t("contactUs"), icon: "✉️" },
     ...(user ? [
       { path: "/mylistings", label: t("myListings"), icon: "📂" },
       { path: "/account", label: t("account"), icon: "👤" },
