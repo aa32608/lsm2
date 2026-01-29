@@ -96,7 +96,7 @@ ${t('contactFormFooter') || 'This email was sent from the contact form on bizcal
 
           <div className="contact-field-group">
             <label htmlFor="name" className="contact-label">
-              {t('name') || 'Name'} *
+              {t('signupNameLabel') || 'Name'} *
             </label>
             <input
               type="text"
