@@ -2,7 +2,8 @@
 import React, { useState, useCallback, Suspense, lazy } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
-import { PLANS, categories, categoryIcons, currencyOptions } from "../constants";
+import { PLANS, categories, categoryIcons, currencyOptions, FREE_TRIAL_DEADLINE_MS } from "../constants";
+import FreeTrialCountdown from "./FreeTrialCountdown";
 import DualRangeSlider from "./DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
 
@@ -684,19 +685,20 @@ const PostListingDrawer = () => {
                         <div className="plan-selection-section">
                           <h4 className="plan-selection-title">{t("selectPlan")}</h4>
                           
-                          {user && userProfile && !userProfile.hasUsedFreeTrial && (
+                          {user && userProfile && !userProfile.hasUsedFreeTrial && Date.now() <= FREE_TRIAL_DEADLINE_MS && (
                             <div className="free-trial-banner">
                                <div className="free-trial-icon">🎁</div>
                                <div className="free-trial-content">
                                  <strong>{t("freeTrialAvailable")}</strong>
                                  <span>{t("freeTrialDesc")}</span>
+                                 <FreeTrialCountdown t={t} />
                                </div>
                             </div>
                           )}
 
                           <div className="plan-selection-grid">
                             {PLANS.map(plan => {
-                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
+                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1" && Date.now() <= FREE_TRIAL_DEADLINE_MS;
                               return (
                               <div 
                                 key={plan.id}

@@ -560,8 +560,12 @@ app.post("/api/create-payment", async (req, res) => {
   }
 
   // --- FREE TRIAL LOGIC ---
-  // If it's a new listing creation, we have a userId, AND the selected plan is "1" (1 Month)
-  if (type === 'create' && userId && String(plan) === "1") {
+  // Free trial only valid until end of Feb 23, 2026 (UTC)
+  const FREE_TRIAL_DEADLINE_MS = new Date('2026-02-23T23:59:59.999Z').getTime();
+  const nowMs = Date.now();
+
+  // If it's a new listing creation, we have a userId, selected plan is "1", and before deadline
+  if (type === 'create' && userId && String(plan) === "1" && nowMs <= FREE_TRIAL_DEADLINE_MS) {
       try {
         const userRef = db.ref(`users/${userId}`);
         const userSnap = await userRef.once('value');

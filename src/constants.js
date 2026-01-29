@@ -51,3 +51,10 @@ export const PLANS = [
   { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
   { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
 ];
+
+// Free 1-month listing offer valid until end of Feb 23, 2026 (UTC)
+export const FREE_TRIAL_DEADLINE_MS = new Date('2026-02-23T23:59:59.999Z').getTime();
+
+export function isFreeTrialActive() {
+  return typeof window !== 'undefined' && Date.now() <= FREE_TRIAL_DEADLINE_MS;
+}

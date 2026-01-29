@@ -45,6 +45,7 @@ import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
+import FreeTrialCountdown from "./components/FreeTrialCountdown";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -106,6 +107,9 @@ const PLANS = [
   { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
   { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
 ];
+
+// Free 1-month offer valid until end of Feb 23, 2026 (UTC)
+const FREE_TRIAL_DEADLINE_MS = new Date('2026-02-23T23:59:59.999Z').getTime();
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -3637,19 +3641,20 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         <div className="plan-selection-section">
                           <h4 className="plan-selection-title">{t("selectPlan") || "Select Plan"}</h4>
                           
-                          {user && userProfile && !userProfile.hasUsedFreeTrial && (
+                          {user && userProfile && !userProfile.hasUsedFreeTrial && Date.now() <= FREE_TRIAL_DEADLINE_MS && (
                             <div className="free-trial-banner">
                                <div className="free-trial-icon">🎁</div>
                                <div className="free-trial-content">
                                  <strong>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
                                  <span>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
+                                 <FreeTrialCountdown t={t} />
                                </div>
                             </div>
                           )}
 
                           <div className="plan-selection-grid">
                             {PLANS.map(plan => {
-                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
+                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1" && Date.now() <= FREE_TRIAL_DEADLINE_MS;
                               return (
                               <div 
                                 key={plan.id}

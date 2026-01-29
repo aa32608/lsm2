@@ -7422,6 +7422,17 @@ img {
   box-shadow: 0 0 0 3px var(--primary-light);
 }
 
+.contact-input-readonly {
+  background: var(--surface-hover);
+  cursor: not-allowed;
+  color: var(--text-secondary);
+}
+
+.contact-input-readonly:focus {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
 .contact-textarea {
   resize: vertical;
   min-height: 120px;

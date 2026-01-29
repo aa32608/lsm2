@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 
 const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
@@ -7,7 +7,7 @@ const API_BASE = (typeof window !== "undefined" && (window.location.hostname ===
   : "https://lsm-wozo.onrender.com");
 
 export default function ContactPage() {
-  const { t } = useApp();
+  const { t, user, userProfile } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,6 +16,21 @@ export default function ContactPage() {
   });
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ type: null, message: '' });
+
+  // When user is logged in, autofill name and email from Firebase and keep them locked
+  useEffect(() => {
+    if (user) {
+      const displayName = (userProfile?.name && userProfile.name.trim()) || user.displayName || (user.email ? user.email.split('@')[0] : '');
+      const email = user.email || userProfile?.email || '';
+      setFormData(prev => ({
+        ...prev,
+        name: displayName,
+        email: email
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, name: '', email: '' }));
+    }
+  }, [user, userProfile?.name, userProfile?.email, user?.email, user?.displayName]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,7 +75,14 @@ ${t('contactFormFooter') || 'This email was sent from the contact form on bizcal
         type: 'success', 
         message: t('contactFormSuccess') || 'Thank you! Your message has been sent successfully.' 
       });
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      // Reset subject and message; keep name/email when logged in
+      if (user) {
+        const displayName = (userProfile?.name && userProfile.name.trim()) || user.displayName || (user.email ? user.email.split('@')[0] : '');
+        const email = user.email || userProfile?.email || '';
+        setFormData(prev => ({ ...prev, subject: '', message: '', name: displayName, email }));
+      } else {
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      }
     } catch (error) {
       console.error('Contact form error:', error);
       setStatus({ 
@@ -96,16 +118,18 @@ ${t('contactFormFooter') || 'This email was sent from the contact form on bizcal
 
           <div className="contact-field-group">
             <label htmlFor="name" className="contact-label">
-              {t('signupNameLabel') || 'Name'} *
+              {t('name') || 'Name'} *
             </label>
             <input
               type="text"
               id="name"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="contact-input"
+              onChange={(e) => !user && setFormData({ ...formData, name: e.target.value })}
+              className={`contact-input ${user ? 'contact-input-readonly' : ''}`}
               placeholder={t('enterName') || 'Enter your name'}
+              readOnly={!!user}
+              aria-readonly={!!user}
             />
           </div>
 
@@ -118,9 +142,11 @@ ${t('contactFormFooter') || 'This email was sent from the contact form on bizcal
               id="email"
               required
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="contact-input"
+              onChange={(e) => !user && setFormData({ ...formData, email: e.target.value })}
+              className={`contact-input ${user ? 'contact-input-readonly' : ''}`}
               placeholder={t('enterEmail') || 'Enter your email'}
+              readOnly={!!user}
+              aria-readonly={!!user}
             />
           </div>
 
