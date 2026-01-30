@@ -3719,26 +3719,26 @@ img {
     align-self: center;
   }
   
+  /* Logo in flow with header bar (same animation/positioning as hamburger & actions) */
   .header-logo {
     order: 2;
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;
     margin: 0;
     align-self: center;
+    flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
     touch-action: manipulation;
+    transition: transform 0.2s ease, color 0.2s ease;
   }
 
   .header-logo:hover {
-    transform: translate(-50%, -50%) translateY(-1px);
+    transform: translateY(-1px);
   }
 
   .header-logo:active {
-    transform: translate(-50%, -50%) scale(0.97);
+    transform: translateY(0) scale(0.97);
   }
 
   .header-logo .brand-mark {
@@ -3746,7 +3746,7 @@ img {
     align-items: center;
     justify-content: center;
     position: relative;
-    transition: transform 0.15s ease;
+    transition: transform 0.2s ease;
   }
 
   .header-logo:active .brand-mark {
@@ -3757,7 +3757,7 @@ img {
     height: 28px !important;
     width: auto !important;
     display: block !important;
-    transition: transform 0.15s ease;
+    transition: transform 0.2s ease;
   }
 
   .header-logo:hover .brand-logo {
@@ -3765,20 +3765,16 @@ img {
   }
 
   .header-logo:active .brand-logo {
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
 
   .header-logo span {
     display: inline !important;
     font-size: 0.9rem;
     position: relative;
-    transition: transform 0.15s ease;
+    transition: color 0.2s ease;
   }
 
-  .header-logo:active span {
-    transform: scale(0.98);
-  }
-  
   .header-actions {
     order: 3;
     align-self: center;
