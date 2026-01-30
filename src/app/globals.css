@@ -143,7 +143,6 @@ img {
 
 /* Header - Completely Redesigned */
 .app-header {
-  height: 70px;
   position: fixed;
   top: 0;
   right: 0;
@@ -157,17 +156,10 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 70px;
   padding: 0 var(--spacing-xl);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
   gap: var(--spacing-md);
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    padding: 0 var(--spacing-md);
-    gap: var(--spacing-sm);
-    justify-content: space-between;
-  }
 }
 
 .app-header::after {
@@ -177,24 +169,55 @@ img {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    var(--primary) 20%, 
-    var(--primary-hover) 50%, 
-    var(--primary) 80%, 
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--primary) 20%,
+    var(--primary-hover) 50%,
+    var(--primary) 80%,
     transparent 100%
   );
   opacity: 0.3;
+  pointer-events: none;
 }
 
 @media (max-width: 768px) {
   .app-header {
-    height: 64px;
     padding: 0 var(--spacing-md);
+    gap: var(--spacing-sm);
   }
-  
+
   :root {
     --header-height: 64px;
+  }
+}
+
+/* Top bar row: hamburger, logo, desktop nav, actions */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 70px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1023px) {
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    min-height: 64px;
+  }
+
+  .header-bar {
+    min-height: 64px;
+    height: 64px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-bar {
+    padding: 0;
   }
 }
 
@@ -211,6 +234,184 @@ img {
     gap: var(--spacing-sm);
     flex: 0 0 auto;
   }
+}
+
+/* Mobile only: expandable drawer (sidebar = header, drags down from header bar) */
+.mobile-header-drawer {
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height var(--menu-duration) var(--menu-ease), opacity var(--menu-duration) var(--menu-ease);
+}
+
+@media (max-width: 1023px) {
+  .mobile-header-drawer {
+    display: flex;
+  }
+
+  .mobile-header-drawer.is-open {
+    max-height: min(70vh, 520px);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-header-drawer {
+    display: none !important;
+  }
+}
+
+.mobile-header-drawer-inner {
+  background: var(--drawer-surface);
+  border-bottom: 1px solid var(--drawer-edge);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  padding: 12px var(--spacing-md) 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-header-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-header-drawer-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text-main);
+  font-size: 0.98rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.26s var(--menu-ease), transform 0.26s var(--menu-ease), background 0.2s ease;
+}
+
+.mobile-header-drawer.is-open .mobile-header-drawer-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-header-drawer-item:hover,
+.mobile-header-drawer-item:focus {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-header-drawer-item.active {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.mobile-header-drawer-item-icon {
+  font-size: 1.2rem;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.04);
+  transition: background 0.2s ease;
+}
+
+.mobile-header-drawer-item.active .mobile-header-drawer-item-icon {
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.mobile-header-drawer-item-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-header-drawer-cta {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  color: white;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.26s var(--menu-ease), transform 0.26s var(--menu-ease), box-shadow 0.2s ease;
+}
+
+.mobile-header-drawer.is-open .mobile-header-drawer-cta {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-header-drawer-cta:active {
+  transform: scale(0.98);
+}
+
+.mobile-header-drawer-cta--secondary {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.mobile-header-drawer-cta-icon {
+  font-size: 1.1rem;
+}
+
+.mobile-header-drawer-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--drawer-edge);
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.26s var(--menu-ease), transform 0.26s var(--menu-ease);
+}
+
+.mobile-header-drawer.is-open .mobile-header-drawer-footer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.mobile-header-drawer-email {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  margin: 0 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-header-drawer-logout {
+  padding: 6px 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: color 0.2s ease;
+}
+
+.mobile-header-drawer-logout:hover {
+  color: var(--danger, #ef4444);
 }
 
 /* Shared: hamburger + top-down drawer use same timing (one interaction) */
@@ -626,7 +827,13 @@ img {
   }
 }
 
-/* Mobile drawer: top-down panel with handle, same timing as hamburger */
+/* Mobile drawer overlay: hidden on mobile; sidebar is the header (expandable) */
+@media (max-width: 1023px) {
+  .mobile-drawer {
+    display: none !important;
+  }
+}
+
 .mobile-drawer {
   position: fixed;
   inset: 0;
