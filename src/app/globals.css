@@ -5364,38 +5364,38 @@ img {
   order: 1000; /* Footer after feedback */
 }
 
-/* Mobile: Reorder sections - Additional Info first, then Description, then Feedback */
+/* Mobile: Additional Info first, then Description, then Feedback (single column) */
 @media (max-width: 768px) {
   .detail-bottom-section {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   .detail-sidebar {
-    order: 1; /* Additional Info appears first */
+    order: 0 !important; /* Additional Info first */
   }
 
   .detail-main-content {
-    order: 2; /* Description and Feedback appear after Additional Info */
+    order: 1 !important; /* Description + Feedback after Additional Info */
     display: flex;
     flex-direction: column;
   }
 
   .detail-description-section {
-    order: 1;
+    order: 0;
   }
 
   .detail-ad-section {
-    order: 2;
+    order: 1;
   }
 
   .detail-feedback-section {
-    order: 3; /* Feedback appears after Additional Info and Description */
+    order: 2 !important; /* Feedback after Additional Info and Description */
     margin-bottom: 0;
   }
 
   .detail-footer {
-    order: 4;
+    order: 3;
     margin-top: 0;
   }
 }

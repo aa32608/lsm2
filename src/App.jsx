@@ -45,7 +45,6 @@ import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
-import FreeTrialCountdown from "./components/FreeTrialCountdown";
 
 const API_BASE =
   import.meta.env.VITE_API_BASE ||
@@ -108,8 +107,6 @@ const PLANS = [
   { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
 ];
 
-// Free 1-month offer valid until end of Feb 23, 2026 (UTC)
-const FREE_TRIAL_DEADLINE_MS = new Date('2026-02-23T23:59:59.999Z').getTime();
 
 /* Helper: strip obvious garbage like tags */
 const stripDangerous = (v = "") => v.replace(/[<>]/g, "");
@@ -446,6 +443,13 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     // Scroll to top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Preload Dodo Payments when user opens My Listings so "Proceed to payment" is fast
+  useEffect(() => {
+    if (selectedTab === "myListings" && typeof fetch !== "undefined") {
+      fetch(`${API_BASE}/api/payments-warmup`, { method: "GET", headers: { "Content-Type": "application/json" } }).catch(() => {});
+    }
+  }, [selectedTab]);
 
   /* Editing */
   const [editingListing, setEditingListing] = useState(null);
@@ -2578,6 +2582,8 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                 key={l.id}
                                 listing={l}
                                 t={t}
+                                user={user}
+                                userProfile={userProfile}
                                 categoryIcons={categoryIcons}
                                 getDaysUntilExpiry={getDaysUntilExpiry}
                                 getListingStats={getListingStats}
@@ -3641,20 +3647,19 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         <div className="plan-selection-section">
                           <h4 className="plan-selection-title">{t("selectPlan") || "Select Plan"}</h4>
                           
-                          {user && userProfile && !userProfile.hasUsedFreeTrial && Date.now() <= FREE_TRIAL_DEADLINE_MS && (
+                          {user && userProfile && !userProfile.hasUsedFreeTrial && (
                             <div className="free-trial-banner">
                                <div className="free-trial-icon">🎁</div>
                                <div className="free-trial-content">
                                  <strong>{t("freeTrialAvailable") || "Free Trial Available!"}</strong>
                                  <span>{t("freeTrialDesc") || "Select the 1 Month plan to get your first month completely free."}</span>
-                                 <FreeTrialCountdown t={t} />
                                </div>
                             </div>
                           )}
 
                           <div className="plan-selection-grid">
                             {PLANS.map(plan => {
-                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1" && Date.now() <= FREE_TRIAL_DEADLINE_MS;
+                              const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
                               return (
                               <div 
                                 key={plan.id}

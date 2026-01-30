@@ -456,7 +456,20 @@ export default function ListingDetailClient({ id, initialListing }) {
               <h2 className="detail-sidebar-title">{t("additionalInfo")}</h2>
               
               <div className="detail-sidebar-section">
-              {/* Most Important Info First - Contact & Price */}
+              {/* Most Important Info First - Contact & Price (phone from contact or phone field) */}
+              {(listing.contact || listing.phone) && (
+                <div className="detail-sidebar-item detail-sidebar-item-priority">
+                  <div className="detail-sidebar-label">
+                    <span aria-hidden="true">📞</span> {t("phoneNumber")}
+                  </div>
+                  <div className="detail-sidebar-value">
+                    <a href={`tel:${listing.contact || listing.phone}`} className="detail-phone-link">
+                      {listing.contact || listing.phone}
+                    </a>
+                  </div>
+                </div>
+              )}
+
               {listing.userEmail && (
                 <div className="detail-sidebar-item detail-sidebar-item-priority">
                   <div className="detail-sidebar-label">

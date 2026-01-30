@@ -20,22 +20,19 @@ if (initialData.listings && initialData.listings.length > 0) {
   queryClient.setQueryData(['listings', 'all'], initialData.listings);
 }
 
-// Wake up backend on website visit to preload Dodo Payments and other services
-// This ensures backend is ready before first requests come in
+// Wake up backend and preload Dodo Payments so first payment is fast
 const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:5000"
   : "https://lsm-wozo.onrender.com");
 
-// Make a lightweight health check request to wake up backend
-// This preloads Dodo Payments connections and other backend services
 if (typeof window !== "undefined") {
-  fetch(`${API_BASE}/api/health`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-    // Don't wait for response - fire and forget
-  }).catch(() => {
-    // Silently fail - this is just a wake-up call
-  });
+  // 1) Health: quick wake-up of the server
+  fetch(`${API_BASE}/api/health`, { method: 'GET', headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+
+  // 2) Payments warmup: perform a real Dodo API call so connections are ready before user clicks pay
+  fetch(`${API_BASE}/api/payments-warmup`, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+    .then(() => { /* warmup done */ })
+    .catch(() => {});
 }
 
 if (container.hasChildNodes() && Object.keys(initialData).length > 0) {

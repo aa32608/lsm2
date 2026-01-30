@@ -22,12 +22,15 @@ const MyListingCard = React.memo(({
   handleShareListing,
   confirmDelete,
   user,
+  userProfile,
 }) => {
   const router = useRouter();
   const stats = getListingStats(l);
   const days = getDaysUntilExpiry(l.expiresAt);
   const isExpiringSoon = days !== null && days > 0 && days <= 7;
   const isExpired = days !== null && days <= 0;
+  const currentPlan = l.plan || "1";
+  const isFreeTrialEligible = (l.status === "pending" || l.status === "unpaid") && currentPlan === "1" && user && userProfile && !userProfile.hasUsedFreeTrial;
 
   return (
     <article className="my-listing-card my-listing-card-horizontal" role="listitem">
@@ -154,10 +157,10 @@ const MyListingCard = React.memo(({
               </button>
               
               {(l.status === "pending" || l.status === "unpaid") ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%' }}>
+                <div className="my-listing-payment-actions">
                   <select
                     className="btn btn-sm"
-                    value={l.plan || "1"}
+                    value={currentPlan}
                     onChange={(e) => {
                       const newPlan = e.target.value;
                       // Update listing plan in Firebase
@@ -186,8 +189,13 @@ const MyListingCard = React.memo(({
                     <option value="6">{t("plan6Months") || "6 Months"}</option>
                     <option value="12">{t("plan12Months") || "12 Months"}</option>
                   </select>
+                  {isFreeTrialEligible && (
+                    <span className="proceed-free-badge" aria-label={t("freeFor1Month")}>
+                      🎁 {t("freeFor1Month")}
+                    </span>
+                  )}
                   <button
-                    className="btn btn-sm btn-primary"
+                    className={`btn btn-sm ${isFreeTrialEligible ? "btn-primary btn-free-trial" : "btn-primary"}`}
                     onClick={() => {
                       // For pending/unpaid listings, redirect to payment
                       const API_BASE = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
@@ -202,7 +210,8 @@ const MyListingCard = React.memo(({
                           type: "create",
                           customerEmail: l.userEmail,
                           customerName: l.name,
-                          plan: l.plan || "1"
+                          plan: currentPlan,
+                          userId: user?.uid || null
                         })
                       })
                       .then(res => res.json())

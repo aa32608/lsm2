@@ -6,7 +6,7 @@ import MyListingCard from './MyListingCard';
 
 export default function MyListingsTab() {
   const {
-    t, user, myListingsRaw, categoryIcons,
+    t, user, userProfile, myListingsRaw, categoryIcons,
     handleSelectListing, handleOpenEdit, handleStartExtendFlow,
     showMessage, handleShareListing, confirmDelete,
     getDaysUntilExpiry, getListingStats, getDescriptionPreview,
@@ -351,6 +351,7 @@ export default function MyListingsTab() {
                   listing={l}
                   t={t}
                   user={user}
+                  userProfile={userProfile}
                   categoryIcons={categoryIcons}
                   getDaysUntilExpiry={getDaysUntilExpiry}
                   getListingStats={getListingStats}

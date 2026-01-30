@@ -256,6 +256,35 @@ app.get("/api/health", async (req, res) => {
   });
 });
 
+/* ----------------------- PAYMENTS WARMUP ENDPOINT ----------------------- */
+// Dedicated warmup: ensures Dodo client is ready and performs a real API call
+// so the first user payment doesn't wait for cold connections.
+app.get("/api/payments-warmup", async (req, res) => {
+  const start = Date.now();
+  try {
+    let client = dodoClient;
+    if (!client && process.env.DODO_PAYMENTS_API_KEY) {
+      client = new DodoPayments({
+        bearerToken: process.env.DODO_PAYMENTS_API_KEY,
+        environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
+      });
+      dodoClient = client;
+      console.log('[DodoPayments] Client initialized on warmup');
+    }
+    if (client) {
+      const productId = productCache['1'] || process.env.DODO_PRODUCT_1_MONTH || process.env.DODO_PAYMENTS_PRODUCT_ID;
+      if (productId && client.products && typeof client.products.retrieve === 'function') {
+        await client.products.retrieve(productId);
+        console.log(`[DodoPayments] Warmup: product connection ready (${Date.now() - start}ms)`);
+      }
+    }
+    res.json({ ready: true, dodoPaymentsReady: !!client, warmupMs: Date.now() - start });
+  } catch (err) {
+    console.warn('[DodoPayments] Warmup failed (non-fatal):', err.message);
+    res.json({ ready: !!dodoClient, dodoPaymentsReady: !!dodoClient, warmupMs: Date.now() - start });
+  }
+});
+
 /* ----------------------- EMAIL NOTIFICATIONS ----------------------- */
 
 // Email cooldown tracking - prevent spam (only for marketing emails, 7 days between marketing emails)
@@ -559,13 +588,9 @@ app.post("/api/create-payment", async (req, res) => {
     return res.status(400).json({ error: EMAIL_TRANSLATIONS.errors.missing_listing_id.en });
   }
 
-  // --- FREE TRIAL LOGIC ---
-  // Free trial only valid until end of Feb 23, 2026 (UTC)
-  const FREE_TRIAL_DEADLINE_MS = new Date('2026-02-23T23:59:59.999Z').getTime();
-  const nowMs = Date.now();
-
-  // If it's a new listing creation, we have a userId, selected plan is "1", and before deadline
-  if (type === 'create' && userId && String(plan) === "1" && nowMs <= FREE_TRIAL_DEADLINE_MS) {
+  // --- FREE TRIAL LOGIC (permanent: first 1-month listing free per account) ---
+  // If it's a new listing creation, we have a userId, and selected plan is "1"
+  if (type === 'create' && userId && String(plan) === "1") {
       try {
         const userRef = db.ref(`users/${userId}`);
         const userSnap = await userRef.once('value');
