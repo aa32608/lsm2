@@ -37,8 +37,8 @@ export default function HomeTab() {
     router.push('/listings');
   };
 
-  // Compact: 2 categories per group for homepage (short, scannable)
-  const categoriesPerGroup = 2;
+  // Compact: 3 categories per group for homepage (short, scannable)
+  const categoriesPerGroup = 3;
 
   return (
     <div className="app-main-content">
@@ -202,11 +202,18 @@ export default function HomeTab() {
       >
         <div className="container">
           <div className="categories-card card">
-            <div className="section-header section-header--compact">
+            <div className="section-header section-header--compact categories-header-row">
               <h2 id="categories-title" className="section-title section-title--compact">
                 <span className="section-icon" aria-hidden="true">🎯</span>
                 {t("homePopularCategoriesTitle")}
               </h2>
+              <Link
+                href="/listings"
+                className="categories-browse-all"
+                aria-label={t("browseAllCategories") || t("browse")}
+              >
+                {t("browseAllCategories") || t("browse")} →
+              </Link>
             </div>
             
             <div 
@@ -215,7 +222,7 @@ export default function HomeTab() {
               aria-label={t("popularCategories") || t("homePopularCategoriesTitle")}
             >
               {(categoryGroups || []).map((group) => (
-                <div key={group.id} className="categories-group-row" role="listitem">
+                <div key={group.id} className="categories-group-block" role="listitem">
                   <span className="categories-group-label">{t(group.labelKey)}</span>
                   <div className="categories-group-chips">
                     {(group.categories || []).slice(0, categoriesPerGroup).map((cat) => (
