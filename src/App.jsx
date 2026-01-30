@@ -43,6 +43,7 @@ import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./legacy_pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
+import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS } from "./constants";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
 
@@ -52,60 +53,7 @@ const API_BASE =
     ? "http://localhost:5000"
     : "https://lsm-wozo.onrender.com");
 
-/* Data */
-const categories = [
-  "food", "car", "electronics", "homeRepair", "health",
-  "education", "clothing", "pets", "services",
-  "tech", "entertainment", "events", "other"
-];
-
-const categoryIcons = {
-  food: "🍔",
-  car: "🚗",
-  electronics: "💡",
-  homeRepair: "🧰",
-  health: "💅",
-  education: "🎓",
-  clothing: "👕",
-  pets: "🐾",
-  services: "💼",
-  tech: "💻",
-  entertainment: "🎮",
-  events: "🎟️",
-  other: "✨",
-};
-
-const countryCodes = [
-  { name: "MK", code: "+389" },
-  { name: "AL", code: "+355" },
-  { name: "KS", code: "+383" },
-  { name: "SR", code: "+381" },
-  { name: "GR", code: "+30" },
-  { name: "BG", code: "+359" },
-  { name: "TR", code: "+90" },
-  { name: "DE", code: "+49" },
-  { name: "US", code: "+1" },
-];
-
-const currencyOptions = ["EUR", "MKD"];
-
-const mkSpotlightCities = [
-  "Skopje",
-  "Tetovë",
-  "Gostivar",
-  "Ohër",
-  "Kumanovë",
-  "Manastir",
-  "Prilep",
-  "Kërçovë",
-];
-
-const PLANS = [
-  { id: "1", label: "1 Month", price: "2 EUR", duration: "30 days", priceVal: 2 },
-  { id: "3", label: "3 Months", price: "5 EUR", duration: "90 days", priceVal: 5 },
-  { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
-  { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
-];
+/* Data from constants (categories, categoryGroups, categoryIcons, etc.) */
 
 
 /* Helper: strip obvious garbage like tags */
@@ -1583,7 +1531,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       const selectedPlan = PLANS.find(p => p.id === planId) || PLANS[0];
       const listingId = await createListingInFirebase({
         ...form,
-        category: categories.find(c => t(c) === form.category) ? categories.find(c => t(c) === form.category) : form.category,
+        category: form.category,
         contact: normalizedContact,
         location: finalLocation,
         locationCity: form.locationCity,
@@ -1820,10 +1768,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       arr = arr.filter((l) => l.location === locFilter);
     }
     if (catFilter) {
-      arr = arr.filter((l) => {
-        const cat = t(l.category) || l.category;
-        return cat === catFilter;
-      });
+      arr = arr.filter((l) => l.category === catFilter || t(l.category) === catFilter);
     }
     // Search is less selective, apply after location/category filters
     if (qTrimmed) {
@@ -3117,6 +3062,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         sortBy={sortBy}
                         setSortBy={setSortBy}
                         categories={categories}
+                        categoryGroups={categoryGroups}
                         categoryIcons={categoryIcons}
                         allLocations={MK_CITIES}
                       />
@@ -3353,10 +3299,14 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             required
                           >
                             <option value="">{t("selectCategory")}</option>
-                            {categories.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {t(cat)}
-                              </option>
+                            {categoryGroups.map((group) => (
+                              <optgroup key={group.id} label={t(group.labelKey)}>
+                                {group.categories.map((cat) => (
+                                  <option key={cat} value={cat}>
+                                    {t(cat) || cat}
+                                  </option>
+                                ))}
+                              </optgroup>
                             ))}
                           </select>
                         </div>
@@ -3379,7 +3329,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                             <option value="">{t("selectCity")}</option>
                             {MK_CITIES.map((city) => (
                               <option key={city} value={city}>
-                                {city}
+                                {t(city) || city}
                               </option>
                             ))}
                           </select>

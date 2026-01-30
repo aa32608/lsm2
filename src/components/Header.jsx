@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
-const Header = ({ onMenuOpen }) => {
+const Header = ({ sidebarOpen, onMenuOpen }) => {
   const { 
     t, 
     lang, 
@@ -49,15 +49,14 @@ const Header = ({ onMenuOpen }) => {
     <header className="app-header">
       <div className="header-left">
         <button
-          className="icon-btn hamburger-btn"
+          className={`hamburger-btn ${sidebarOpen ? "open" : ""}`}
           onClick={onMenuOpen}
-          aria-label={t("menu")}
+          aria-label={sidebarOpen ? t("close") : t("menu")}
+          aria-expanded={!!sidebarOpen}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
+          <span className="hamburger-box">
+            <span className="hamburger-inner" />
+          </span>
         </button>
 
         <Link

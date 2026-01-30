@@ -13,6 +13,7 @@ const EditListingModal = () => {
     setEditForm,
     saveEdit,
     categories,
+    categoryGroups,
     MK_CITIES,
     stripDangerous,
     editLocationPreview,
@@ -97,10 +98,12 @@ const EditListingModal = () => {
                     setEditForm({ ...editForm, category: e.target.value })
                   }
                 >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {t(cat)}
-                    </option>
+                  {categoryGroups && categoryGroups.map((group) => (
+                    <optgroup key={group.id} label={t(group.labelKey)}>
+                      {group.categories.map((cat) => (
+                        <option key={cat} value={cat}>{t(cat) || cat}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
@@ -121,7 +124,7 @@ const EditListingModal = () => {
                     <option value="">{t("selectCity")}</option>
                     {MK_CITIES.map((city) => (
                       <option key={city} value={city}>
-                        {city}
+                        {t(city) || city}
                       </option>
                     ))}
                   </select>

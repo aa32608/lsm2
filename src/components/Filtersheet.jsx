@@ -14,6 +14,7 @@ const Filtersheet = React.memo(({
   sortBy,
   setSortBy,
   categories,
+  categoryGroups,
   categoryIcons,
   allLocations,
   setPage, // Add setPage to reset page when filters change
@@ -190,37 +191,41 @@ const Filtersheet = React.memo(({
               </div>
             )}
 
-            {categories && setCatFilter && (
+            {categoryGroups && setCatFilter && (
               <div className="filter-group">
                 <div className="filter-group-header">
                   <span className="filter-group-icon">📂</span>
                   <span className="filter-group-title">{t("category")}</span>
                 </div>
-                <div className="filter-group-content">
-                  <div className="filter-options-grid">
-                    {categories.map((cat) => {
-                      const label = t(cat);
-                      const active = localCat === label;
-                      return (
-                        <button
-                          key={cat}
-                          type="button"
-                          className={`filter-option-card ${active ? "is-selected" : ""}`}
-                          onClick={() => setLocalCat(active ? "" : label)}
-                        >
-                          <div className="filter-option-icon">{categoryIcons[cat]}</div>
-                          <div className="filter-option-label">{label}</div>
-                          {active && (
-                            <div className="filter-option-check">
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
-                                <polyline points="20 6 9 17 4 12"></polyline>
-                              </svg>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                <div className="filter-group-content filter-categories-by-group">
+                  {categoryGroups.map((group) => (
+                    <div key={group.id} className="filter-category-group">
+                      <div className="filter-category-group-label">{t(group.labelKey)}</div>
+                      <div className="filter-options-grid">
+                        {group.categories.map((cat) => {
+                          const active = localCat === cat;
+                          return (
+                            <button
+                              key={cat}
+                              type="button"
+                              className={`filter-option-card ${active ? "is-selected" : ""}`}
+                              onClick={() => setLocalCat(active ? "" : cat)}
+                            >
+                              <div className="filter-option-icon">{categoryIcons[cat] || "🏷️"}</div>
+                              <div className="filter-option-label">{t(cat) || cat}</div>
+                              {active && (
+                                <div className="filter-option-check">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -240,7 +245,7 @@ const Filtersheet = React.memo(({
                     >
                       <option value="">{t("allLocations")}</option>
                       {allLocations.map((l) => (
-                        <option key={l} value={l}>{l}</option>
+                        <option key={l} value={l}>{t(l) || l}</option>
                       ))}
                     </select>
                     <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

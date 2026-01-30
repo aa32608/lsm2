@@ -13,6 +13,7 @@ export default function HomeTab() {
     setAuthMode,
     setForm,
     categoryIcons,
+    categoryGroups,
     setCatFilter,
     activeListingCount,
     verifiedListingCount,
@@ -32,9 +33,12 @@ export default function HomeTab() {
   };
 
   const handleCategoryClick = (cat) => {
-    setCatFilter(t(cat));
+    setCatFilter(cat);
     router.push('/listings');
   };
+
+  // Compact: 2 categories per group for homepage (short, scannable)
+  const categoriesPerGroup = 2;
 
   return (
     <div className="app-main-content">
@@ -191,38 +195,45 @@ export default function HomeTab() {
         </div>
       </section>
 
-      {/* CATEGORIES */}
+      {/* CATEGORIES – compact by group */}
       <section 
-        className="categories-section" 
+        className="categories-section categories-section--compact" 
         aria-labelledby="categories-title"
       >
         <div className="container">
           <div className="categories-card card">
-            <div className="section-header">
-              <h2 id="categories-title" className="section-title">
+            <div className="section-header section-header--compact">
+              <h2 id="categories-title" className="section-title section-title--compact">
                 <span className="section-icon" aria-hidden="true">🎯</span>
                 {t("homePopularCategoriesTitle")}
               </h2>
             </div>
             
             <div 
-              className="categories-grid" 
+              className="categories-by-group" 
               role="list"
               aria-label={t("popularCategories") || t("homePopularCategoriesTitle")}
             >
-              {Object.keys(categoryIcons).map((cat) => (
-                <button
-                  key={cat}
-                  className="category-chip"
-                  onClick={() => handleCategoryClick(cat)}
-                  aria-label={`${t("browse")} ${t(cat)} ${t("category")}`}
-                  type="button"
-                >
-                  <span className="category-icon" aria-hidden="true">
-                    {categoryIcons[cat]}
-                  </span>
-                  <span className="category-name">{t(cat)}</span>
-                </button>
+              {(categoryGroups || []).map((group) => (
+                <div key={group.id} className="categories-group-row" role="listitem">
+                  <span className="categories-group-label">{t(group.labelKey)}</span>
+                  <div className="categories-group-chips">
+                    {(group.categories || []).slice(0, categoriesPerGroup).map((cat) => (
+                      <button
+                        key={cat}
+                        className="category-chip category-chip--compact"
+                        onClick={() => handleCategoryClick(cat)}
+                        aria-label={`${t("browse")} ${t(cat)} ${t("category")}`}
+                        type="button"
+                      >
+                        <span className="category-icon" aria-hidden="true">
+                          {categoryIcons?.[cat] ?? "🏷️"}
+                        </span>
+                        <span className="category-name">{t(cat) || cat}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

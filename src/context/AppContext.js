@@ -26,6 +26,7 @@ import {
 } from "firebase/auth";
 import { TRANSLATIONS } from "../translations";
 import { MK_CITIES } from "../mkCities";
+import { categories, categoryGroups, categoryIcons, mkSpotlightCities } from "../constants";
 
 const API_BASE =
   (typeof window !== "undefined" && window.location.hostname === "localhost")
@@ -1308,7 +1309,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     firebaseReady,
     listingsLoaded,
     // Constants
-    categories: ["food", "car", "electronics", "homeRepair", "health", "education", "clothing", "pets", "services", "tech", "entertainment", "events", "other"],
+    categories,
+    categoryGroups,
     categoryIcons,
     mkSpotlightCities,
     countryCodes,

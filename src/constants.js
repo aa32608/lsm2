@@ -1,22 +1,126 @@
-export const categories = [
-  "food", "car", "electronics", "homeRepair", "health",
-  "education", "clothing", "pets", "services",
-  "tech", "entertainment", "events", "other"
+// Category groups for North Macedonia – local & professional services (easier to find/pick)
+export const categoryGroups = [
+  {
+    id: "food",
+    labelKey: "catGroupFood",
+    categories: ["food", "restaurant", "cafe", "bakery", "catering", "fastFood", "grocery", "butcher", "bar", "pastry"],
+  },
+  {
+    id: "transport",
+    labelKey: "catGroupTransport",
+    categories: ["car", "carRepair", "carWash", "tires", "autoParts", "taxi", "drivingSchool", "towing"],
+  },
+  {
+    id: "home",
+    labelKey: "catGroupHome",
+    categories: ["homeRepair", "plumbing", "electrical", "painting", "carpentry", "cleaning", "landscaping", "locksmith", "hvac", "moving"],
+  },
+  {
+    id: "health",
+    labelKey: "catGroupHealth",
+    categories: ["health", "pharmacy", "dentist", "doctor", "clinic", "physiotherapy", "hairdresser", "barber", "beautySalon", "massage", "gym"],
+  },
+  {
+    id: "education",
+    labelKey: "catGroupEducation",
+    categories: ["education", "tutoring", "languageSchool", "musicSchool", "privateLessons"],
+  },
+  {
+    id: "professional",
+    labelKey: "catGroupProfessional",
+    categories: ["services", "lawyer", "accountant", "notary", "insurance", "realEstate", "photography", "printing", "translation"],
+  },
+  {
+    id: "tech",
+    labelKey: "catGroupTech",
+    categories: ["tech", "electronics", "phoneRepair", "computerRepair", "internet", "software"],
+  },
+  {
+    id: "events",
+    labelKey: "catGroupEvents",
+    categories: ["entertainment", "events", "eventPlanning", "dj", "musician", "weddingVenue"],
+  },
+  {
+    id: "other",
+    labelKey: "catGroupOther",
+    categories: ["clothing", "pets", "tailor", "laundry", "other"],
+  },
 ];
 
+// Flat list of all category ids (for backward compatibility and filtering)
+export const categories = categoryGroups.flatMap((g) => g.categories);
+
+// Icons for every category
 export const categoryIcons = {
   food: "🍔",
+  restaurant: "🍽️",
+  cafe: "☕",
+  bakery: "🥖",
+  catering: "📦",
+  fastFood: "🍟",
+  grocery: "🛒",
+  butcher: "🥩",
+  bar: "🍺",
+  pastry: "🧁",
   car: "🚗",
-  electronics: "💡",
+  carRepair: "🔧",
+  carWash: "🚿",
+  tires: "🛞",
+  autoParts: "⚙️",
+  taxi: "🚕",
+  drivingSchool: "📜",
+  towing: "🚛",
   homeRepair: "🧰",
+  plumbing: "🔩",
+  electrical: "⚡",
+  painting: "🖌️",
+  carpentry: "🪚",
+  cleaning: "🧹",
+  landscaping: "🌳",
+  locksmith: "🔑",
+  hvac: "❄️",
+  moving: "📦",
   health: "💅",
+  pharmacy: "💊",
+  dentist: "🦷",
+  doctor: "👨‍⚕️",
+  clinic: "🏥",
+  physiotherapy: "🦵",
+  hairdresser: "💇",
+  barber: "💈",
+  beautySalon: "💄",
+  massage: "💆",
+  gym: "🏋️",
   education: "🎓",
-  clothing: "👕",
-  pets: "🐾",
+  tutoring: "📚",
+  languageSchool: "🌍",
+  musicSchool: "🎵",
+  privateLessons: "✏️",
   services: "💼",
+  lawyer: "⚖️",
+  accountant: "📊",
+  notary: "📝",
+  insurance: "🛡️",
+  realEstate: "🏠",
+  photography: "📷",
+  printing: "🖨️",
+  translation: "🌐",
   tech: "💻",
+  electronics: "💡",
+  phoneRepair: "📱",
+  computerRepair: "🖥️",
+  internet: "🌐",
+  software: "📲",
   entertainment: "🎮",
   events: "🎟️",
+  eventPlanning: "📅",
+  dj: "🎧",
+  musician: "🎸",
+  weddingVenue: "💒",
+  clothing: "👕",
+  pets: "🐾",
+  tailor: "🧵",
+  laundry: "🧺",
   other: "✨",
 };
 
@@ -36,13 +140,13 @@ export const currencyOptions = ["EUR", "MKD"];
 
 export const mkSpotlightCities = [
   "Skopje",
-  "Tetovë",
+  "Tetovo",
   "Gostivar",
-  "Ohër",
-  "Kumanovë",
-  "Manastir",
+  "Ohrid",
+  "Kumanovo",
+  "Bitola",
   "Prilep",
-  "Kërçovë",
+  "Kichevo",
 ];
 
 export const PLANS = [
@@ -51,5 +155,3 @@ export const PLANS = [
   { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
   { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
 ];
-
-// Free first 1-month listing per account (permanent feature)

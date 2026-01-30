@@ -164,7 +164,7 @@ export default function ListingsTab(props = {}) {
                  {locFilter && (
                    <span className="active-filter-chip" role="listitem">
                      <span className="filter-chip-label">{t("location")}:</span>
-                     <span className="filter-chip-value">{locFilter}</span>
+                     <span className="filter-chip-value">{t(locFilter) || locFilter}</span>
                      <button 
                        className="filter-chip-remove" 
                       onClick={() => setLocFilter("")}

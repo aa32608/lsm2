@@ -530,7 +530,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                   <div className="detail-sidebar-label">
                     <span aria-hidden="true">🏙️</span> {t("cityLabel")}
                   </div>
-                  <div className="detail-sidebar-value">{listing.locationCity}</div>
+                  <div className="detail-sidebar-value">{t(listing.locationCity) || listing.locationCity}</div>
                 </div>
               )}
 

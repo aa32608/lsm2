@@ -2,7 +2,7 @@
 import React, { useState, useCallback, Suspense, lazy } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
-import { PLANS, categories, categoryIcons, currencyOptions } from "../constants";
+import { PLANS, categoryGroups, categoryIcons, currencyOptions } from "../constants";
 import DualRangeSlider from "./DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
 
@@ -351,10 +351,12 @@ const PostListingDrawer = () => {
                             required
                             >
                             <option value="">{t("selectCategory")}</option>
-                            {categories.map((cat) => (
-                                <option key={cat} value={cat}>
-                                {t(cat)}
-                                </option>
+                            {categoryGroups.map((group) => (
+                                <optgroup key={group.id} label={t(group.labelKey)}>
+                                    {group.categories.map((cat) => (
+                                        <option key={cat} value={cat}>{t(cat) || cat}</option>
+                                    ))}
+                                </optgroup>
                             ))}
                             </select>
                         </div>
@@ -377,7 +379,7 @@ const PostListingDrawer = () => {
                             <option value="">{t("selectCity")}</option>
                             {MK_CITIES.map((city) => (
                                 <option key={city} value={city}>
-                                {city}
+                                {t(city) || city}
                                 </option>
                             ))}
                             </select>
