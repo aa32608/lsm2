@@ -217,7 +217,8 @@ img {
 
 @media (max-width: 768px) {
   .header-bar {
-    padding: 0;
+    padding: 0 var(--spacing-sm);
+    position: relative;
   }
 }
 
@@ -3658,6 +3659,7 @@ img {
     gap: var(--spacing-sm);
     flex: 0 0 auto;
     order: 1;
+    min-width: 0;
   }
 
   .header-logo {
@@ -3681,6 +3683,7 @@ img {
     display: block !important;
   }
 
+  /* Language + logout after logo; ensure both visible */
   .header-actions {
     gap: var(--spacing-sm);
     flex-shrink: 0;
@@ -3689,43 +3692,54 @@ img {
     order: 3;
     margin-left: auto;
     align-self: center;
+    min-width: 0;
+    z-index: 2;
+    position: relative;
   }
 
   .header-actions .select {
     font-size: 0.8125rem;
     padding: var(--spacing-xs) var(--spacing-sm);
     padding-right: 1.75rem;
-    min-width: 65px;
+    min-width: 56px;
     min-height: 36px;
     align-self: center;
+    flex-shrink: 0;
   }
 
-  .header-actions .btn {
+  .header-actions .btn,
+  .header-actions .btn-ghost,
+  .header-actions .btn-primary {
     display: inline-flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     padding: var(--spacing-xs) var(--spacing-sm);
     font-size: 0.8125rem;
     min-height: 36px;
-    min-width: 70px;
+    min-width: 60px;
     white-space: nowrap;
     align-self: center;
+    flex-shrink: 0;
   }
-  
+
   .hamburger-btn {
     order: 1;
     flex-shrink: 0;
     z-index: 10;
     align-self: center;
   }
-  
-  /* Logo in flow with header bar (same animation/positioning as hamburger & actions) */
+
+  /* Logo centered in header bar (language + logout after logo) */
   .header-logo {
     order: 2;
-    position: relative;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     margin: 0;
     align-self: center;
     flex-shrink: 0;
+    z-index: 1;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
@@ -3734,11 +3748,11 @@ img {
   }
 
   .header-logo:hover {
-    transform: translateY(-1px);
+    transform: translate(-50%, -50%) translateY(-1px);
   }
 
   .header-logo:active {
-    transform: translateY(0) scale(0.97);
+    transform: translate(-50%, -50%) scale(0.97);
   }
 
   .header-logo .brand-mark {
