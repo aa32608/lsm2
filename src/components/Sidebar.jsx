@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 
 /**
- * Mobile nav: bottom sheet (slides up). Completely separate design and behavior from any previous sidebar.
- * Desktop: not rendered (header has nav).
+ * Mobile nav: left slide-in drawer, transparent/glass, synced with hamburger.
+ * Always in DOM for smooth open/close transition; visibility via .is-open.
  */
 const Sidebar = ({ onClose, isOpen }) => {
   const { t, user, onLogout, setShowPostForm, setShowAuthModal, setAuthMode, setForm } = useApp();
@@ -28,29 +28,27 @@ const Sidebar = ({ onClose, isOpen }) => {
     ] : []),
   ], [user, t]);
 
-  if (!isOpen) return null;
-
   return (
-    <>
+    <div className={`mobile-drawer ${isOpen ? "is-open" : ""}`} aria-hidden={!isOpen}>
       <div
-        className="mobile-nav-backdrop"
+        className="mobile-drawer-backdrop"
         onClick={onClose}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
         role="button"
-        tabIndex={0}
+        tabIndex={-1}
         aria-label={t("close")}
       />
-      <div
-        className="mobile-nav-sheet"
+      <aside
+        className="mobile-drawer-panel"
         role="dialog"
         aria-modal="true"
         aria-label={t("menu") || t("navigation")}
       >
-        <div className="mobile-nav-sheet-header">
-          <span className="mobile-nav-sheet-title">{t("appName")}</span>
+        <div className="mobile-drawer-header">
+          <span className="mobile-drawer-title">{t("appName")}</span>
           <button
             type="button"
-            className="mobile-nav-sheet-close"
+            className="mobile-drawer-close"
             onClick={onClose}
             aria-label={t("close")}
           >
@@ -61,60 +59,61 @@ const Sidebar = ({ onClose, isOpen }) => {
           </button>
         </div>
 
-        <nav className="mobile-nav-sheet-nav">
-          {links.map((item) => (
+        <nav className="mobile-drawer-nav">
+          {links.map((item, i) => (
             <Link
               key={item.path}
               href={item.path}
-              className={`mobile-nav-sheet-item ${isActive(item.path) ? "active" : ""}`}
+              className={`mobile-drawer-item ${isActive(item.path) ? "active" : ""}`}
+              style={{ transitionDelay: isOpen ? `${55 + i * 42}ms` : "0ms" }}
               onClick={onClose}
             >
-              <span className="mobile-nav-sheet-item-icon" aria-hidden>{item.icon}</span>
-              <span className="mobile-nav-sheet-item-label">{item.label}</span>
+              <span className="mobile-drawer-item-icon" aria-hidden>{item.icon}</span>
+              <span className="mobile-drawer-item-label">{item.label}</span>
             </Link>
           ))}
 
           {user?.emailVerified ? (
             <button
               type="button"
-              className="mobile-nav-sheet-cta"
+              className="mobile-drawer-cta"
+              style={{ transitionDelay: isOpen ? `${55 + links.length * 42}ms` : "0ms" }}
               onClick={() => {
                 setShowPostForm(true);
                 setForm((f) => ({ ...f, step: 1 }));
                 onClose();
               }}
             >
-              <span className="mobile-nav-sheet-cta-icon">➕</span>
+              <span className="mobile-drawer-cta-icon">➕</span>
               {t("submitListing")}
             </button>
           ) : (
             <button
               type="button"
-              className="mobile-nav-sheet-cta mobile-nav-sheet-cta--secondary"
+              className="mobile-drawer-cta mobile-drawer-cta--secondary"
+              style={{ transitionDelay: isOpen ? `${55 + links.length * 42}ms` : "0ms" }}
               onClick={() => {
                 setAuthMode("login");
                 setShowAuthModal(true);
                 onClose();
               }}
             >
-              <span className="mobile-nav-sheet-cta-icon">🔐</span>
+              <span className="mobile-drawer-cta-icon">🔐</span>
               {t("login")} / {t("submitListing")}
             </button>
           )}
         </nav>
 
-        <div className="mobile-nav-sheet-footer">
-          {user ? (
-            <>
-              <p className="mobile-nav-sheet-email" title={user.email}>{user.email}</p>
-              <button type="button" className="mobile-nav-sheet-logout" onClick={() => { onLogout?.(); onClose(); }}>
-                {t("logout")}
-              </button>
-            </>
-          ) : null}
-        </div>
-      </div>
-    </>
+        {user && (
+          <div className="mobile-drawer-footer">
+            <p className="mobile-drawer-email" title={user.email}>{user.email}</p>
+            <button type="button" className="mobile-drawer-logout" onClick={() => { onLogout?.(); onClose(); }}>
+              {t("logout")}
+            </button>
+          </div>
+        )}
+      </aside>
+    </div>
   );
 };
 

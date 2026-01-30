@@ -50,7 +50,7 @@ const LayoutContent = ({ children }) => {
 
   return (
     <div className="app-container">
-      <Header sidebarOpen={sidebarOpen} onMenuOpen={() => setSidebarOpen(true)} />
+      <Header sidebarOpen={sidebarOpen} onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <main className="main-content">

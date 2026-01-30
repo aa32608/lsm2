@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
-const Header = ({ sidebarOpen, onMenuOpen }) => {
+const Header = ({ sidebarOpen, onMenuToggle }) => {
   const { 
     t, 
     lang, 
@@ -50,7 +50,7 @@ const Header = ({ sidebarOpen, onMenuOpen }) => {
       <div className="header-left">
         <button
           className={`hamburger-btn ${sidebarOpen ? "open" : ""}`}
-          onClick={onMenuOpen}
+          onClick={onMenuToggle}
           aria-label={sidebarOpen ? t("close") : t("menu")}
           aria-expanded={!!sidebarOpen}
         >
