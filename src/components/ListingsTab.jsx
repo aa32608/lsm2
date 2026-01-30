@@ -52,6 +52,7 @@ export default function ListingsTab(props = {}) {
   const filtersOpen = props.filtersOpen ?? context.filtersOpen ?? false;
   const setFiltersOpen = props.setFiltersOpen || context.setFiltersOpen || (() => {});
   const categories = props.categories ?? context.categories ?? [];
+  const categoryGroups = props.categoryGroups ?? context.categoryGroups ?? [];
   const allLocations = props.allLocations ?? context.allLocations ?? [];
   const getDescriptionPreview = props.getDescriptionPreview || context.getDescriptionPreview || ((desc) => desc);
   const getListingStats = props.getListingStats || context.getListingStats || (() => ({ avgRating: 0, feedbackCount: 0 }));
@@ -313,6 +314,7 @@ export default function ListingsTab(props = {}) {
         sortBy={sortBy}
         setSortBy={setSortBy}
         categories={categories}
+        categoryGroups={categoryGroups}
         categoryIcons={categoryIcons}
         allLocations={allLocations}
         setPage={setPage}
