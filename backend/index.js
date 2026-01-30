@@ -326,10 +326,48 @@ async function waitForEmailRateLimit() {
   lastEmailSentTime = Date.now();
 }
 
-async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = null) {
+// Dedupe: prevent sending the same email twice for the SAME REASON within a short window.
+// Different reasons bypass cooldown so important emails (e.g. payment success) are not blocked.
+const EMAIL_DEDUPE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+const recentEmailKeys = new Map(); // key = "to|reason" -> timestamp
+
+function getEmailDedupeKey(to, reason) {
+  const r = reason == null ? "generic" : String(reason);
+  return `${to}|${r}`;
+}
+
+function wasRecentlySentForReason(to, reason) {
+  const key = getEmailDedupeKey(to, reason);
+  const sentAt = recentEmailKeys.get(key);
+  if (!sentAt) return false;
+  if (Date.now() - sentAt > EMAIL_DEDUPE_WINDOW_MS) {
+    recentEmailKeys.delete(key);
+    return false;
+  }
+  return true;
+}
+
+function markEmailSentForReason(to, reason) {
+  const key = getEmailDedupeKey(to, reason);
+  recentEmailKeys.set(key, Date.now());
+  if (recentEmailKeys.size > 500) {
+    const cutoff = Date.now() - EMAIL_DEDUPE_WINDOW_MS;
+    for (const [k, ts] of recentEmailKeys.entries()) {
+      if (ts < cutoff) recentEmailKeys.delete(k);
+    }
+  }
+}
+
+async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = null, reason = null) {
   if (!to || !subject || !text) {
     console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
     return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
+  }
+
+  const emailReason = reason == null ? "generic" : String(reason);
+  if (wasRecentlySentForReason(to, emailReason)) {
+    console.log(`[Email] Skipped duplicate (same reason "${emailReason}" to ${to} within ${EMAIL_DEDUPE_WINDOW_MS / 60000} min)`);
+    return { skipped: true, reason: "duplicate" };
   }
 
   // Only check cooldown for marketing emails
@@ -415,6 +453,8 @@ async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = 
     if (isMarketingEmail) {
       updateMarketingEmailCooldown(to);
     }
+
+    markEmailSentForReason(to, emailReason);
     
     console.log(`[Email] ========================================`);
     console.log(`[Email] ✅ SUCCESS! Email sent successfully`);
@@ -472,7 +512,7 @@ app.post("/api/send-feedback-notification", async (req, res) => {
     );
 
     console.log(`[API] Calling sendEmail with subject: ${subject.substring(0, 50)}...`);
-    const emailResult = await sendEmail(ownerEmail, subject, text, false);
+    const emailResult = await sendEmail(ownerEmail, subject, text, false, null, "feedback_notification");
     
     if (emailResult.ok) {
       console.log(`[API] ✅ Feedback notification sent to ${ownerEmail} for listing ${listingId}. Email ID: ${emailResult.id}`);
@@ -495,70 +535,19 @@ app.post("/api/send-feedback-notification", async (req, res) => {
 });
 
 app.post("/api/send-email", async (req, res) => {
-  const { to, subject, text, replyTo } = req.body;
+  const { to, subject, text, replyTo, reason } = req.body;
   console.log(`[API] /api/send-email called for ${to}`);
-  const result = await sendEmail(to, subject, text, false, replyTo);
+  const result = await sendEmail(to, subject, text, false, replyTo, reason || "contact_form");
   if (result.error && !result.skipped) {
     console.error(`[API] Email send failed:`, result.error);
     return res.status(500).json({ error: result.error });
   }
   if (result.skipped) {
-    console.log(`[API] Email skipped due to cooldown`);
-    return res.status(200).json({ skipped: true, message: "Email skipped due to cooldown" });
+    console.log(`[API] Email skipped:`, result.reason || "cooldown");
+    return res.status(200).json({ skipped: true, message: result.reason === "duplicate" ? "Email skipped (duplicate)" : "Email skipped due to cooldown" });
   }
   console.log(`[API] Email sent successfully:`, result.id);
   res.json(result);
-});
-
-// Test endpoint to verify email configuration
-app.post("/api/test-email", async (req, res) => {
-  const { adminKey, testEmail } = req.body;
-  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  
-  if (!testEmail) {
-    return res.status(400).json({ error: "testEmail is required" });
-  }
-  
-  console.log(`[Test] ========================================`);
-  console.log(`[Test] Testing email configuration`);
-  console.log(`[Test] Test email address: ${testEmail}`);
-  console.log(`[Test] Resend initialized: ${!!resend}`);
-  console.log(`[Test] RESEND_API_KEY exists: ${!!process.env.RESEND_API_KEY}`);
-  console.log(`[Test] RESEND_DOMAIN: ${process.env.RESEND_DOMAIN || 'not set'}`);
-  console.log(`[Test] ========================================`);
-  
-  if (!resend) {
-    return res.status(500).json({ 
-      error: "Resend not configured", 
-      details: "RESEND_API_KEY is missing or invalid",
-      resendInitialized: false,
-      hasApiKey: !!process.env.RESEND_API_KEY
-    });
-  }
-  
-  const result = await sendEmail(
-    testEmail,
-    "Test Email from BizCall",
-    "This is a test email to verify email configuration is working correctly.",
-    false // Not a marketing email
-  );
-  
-  if (result.error) {
-    return res.status(500).json({ 
-      error: result.error,
-      details: "Check server logs for more information",
-      skipped: result.skipped || false
-    });
-  }
-  
-  res.json({ 
-    success: true, 
-    emailId: result.id,
-    message: "Test email sent successfully",
-    details: "Check your inbox and Resend dashboard"
-  });
 });
 
 // Diagnostic endpoint to check email system status
@@ -622,7 +611,7 @@ app.post("/api/create-payment", async (req, res) => {
                         EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
             
             if (customerEmail) {
-                const emailResult = await sendEmail(customerEmail, subject, text);
+                const emailResult = await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated");
                 if (emailResult.ok) {
                     console.log(`[Payment] Free trial email sent to ${customerEmail}`);
                 } else if (!emailResult.skipped) {
@@ -787,7 +776,8 @@ app.post("/api/webhook", async (req, res) => {
             }
             
             if (subject && text) {
-                const emailResult = await sendEmail(userEmail, subject, text, false);
+                const emailReason = type === "extend" ? "listing_extended" : "listing_activated";
+                const emailResult = await sendEmail(userEmail, subject, text, false, null, emailReason);
                 if (emailResult.ok) {
                     console.log(`[Webhook] ✅ Notification email sent to ${userEmail}. Email ID: ${emailResult.id}`);
                 } else if (!emailResult.skipped) {
@@ -813,6 +803,7 @@ cron.schedule("0 0 * * *", async () => {
     console.log("[Cron] Running daily maintenance tasks...");
     const now = Date.now();
     const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000; // For pending/unpaid cleanup only
     const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
     const TWENTY_SEVEN_DAYS_MS = 27 * 24 * 60 * 60 * 1000;
 
@@ -846,7 +837,7 @@ cron.schedule("0 0 * * *", async () => {
                             const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
 
-                            const emailResult = await sendEmail(email, subject, text);
+                            const emailResult = await sendEmail(email, subject, text, false, null, "expiring_soon");
                             if (emailResult.ok) {
                                 updates[`listings/${id}/expiryWarningSent`] = true;
                                 console.log(`[Cron] Sent expiry warning for listing ${id} to ${email}`);
@@ -871,7 +862,7 @@ cron.schedule("0 0 * * *", async () => {
                              const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
  
-                             const emailResult = await sendEmail(email, subject, text);
+                             const emailResult = await sendEmail(email, subject, text, false, null, "pre_deletion_warning");
                              if (emailResult.ok) {
                                  updates[`listings/${id}/preDeletionWarningSent`] = true;
                                  console.log(`[Cron] Sent pre-deletion warning for listing ${id} to ${email}`);
@@ -888,10 +879,10 @@ cron.schedule("0 0 * * *", async () => {
                     }
                 }
 
-                // 2. Handle Pending/Unpaid Listings (Cleanup after 30 days)
+                // 2. ONLY Pending/Unpaid Listings: delete after 1 week in that status (expired listings have their own deadline)
                 if ((listing.status === "unpaid" || listing.status === "pending") && listing.createdAt) {
                     const timeSinceCreation = now - listing.createdAt;
-                    if (timeSinceCreation >= THIRTY_DAYS_MS) {
+                    if (timeSinceCreation >= ONE_WEEK_MS) {
                          listingsToDelete.push({ id, reason: "pending_stale" });
                     }
                 }
@@ -918,7 +909,7 @@ cron.schedule("0 0 * * *", async () => {
                     const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                     
-                    const emailResult = await sendEmail(item.email, subject, text);
+                    const emailResult = await sendEmail(item.email, subject, text, false, null, "expired_deleted");
                     if (emailResult.ok) {
                         console.log(`[Cron] Sent deletion notification for listing ${item.id} to ${item.email}`);
                     } else if (!emailResult.skipped) {
@@ -1062,7 +1053,7 @@ async function sendMarketingEmails() {
       }
 
       console.log(`[Marketing] Sending email to ${finalTo}...`);
-      const emailResult = await sendEmail(finalTo, finalSubject, finalText, true); // true = isMarketingEmail
+      const emailResult = await sendEmail(finalTo, finalSubject, finalText, true, null, "marketing");
       
       if (emailResult.ok) {
         console.log(`[Marketing] ✅ Successfully sent to ${finalTo}. Email ID: ${emailResult.id}`);
@@ -1246,7 +1237,7 @@ cron.schedule("0 9 * * *", async () => {
         const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
         
-        const emailResult = await sendEmail(userEmail, subject, text);
+        const emailResult = await sendEmail(userEmail, subject, text, false, null, "expiring_soon");
         if (emailResult.ok) {
             console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
             count++;
@@ -1269,7 +1260,7 @@ cron.schedule("0 9 * * *", async () => {
 // Runs daily at 00:00 (Midnight) to handle:
 // 1. Pre-deletion warnings (3 days before deletion)
 // 2. Deletion of expired listings (> 30 days past expiry)
-// 3. Cleanup of old pending/unpaid listings (> 30 days old)
+// 3. ONLY pending/unpaid listings: delete after 1 week in that status (expired have their own deadline)
 cron.schedule("0 0 * * *", async () => {
   console.log("[Cron] Running daily maintenance tasks...");
   if (!isFirebaseInitialized) return;
@@ -1308,7 +1299,7 @@ cron.schedule("0 0 * * *", async () => {
                 const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
 
-                const emailResult = await sendEmail(userEmail, subject, text, false);
+                const emailResult = await sendEmail(userEmail, subject, text, false, null, "pre_deletion_warning");
                 if (emailResult.ok) {
                     await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
                     console.log(`[Cron] ✅ Sent pre-deletion warning for ${id} to ${userEmail}. Email ID: ${emailResult.id}`);
@@ -1333,7 +1324,7 @@ cron.schedule("0 0 * * *", async () => {
                  const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                  
-                 const emailResult = await sendEmail(userEmail, subject, text);
+                 const emailResult = await sendEmail(userEmail, subject, text, false, null, "expired_deleted");
                  if (emailResult.ok) {
                      console.log(`[Cron] Sent deletion notification for ${id} to ${userEmail}`);
                  } else if (!emailResult.skipped) {
@@ -1349,12 +1340,12 @@ cron.schedule("0 0 * * *", async () => {
           }
        }
 
-       // 2. Handle Pending/Unpaid Listings
+       // 2. ONLY Pending/Unpaid Listings: delete after 1 week in that status (expired listings have their own deadline)
        if ((listing.status === "unpaid" || listing.status === "pending") && listing.createdAt) {
            const daysSinceCreation = (now - listing.createdAt) / dayMs;
-           if (daysSinceCreation >= 30) {
+           if (daysSinceCreation >= 7) {
                await db.ref(`listings/${id}`).remove();
-               console.log(`[Cron] Deleted old pending listing ${id}`);
+               console.log(`[Cron] Deleted pending/unpaid listing ${id} (over 1 week in status)`);
                pendingDeletedCount++;
            }
        }
@@ -1496,7 +1487,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(`[Server] Firebase initialized: ${isFirebaseInitialized}`);
     console.log(`[Server] DodoPayments initialized: ${!!dodoClient}`);
     console.log(`\n[Server] Available endpoints:`);
-    console.log(`[Server]   - POST /api/test-email (with adminKey)`);
     console.log(`[Server]   - POST /api/admin/test-marketing-now (with adminKey)`);
     console.log(`[Server]   - POST /api/admin/send-weekly-marketing (with adminKey)`);
     console.log(`[Server]   - GET /api/email-status`);

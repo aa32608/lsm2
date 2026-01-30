@@ -1,5 +1,5 @@
 "use client";
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
 import { AppProvider, useApp } from "../context/AppContext";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -7,6 +7,10 @@ import NotificationToast from "./NotificationToast";
 import CookieConsent from "./CookieConsent";
 import FirebaseLoader from "./FirebaseLoader";
 import { AnimatePresence } from "framer-motion";
+
+const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ? "http://localhost:5000"
+  : "https://lsm-wozo.onrender.com";
 
 // Lazy load heavy modals for better performance
 const AuthModal = lazy(() => import("./AuthModal"));
@@ -37,6 +41,12 @@ const LegalModalsLoader = ({ showTerms, showPrivacy, onCloseTerms, onClosePrivac
 // Helper component to consume context
 const LayoutContent = ({ children }) => {
   const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal, message, setMessage } = useApp();
+
+  // Load Dodo payments as soon as user enters the website (any tab/page)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    fetch(`${API_BASE}/api/payments-warmup`, { method: "GET", headers: { "Content-Type": "application/json" } }).catch(() => {});
+  }, []);
 
   return (
     <div className="app-container">
