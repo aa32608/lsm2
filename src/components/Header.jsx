@@ -18,8 +18,6 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
     firebaseReady,
     setAuthMode,
     setShowAuthModal,
-    setShowPostForm,
-    setForm,
   } = useApp();
   const pathname = usePathname();
 
@@ -45,7 +43,33 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
 
   return (
     <header className="app-header">
-      {/* Top bar: always visible (hamburger, logo, desktop nav, actions) */}
+      {/* Mobile only: drawer content ABOVE the header bar — revealed when "drawer" (header bar) is pulled down */}
+      <div
+        className={`mobile-header-drawer ${sidebarOpen ? "is-open" : ""}`}
+        aria-hidden={!sidebarOpen}
+        id="mobile-header-drawer"
+      >
+        <div className="mobile-header-drawer-inner">
+          <nav className="mobile-header-drawer-nav">
+            {navItems.map((item, i) => (
+              <Link
+                key={item.path}
+                href={item.path}
+                className={`mobile-header-drawer-item ${isActive(item.path) ? "active" : ""}`}
+                style={{ transitionDelay: stagger(i) }}
+                onClick={onMenuToggle}
+              >
+                <span className="mobile-header-drawer-item-icon" aria-hidden>
+                  {item.icon}
+                </span>
+                <span className="mobile-header-drawer-item-label">{item.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Header bar = front of drawer / handle — when pulled, it comes down and reveals content above */}
       <div className="header-bar">
         <div className="header-left">
           <button
@@ -140,83 +164,6 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
             >
               {t("login")}
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile only: expandable drawer (nav + CTA + footer) — sidebar is the header */}
-      <div
-        className={`mobile-header-drawer ${sidebarOpen ? "is-open" : ""}`}
-        aria-hidden={!sidebarOpen}
-        id="mobile-header-drawer"
-      >
-        <div className="mobile-header-drawer-inner">
-          <nav className="mobile-header-drawer-nav">
-            {navItems.map((item, i) => (
-              <Link
-                key={item.path}
-                href={item.path}
-                className={`mobile-header-drawer-item ${isActive(item.path) ? "active" : ""}`}
-                style={{ transitionDelay: stagger(i) }}
-                onClick={onMenuToggle}
-              >
-                <span className="mobile-header-drawer-item-icon" aria-hidden>
-                  {item.icon}
-                </span>
-                <span className="mobile-header-drawer-item-label">{item.label}</span>
-              </Link>
-            ))}
-
-            {user?.emailVerified ? (
-              <button
-                type="button"
-                className="mobile-header-drawer-cta"
-                style={{ transitionDelay: stagger(navItems.length) }}
-                onClick={() => {
-                  setShowPostForm(true);
-                  setForm((f) => ({ ...f, step: 1 }));
-                  onMenuToggle();
-                }}
-              >
-                <span className="mobile-header-drawer-cta-icon">➕</span>
-                {t("submitListing")}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="mobile-header-drawer-cta mobile-header-drawer-cta--secondary"
-                style={{ transitionDelay: stagger(navItems.length) }}
-                onClick={() => {
-                  setAuthMode("login");
-                  setShowAuthModal(true);
-                  onMenuToggle();
-                }}
-              >
-                <span className="mobile-header-drawer-cta-icon">🔐</span>
-                {t("login")} / {t("submitListing")}
-              </button>
-            )}
-          </nav>
-
-          {user && (
-            <div
-              className="mobile-header-drawer-footer"
-              style={{ transitionDelay: stagger(navItems.length + 1) }}
-            >
-              <p className="mobile-header-drawer-email" title={user.email}>
-                {user.email}
-              </p>
-              <button
-                type="button"
-                className="mobile-header-drawer-logout"
-                onClick={() => {
-                  onLogout?.();
-                  onMenuToggle();
-                }}
-              >
-                {t("logout")}
-              </button>
-            </div>
           )}
         </div>
       </div>
