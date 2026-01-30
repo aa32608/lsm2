@@ -128,26 +128,6 @@ const countryCodes = [
   { name: "US", code: "+1" },
 ];
 
-const categoryIcons = {
-  food: "🍔",
-  car: "🚗",
-  electronics: "💡",
-  homeRepair: "🧰",
-  health: "💅",
-  education: "🎓",
-  clothing: "👕",
-  pets: "🐾",
-  services: "💼",
-  tech: "💻",
-  entertainment: "🎮",
-  events: "🎟️",
-  other: "✨",
-};
-
-const mkSpotlightCities = [
-  "Skopje", "Tetovë", "Gostivar", "Ohër", "Kumanovë", "Manastir", "Prilep", "Kërçovë",
-];
-
 const validatePhone = (p) => {
   // Simple check
   return p && p.length > 6; 
