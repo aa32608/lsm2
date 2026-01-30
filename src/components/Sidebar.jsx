@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 
 /**
- * Mobile nav: left slide-in drawer, transparent/glass, synced with hamburger.
- * Always in DOM for smooth open/close transition; visibility via .is-open.
+ * Mobile nav: top-down drawer with handle, synced with hamburger.
+ * Drawer drops from top; inner elements cascade in with stagger.
  */
 const Sidebar = ({ onClose, isOpen }) => {
   const { t, user, onLogout, setShowPostForm, setShowAuthModal, setAuthMode, setForm } = useApp();
@@ -28,6 +28,8 @@ const Sidebar = ({ onClose, isOpen }) => {
     ] : []),
   ], [user, t]);
 
+  const stagger = (i) => (isOpen ? `${60 + i * 48}ms` : "0ms");
+
   return (
     <div className={`mobile-drawer ${isOpen ? "is-open" : ""}`} aria-hidden={!isOpen}>
       <div
@@ -44,6 +46,11 @@ const Sidebar = ({ onClose, isOpen }) => {
         aria-modal="true"
         aria-label={t("menu") || t("navigation")}
       >
+        {/* Drawer handle: visual “pull” and connection to hamburger */}
+        <div className="mobile-drawer-handle" aria-hidden>
+          <span className="mobile-drawer-handle-bar" />
+        </div>
+
         <div className="mobile-drawer-header">
           <span className="mobile-drawer-title">{t("appName")}</span>
           <button
@@ -52,7 +59,7 @@ const Sidebar = ({ onClose, isOpen }) => {
             onClick={onClose}
             aria-label={t("close")}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -65,7 +72,7 @@ const Sidebar = ({ onClose, isOpen }) => {
               key={item.path}
               href={item.path}
               className={`mobile-drawer-item ${isActive(item.path) ? "active" : ""}`}
-              style={{ transitionDelay: isOpen ? `${55 + i * 42}ms` : "0ms" }}
+              style={{ transitionDelay: stagger(i) }}
               onClick={onClose}
             >
               <span className="mobile-drawer-item-icon" aria-hidden>{item.icon}</span>
@@ -77,7 +84,7 @@ const Sidebar = ({ onClose, isOpen }) => {
             <button
               type="button"
               className="mobile-drawer-cta"
-              style={{ transitionDelay: isOpen ? `${55 + links.length * 42}ms` : "0ms" }}
+              style={{ transitionDelay: stagger(links.length) }}
               onClick={() => {
                 setShowPostForm(true);
                 setForm((f) => ({ ...f, step: 1 }));
@@ -91,7 +98,7 @@ const Sidebar = ({ onClose, isOpen }) => {
             <button
               type="button"
               className="mobile-drawer-cta mobile-drawer-cta--secondary"
-              style={{ transitionDelay: isOpen ? `${55 + links.length * 42}ms` : "0ms" }}
+              style={{ transitionDelay: stagger(links.length) }}
               onClick={() => {
                 setAuthMode("login");
                 setShowAuthModal(true);
@@ -105,7 +112,7 @@ const Sidebar = ({ onClose, isOpen }) => {
         </nav>
 
         {user && (
-          <div className="mobile-drawer-footer">
+          <div className="mobile-drawer-footer" style={{ transitionDelay: stagger(links.length + 1) }}>
             <p className="mobile-drawer-email" title={user.email}>{user.email}</p>
             <button type="button" className="mobile-drawer-logout" onClick={() => { onLogout?.(); onClose(); }}>
               {t("logout")}
