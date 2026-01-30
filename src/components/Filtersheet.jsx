@@ -197,35 +197,29 @@ const Filtersheet = React.memo(({
                   <span className="filter-group-icon">📂</span>
                   <span className="filter-group-title">{t("category")}</span>
                 </div>
-                <div className="filter-group-content filter-categories-by-group">
-                  {categoryGroups.map((group) => (
-                    <div key={group.id} className="filter-category-group">
-                      <div className="filter-category-group-label">{t(group.labelKey)}</div>
-                      <div className="filter-options-grid">
-                        {group.categories.map((cat) => {
-                          const active = localCat === cat;
-                          return (
-                            <button
-                              key={cat}
-                              type="button"
-                              className={`filter-option-card ${active ? "is-selected" : ""}`}
-                              onClick={() => setLocalCat(active ? "" : cat)}
-                            >
-                              <div className="filter-option-icon">{categoryIcons[cat] || "🏷️"}</div>
-                              <div className="filter-option-label">{t(cat) || cat}</div>
-                              {active && (
-                                <div className="filter-option-check">
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ minWidth: "24" }}>
-                                    <polyline points="20 6 9 17 4 12"></polyline>
-                                  </svg>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
+                <div className="filter-group-content filter-category-dropdown-wrap">
+                  <div className="filter-select-wrapper">
+                    <select
+                      className="filter-select-field filter-category-select"
+                      value={localCat}
+                      onChange={(e) => setLocalCat(e.target.value)}
+                      aria-label={t("category")}
+                    >
+                      <option value="">{t("allCategories") || t("category")}</option>
+                      {categoryGroups.map((group) => (
+                        <optgroup key={group.id} label={t(group.labelKey)}>
+                          {(group.categories || []).map((cat) => (
+                            <option key={cat} value={cat}>
+                              {(categoryIcons?.[cat] || "•")} {t(cat) || cat}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </div>
                 </div>
               </div>
             )}

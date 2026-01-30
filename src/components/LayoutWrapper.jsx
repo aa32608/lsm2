@@ -40,12 +40,6 @@ const LayoutContent = ({ children }) => {
 
   return (
     <div className="app-container">
-      {/* Sidebar Overlay for Mobile */}
-      <div 
-        className={`sidebar-overlay ${sidebarOpen ? "visible" : ""}`} 
-        onClick={() => setSidebarOpen(false)}
-      />
-
       <Header sidebarOpen={sidebarOpen} onMenuOpen={() => setSidebarOpen(true)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       

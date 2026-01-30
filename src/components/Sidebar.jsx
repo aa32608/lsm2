@@ -1,113 +1,120 @@
+"use client";
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 
+/**
+ * Mobile nav: bottom sheet (slides up). Completely separate design and behavior from any previous sidebar.
+ * Desktop: not rendered (header has nav).
+ */
 const Sidebar = ({ onClose, isOpen }) => {
-  const { t, user, myListingsRaw, onLogout, setShowPostForm, setShowAuthModal, setAuthMode, setForm } = useApp();
+  const { t, user, onLogout, setShowPostForm, setShowAuthModal, setAuthMode, setForm } = useApp();
   const pathname = usePathname();
-
-  const userStats = useMemo(() => {
-    if (!user || !myListingsRaw) return null;
-    const listingsCount = myListingsRaw.length;
-    const viewsCount = myListingsRaw.reduce((acc, curr) => acc + (curr.views || 0), 0);
-    return { listingsCount, viewsCount };
-  }, [user, myListingsRaw]);
 
   const isActive = (path) => {
     if (path === "/" && pathname === "/") return true;
-    if (path !== "/" && pathname.startsWith(path)) return true;
+    if (path !== "/" && pathname?.startsWith(path)) return true;
     return false;
   };
 
-  const navItems = [
+  const links = useMemo(() => [
     { path: "/", label: t("homepage"), icon: "🏠" },
-    { path: "/listings", label: t("explore"), icon: "🧭" },
+    { path: "/listings", label: t("explore"), icon: "🔍" },
     { path: "/contact", label: t("contactUs"), icon: "✉️" },
     ...(user ? [
-      { path: "/mylistings", label: t("myListings"), icon: "📂" },
+      { path: "/mylistings", label: t("myListings"), icon: "📋" },
       { path: "/account", label: t("account"), icon: "👤" },
     ] : []),
-  ];
+  ], [user, t]);
+
+  if (!isOpen) return null;
 
   return (
-    <aside className={`app-sidebar ${isOpen ? "open" : ""}`}>
-      <div className="sidebar-header">
-        <div className="brand-text">
-          <h3 className="brand-title">{t("bizCall")}</h3>
-          <p className="brand-tagline">{t("communityTagline")}</p>
-        </div>
-        <button className="icon-btn md:hidden" onClick={onClose} aria-label={t("close")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <Link
-            key={item.path}
-            href={item.path}
-            className={`nav-item ${isActive(item.path) ? "active" : ""}`}
+    <>
+      <div
+        className="mobile-nav-backdrop"
+        onClick={onClose}
+        onKeyDown={(e) => e.key === "Escape" && onClose()}
+        role="button"
+        tabIndex={0}
+        aria-label={t("close")}
+      />
+      <div
+        className="mobile-nav-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("menu") || t("navigation")}
+      >
+        <div className="mobile-nav-sheet-header">
+          <span className="mobile-nav-sheet-title">{t("appName")}</span>
+          <button
+            type="button"
+            className="mobile-nav-sheet-close"
             onClick={onClose}
+            aria-label={t("close")}
           >
-            <span className="nav-item-icon">{item.icon}</span>
-            <span className="nav-item-label">{item.label}</span>
-          </Link>
-        ))}
-        
-        {/* Submit Listing Button */}
-        {user && user.emailVerified ? (
-          <button
-            className="nav-item nav-item-button"
-            onClick={() => {
-              setShowPostForm(true);
-              setForm((f) => ({ ...f, step: 1 }));
-              onClose();
-            }}
-            aria-label={t("submitListing")}
-          >
-            <span className="nav-item-icon">➕</span>
-            <span className="nav-item-label">{t("submitListing")}</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
-        ) : (
-          <button
-            className="nav-item nav-item-button"
-            onClick={() => {
-              setAuthMode("login");
-              setShowAuthModal(true);
-              onClose();
-            }}
-            aria-label={t("loginToSubmitListing")}
-          >
-            <span className="nav-item-icon">🔐</span>
-            <span className="nav-item-label">{t("submitListing")}</span>
-          </button>
-        )}
-      </nav>
+        </div>
 
-      <div className="sidebar-footer">
-        {user ? (
-          <div className="user-profile-summary">
-            <div className="user-info">
-              <span className="user-email">{user.email}</span>
-            </div>
-            <button className="btn btn-ghost btn-sm w-full mt-2" onClick={onLogout}>
-              {t("logout")}
+        <nav className="mobile-nav-sheet-nav">
+          {links.map((item) => (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`mobile-nav-sheet-item ${isActive(item.path) ? "active" : ""}`}
+              onClick={onClose}
+            >
+              <span className="mobile-nav-sheet-item-icon" aria-hidden>{item.icon}</span>
+              <span className="mobile-nav-sheet-item-label">{item.label}</span>
+            </Link>
+          ))}
+
+          {user?.emailVerified ? (
+            <button
+              type="button"
+              className="mobile-nav-sheet-cta"
+              onClick={() => {
+                setShowPostForm(true);
+                setForm((f) => ({ ...f, step: 1 }));
+                onClose();
+              }}
+            >
+              <span className="mobile-nav-sheet-cta-icon">➕</span>
+              {t("submitListing")}
             </button>
-          </div>
-        ) : (
-          <div className="p-4">
-             {/* Login button handled in Header usually, but can be here too */}
-          </div>
-        )}
-        <div className="text-xs text-muted text-center mt-4">
-          © 2025 BizCall
+          ) : (
+            <button
+              type="button"
+              className="mobile-nav-sheet-cta mobile-nav-sheet-cta--secondary"
+              onClick={() => {
+                setAuthMode("login");
+                setShowAuthModal(true);
+                onClose();
+              }}
+            >
+              <span className="mobile-nav-sheet-cta-icon">🔐</span>
+              {t("login")} / {t("submitListing")}
+            </button>
+          )}
+        </nav>
+
+        <div className="mobile-nav-sheet-footer">
+          {user ? (
+            <>
+              <p className="mobile-nav-sheet-email" title={user.email}>{user.email}</p>
+              <button type="button" className="mobile-nav-sheet-logout" onClick={() => { onLogout?.(); onClose(); }}>
+                {t("logout")}
+              </button>
+            </>
+          ) : null}
         </div>
       </div>
-    </aside>
+    </>
   );
 };
 
