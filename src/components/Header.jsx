@@ -66,9 +66,9 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
               </Link>
             ))}
           </nav>
-          {/* Logout button in mobile drawer (only when logged in) */}
-          {user && (
-            <div className="mobile-header-drawer-footer" style={{ transitionDelay: stagger(navItems.length) }}>
+          {/* Login/Logout button in mobile drawer */}
+          <div className="mobile-header-drawer-footer" style={{ transitionDelay: stagger(navItems.length) }}>
+            {user ? (
               <button
                 type="button"
                 className="mobile-header-drawer-logout-btn"
@@ -80,8 +80,21 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
                 <span className="mobile-header-drawer-logout-icon">🚪</span>
                 {t("logout")}
               </button>
-            </div>
-          )}
+            ) : (
+              <button
+                type="button"
+                className="mobile-header-drawer-login-btn"
+                onClick={() => {
+                  setAuthMode("login");
+                  setShowAuthModal(true);
+                  onMenuToggle();
+                }}
+              >
+                <span className="mobile-header-drawer-login-icon">👤</span>
+                {t("login")}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -141,8 +154,7 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
         </div>
 
         <div className="header-actions">
-          {/* Desktop: show login/logout button, then language */}
-          {/* Mobile: show login button (if not logged in), then language on far right */}
+          {/* Desktop only: login/logout button */}
           {authLoading || !firebaseReady ? (
             <div
               className="header-loading-placeholder desktop-only"
@@ -157,13 +169,12 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
               }}
             />
           ) : user ? (
-            /* Desktop only: logout button in header */
             <button className="btn btn-ghost desktop-only" onClick={onLogout}>
               {t("logout")}
             </button>
           ) : (
             <button
-              className="btn btn-primary"
+              className="btn btn-primary desktop-only"
               onClick={() => {
                 setAuthMode("login");
                 setShowAuthModal(true);
@@ -173,6 +184,7 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
             </button>
           )}
 
+          {/* Language selector - visible on all devices */}
           <select
             className="select header-lang-select"
             value={lang}

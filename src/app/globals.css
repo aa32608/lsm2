@@ -425,9 +425,57 @@ img {
   font-size: 1.15rem;
 }
 
+.mobile-header-drawer-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+}
+
+.mobile-header-drawer-login-btn:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.08) 100%);
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+}
+
+.mobile-header-drawer-login-btn:active {
+  transform: scale(0.98);
+}
+
+.mobile-header-drawer-login-icon {
+  font-size: 1.15rem;
+}
+
 .header-lang-select {
   width: auto;
-  padding-right: 2rem;
+  min-width: 70px;
+  padding-right: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Mobile: ensure language dropdown doesn't get cut off */
+@media (max-width: 768px) {
+  .header-actions {
+    margin-right: 8px;
+    gap: 8px;
+  }
+  
+  .header-lang-select {
+    min-width: 65px;
+    padding: 8px 24px 8px 8px;
+    font-size: 0.85rem;
+  }
 }
 
 /* Shared: hamburger + top-down drawer use same timing (one interaction) */
@@ -3774,7 +3822,7 @@ img {
     display: block !important;
   }
 
-  /* Language + logout after logo; ensure both visible */
+  /* Language selector in header - login/logout are in drawer on mobile */
   .header-actions {
     gap: var(--spacing-sm);
     flex-shrink: 0;
@@ -3782,6 +3830,7 @@ img {
     align-items: center !important;
     order: 3;
     margin-left: auto;
+    margin-right: 12px;
     align-self: center;
     min-width: 0;
     z-index: 2;
@@ -3789,21 +3838,21 @@ img {
   }
 
   .header-actions .select {
-    font-size: 0.8125rem;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    padding-right: 1.75rem;
-    min-width: 56px;
+    font-size: 0.85rem;
+    padding: 8px 28px 8px 10px;
+    min-width: 68px;
     min-height: 36px;
     align-self: center;
     flex-shrink: 0;
   }
 
+  /* Hide login/logout buttons in header on mobile - they're in drawer */
   .header-actions .btn,
   .header-actions .btn-ghost,
   .header-actions .btn-primary {
-    display: inline-flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
     padding: var(--spacing-xs) var(--spacing-sm);
     font-size: 0.8125rem;
     min-height: 36px;
@@ -3920,10 +3969,13 @@ img {
   }
 
   .header-actions .select {
-    min-width: 60px;
-    font-size: 0.8125rem;
-    padding: var(--spacing-xs);
-    padding-right: 1.5rem;
+    min-width: 65px;
+    font-size: 0.8rem;
+    padding: 6px 24px 6px 8px;
+  }
+  
+  .header-actions {
+    margin-right: 10px;
   }
 }
 
