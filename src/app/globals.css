@@ -215,7 +215,8 @@ img {
   }
 }
 
-@media (max-width: 768px) {
+/* Mobile + Tablet (iPad Mini, iPad Pro, etc.): same header layout */
+@media (max-width: 1024px) {
   .header-bar {
     display: flex;
     flex-direction: row;
@@ -227,17 +228,21 @@ img {
     overflow: visible;
     width: 100%;
   }
-  /* Left side: hamburger only (logo is absolute centered) */
   .header-bar .header-left {
     flex: 0 0 auto;
     order: 1;
     min-width: 0;
   }
-  /* Right side: language dropdown at the end of the header */
   .header-bar .header-actions {
     flex: 0 0 auto;
     order: 2;
     margin-left: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-bar {
+    padding: 0 12px 0 10px;
   }
 }
 
@@ -274,8 +279,9 @@ img {
   }
 
   .mobile-header-drawer.is-open {
-    max-height: min(65vh, 420px);
+    max-height: min(90vh, 560px);
     opacity: 1;
+    height: auto;
   }
 
   /* Header bar = front face of drawer when open */
@@ -298,12 +304,24 @@ img {
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     inset 0 -2px 8px rgba(0, 0, 0, 0.03);
   padding: 18px var(--spacing-md) 16px;
-  -webkit-overflow-scrolling: touch;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
+  overflow: visible;
   border-bottom: 2px solid var(--drawer-edge);
   position: relative;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mobile-header-drawer-inner::-webkit-scrollbar {
+  display: none;
+}
+.mobile-header-drawer,
+.mobile-header-drawer * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.mobile-header-drawer::-webkit-scrollbar,
+.mobile-header-drawer *::-webkit-scrollbar {
+  display: none;
 }
 
 /* Drawer handle bar at bottom of drawer content */
@@ -483,7 +501,13 @@ img {
   flex-shrink: 0;
 }
 
-/* Mobile: language dropdown stays on right but inside header (no overflow) */
+/* Mobile + Tablet: language dropdown on right (margin-left pushes it past logo area) */
+@media (max-width: 1024px) {
+  .header-actions .select {
+    margin-left: 70%;
+  }
+}
+
 @media (max-width: 768px) {
   .header-lang-select {
     min-width: 60px;
@@ -3778,14 +3802,16 @@ img {
   text-align: center;
   position: relative;
   overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
   min-height: 60vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Mobile Responsive - Header */
-@media (max-width: 768px) {
+/* Mobile + Tablet (incl. iPad Mini, iPad Pro) - Header */
+@media (max-width: 1024px) {
   .app-header {
     padding: 0 var(--spacing-md);
     min-height: var(--header-height);
@@ -4307,6 +4333,18 @@ img {
   position: relative;
   z-index: 1;
   max-width: 800px;
+  overflow: hidden;
+}
+
+/* Hide any scrollbar inside hero section */
+.hero-section,
+.hero-section * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hero-section::-webkit-scrollbar,
+.hero-section *::-webkit-scrollbar {
+  display: none;
 }
 
 .hero-title {
