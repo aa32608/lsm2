@@ -201,7 +201,8 @@ img {
   flex-shrink: 0;
 }
 
-@media (max-width: 1023px) {
+/* Tablet + mobile: single header style (avoids iPad Pro showing both) */
+@media (max-width: 1024px) {
   .app-header {
     flex-direction: column;
     align-items: stretch;
@@ -273,7 +274,7 @@ img {
   transition: max-height var(--menu-duration) var(--menu-ease), opacity var(--menu-duration) var(--menu-ease);
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1024px) {
   .mobile-header-drawer {
     display: flex;
   }
@@ -291,7 +292,7 @@ img {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1025px) {
   .mobile-header-drawer {
     display: none !important;
   }
@@ -501,12 +502,7 @@ img {
   flex-shrink: 0;
 }
 
-/* Mobile + Tablet: language dropdown on right (margin-left pushes it past logo area) */
-@media (max-width: 1024px) {
-  .header-actions .select {
-    margin-left: 70%;
-  }
-}
+/* Mobile + Tablet: language dropdown stays on right via .header-actions margin-left: auto (no fixed %) */
 
 @media (max-width: 768px) {
   .header-lang-select {
@@ -623,15 +619,15 @@ img {
   transform: translateY(0) rotate(-45deg);
 }
 
-/* Show hamburger on mobile only */
-@media (min-width: 1024px) {
+/* Show hamburger on tablet/mobile only; hide on desktop */
+@media (min-width: 1025px) {
   .hamburger-btn {
     display: none !important;
     visibility: hidden !important;
   }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1024px) {
   .hamburger-btn {
     display: flex !important;
     visibility: visible !important;
@@ -733,7 +729,7 @@ img {
   display: none;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1025px) {
   .desktop-nav {
     display: flex;
     align-items: center;
@@ -931,7 +927,7 @@ img {
   display: none;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1025px) {
   .desktop-only {
     display: inline-block;
   }
