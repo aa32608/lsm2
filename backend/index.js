@@ -882,8 +882,34 @@ cron.schedule("0 0 * * *", async () => {
                 // 2. ONLY Pending/Unpaid Listings: delete after 1 week in that status (expired listings have their own deadline)
                 if ((listing.status === "unpaid" || listing.status === "pending") && listing.createdAt) {
                     const timeSinceCreation = now - listing.createdAt;
+                    const SIX_DAYS_MS = 6 * 24 * 60 * 60 * 1000;
+                    
+                    // Delete after 7 days
                     if (timeSinceCreation >= ONE_WEEK_MS) {
                          listingsToDelete.push({ id, reason: "pending_stale" });
+                    }
+                    // Send warning email at 6 days (1 day before deletion)
+                    else if (timeSinceCreation >= SIX_DAYS_MS && !listing.pendingDeletionWarningSent) {
+                        const email = listing.userEmail || listing.email;
+                        if (email && listing.userId) {
+                            const userLang = await getUserLanguage(listing.userId);
+                            const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
+                            const link = buildSiteUrl("/mylistings");
+                            
+                            const subject = EMAIL_TRANSLATIONS.listing.pending_deletion_warning.subject[userLang] || 
+                                           EMAIL_TRANSLATIONS.listing.pending_deletion_warning.subject.en;
+                            const text = EMAIL_TRANSLATIONS.listing.pending_deletion_warning.text[userLang](listingName, link) || 
+                                        EMAIL_TRANSLATIONS.listing.pending_deletion_warning.text.en(listingName, link);
+                            
+                            const emailResult = await sendEmail(email, subject, text, false, null, "pending_deletion_warning");
+                            if (emailResult.ok) {
+                                updates[`listings/${id}/pendingDeletionWarningSent`] = true;
+                                console.log(`[Cron] Sent pending deletion warning for listing ${id} to ${email}`);
+                            } else if (!emailResult.skipped) {
+                                console.error(`[Cron] Failed to send pending deletion warning for ${id}:`, emailResult.error);
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
                     }
                 }
             }

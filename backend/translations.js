@@ -122,6 +122,18 @@ export const EMAIL_TRANSLATIONS = {
         mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е истечен речиси 30 дена. Ќе биде трајно избришан за 3 дена доколку не се обнови.\n\nОбновете сега за да го задржите: ${url}\n\nТимот на BizCall`
       }
     },
+    pending_deletion_warning: {
+      subject: {
+        en: "⚠️ Action Required: Your Pending Listing Will Be Deleted Tomorrow",
+        sq: "⚠️ Veprim Kërkohet: Shpallja Juaj në Pritje do të Fshihet Nesër",
+        mk: "⚠️ Потребна е Акција: Вашиот Оглас во Исчекување ќе биде Избришан Утре"
+      },
+      text: {
+        en: (name, url) => `Hello,\n\nYour listing "${name}" has been in pending/unpaid status for almost 7 days. It will be automatically deleted tomorrow if not activated.\n\nTo keep your listing, please complete the payment or activation process:\n👉 ${url}\n\nDon't lose your listing!\n\nThe BizCall Team`,
+        sq: (name, url) => `Përshëndetje,\n\nShpallja juaj "${name}" ka qenë në statusin në pritje/e papaguar për pothuajse 7 ditë. Ajo do të fshihet automatikisht nesër nëse nuk aktivizohet.\n\nPër ta mbajtur shpalljen tuaj, ju lutemi përfundoni procesin e pagesës ose aktivizimit:\n👉 ${url}\n\nMos e humbisni shpalljen tuaj!\n\nEkipi i BizCall`,
+        mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е во статус на исчекување/неплатен речиси 7 дена. Ќе биде автоматски избришан утре доколку не се активира.\n\nЗа да го задржите вашиот оглас, ве молиме завршете го процесот на плаќање или активирање:\n👉 ${url}\n\nНе го изгубете вашиот оглас!\n\nТимот на BizCall`
+      }
+    },
     feedback_received: {
       subject: {
         en: "⭐ New Review on Your Listing",

@@ -15,7 +15,8 @@ import {
   updatePhoneNumber,
   PhoneAuthProvider,
   signInWithPhoneNumber,
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { ref as dbRef, update, remove } from "firebase/database";
 import { auth, createRecaptcha } from "../firebase";
@@ -138,17 +139,25 @@ const AccountTab = () => {
     setSavingPhone(true);
     try {
       await phoneConfirmationResult.confirm(phoneVerificationCode);
+      const newPhone = `${phoneCountryCode}${phoneNumber.replace(/^0+/, "")}`;
       // Update DB
       if (user) {
          await update(dbRef(db, `users/${user.uid}`), { 
-           phone: `${phoneCountryCode}${phoneNumber.replace(/^0+/, "")}`,
+           phone: newPhone,
            phoneVerified: true 
          });
+         // Also update phone on all user's listings
+         if (myListingsRaw && myListingsRaw.length > 0) {
+           const updatePromises = myListingsRaw.map(listing => 
+             update(dbRef(db, `listings/${listing.id}`), { contact: newPhone })
+           );
+           await Promise.all(updatePromises);
+         }
       }
       showMessage(t("phoneVerified"), "success");
       setPhoneEditing(false);
       setPhoneConfirmationResult(null);
-      setAccountPhone(`${phoneCountryCode}${phoneNumber.replace(/^0+/, "")}`);
+      setAccountPhone(newPhone);
     } catch (err) {
       console.error(err);
       showMessage(t("invalidCode"), "error");
@@ -185,8 +194,19 @@ const AccountTab = () => {
     try {
       const cred = EmailAuthProvider.credential(user.email, emailForm.currentPassword);
       await reauthenticateWithCredential(user, cred);
+      const oldEmail = user.email;
       await updateEmail(user, emailForm.newEmail);
       await sendEmailVerification(user);
+      // Also update email on all user's listings
+      if (myListingsRaw && myListingsRaw.length > 0) {
+        const updatePromises = myListingsRaw.map(listing => 
+          update(dbRef(db, `listings/${listing.id}`), { 
+            email: emailForm.newEmail,
+            userEmail: emailForm.newEmail 
+          })
+        );
+        await Promise.all(updatePromises);
+      }
       showMessage(t("emailUpdatedVerificationSent"), "success");
       setEmailForm({ newEmail: "", currentPassword: "" });
     } catch (err) {
@@ -670,6 +690,20 @@ const AccountTab = () => {
                 <div className="account-form-actions">
                   <button type="submit" className="account-btn primary small" disabled={savingPassword}>
                     {savingPassword ? t("saving") : t("savePassword")}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="account-btn ghost small"
+                    onClick={async () => {
+                      try {
+                        await sendPasswordResetEmail(auth, user.email);
+                        showMessage(t("passwordResetEmailSent"), "success");
+                      } catch (err) {
+                        showMessage(t("passwordResetError"), "error");
+                      }
+                    }}
+                  >
+                    {t("forgotPassword")}
                   </button>
                 </div>
               </form>

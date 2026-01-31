@@ -401,13 +401,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  const allLocations = useMemo(() => {
-    const locs = new Set();
-    publicListings.forEach(l => {
-      if (l.locationCity) locs.add(l.locationCity);
-    });
-    return Array.from(locs).sort();
-  }, [publicListings]);
+  // Use predefined MK_CITIES list for faster filtering and to show all cities
+  const allLocations = useMemo(() => MK_CITIES, []);
   const [favorites, setFavorites] = useState(() => {
     if (typeof window !== "undefined") {
       try {

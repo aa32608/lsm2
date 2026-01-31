@@ -185,7 +185,11 @@ export default function ListingDetailClient({ id, initialListing }) {
     );
   }
 
-  if (!listing) {
+  // Pending/unpaid listings: only owner can view
+  const isOwner = user && listing && listing.userId === user.uid;
+  const isPendingOrUnpaid = listing && (listing.status === "pending" || listing.status === "unpaid");
+
+  if (!listing || (isPendingOrUnpaid && !isOwner)) {
     return (
       <div className="container" style={{ padding: "4rem", textAlign: "center" }}>
         <h2 className="text-h2">{t("listingNotFound")}</h2>
@@ -592,14 +596,6 @@ export default function ListingDetailClient({ id, initialListing }) {
                 </div>
               )}
 
-              {listing.plan && (
-                <div className="detail-sidebar-item">
-                  <div className="detail-sidebar-label">
-                    <span aria-hidden="true">💎</span> {t("plan")}
-                  </div>
-                  <div className="detail-sidebar-value">{listing.plan}</div>
-                </div>
-              )}
 
               {listing.createdAt && (
                 <div className="detail-sidebar-item">

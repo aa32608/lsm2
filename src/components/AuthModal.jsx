@@ -11,7 +11,8 @@ import {
   updateProfile,
   sendEmailVerification,
   EmailAuthProvider,
-  getAdditionalUserInfo
+  getAdditionalUserInfo,
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { ref as dbRef, set } from "firebase/database";
 
@@ -305,6 +306,40 @@ const AuthModal = () => {
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                           <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
+                      </button>
+
+                      {/* Forgot Password Link */}
+                      <button
+                        type="button"
+                        className="auth-forgot-password-link"
+                        onClick={async () => {
+                          if (!validateEmail(email)) {
+                            return showMessage(t("enterEmailForReset"), "error");
+                          }
+                          try {
+                            await sendPasswordResetEmail(auth, email);
+                            showMessage(t("passwordResetEmailSent"), "success");
+                          } catch (e) {
+                            if (e.code === 'auth/user-not-found') {
+                              showMessage(t("userNotFound"), "error");
+                            } else {
+                              showMessage(t("passwordResetError"), "error");
+                            }
+                          }
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--primary)',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          marginTop: '12px',
+                          textDecoration: 'underline',
+                          width: '100%',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {t("forgotPassword")}
                       </button>
                     </>
                   ) : (

@@ -133,7 +133,7 @@ const ListingCard = React.memo(({
           <h3 className="listing-card-title">{l.name}</h3>
           <div className="listing-card-meta">
              <span className="pill pill-category">{t(l.category) || l.category}</span>
-             <span className="pill pill-location">📍 {l.location || t("unspecified")}</span>
+             <span className="pill pill-location">📍 {t(l.location) || l.location || t("unspecified")}</span>
           </div>
         </div>
 
