@@ -217,10 +217,27 @@ img {
 
 @media (max-width: 768px) {
   .header-bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     padding: 0 12px 0 10px;
     position: relative;
     box-sizing: border-box;
     overflow: visible;
+    width: 100%;
+  }
+  /* Left side: hamburger only (logo is absolute centered) */
+  .header-bar .header-left {
+    flex: 0 0 auto;
+    order: 1;
+    min-width: 0;
+  }
+  /* Right side: language dropdown at the end of the header */
+  .header-bar .header-actions {
+    flex: 0 0 auto;
+    order: 2;
+    margin-left: auto;
   }
 }
 
@@ -3774,29 +3791,21 @@ img {
     min-height: var(--header-height);
   }
 
+  /* Left side: hamburger + logo (logo is absolute centered) */
   .header-left {
-    gap: var(--spacing-sm);
-    flex: 1;
-    min-width: 0;
-    display: flex !important; /* Ensure header-left is visible */
+    display: flex !important;
     align-items: center !important;
+    gap: var(--spacing-sm);
+    flex: 0 0 auto;
+    order: 1;
+    min-width: 0;
   }
 
-  /* Ensure hamburger button is visible on mobile */
   .hamburger-btn {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
     z-index: 10;
-  }
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    flex: 0 0 auto;
-    order: 1;
-    min-width: 0;
   }
 
   .header-logo {
@@ -3820,14 +3829,15 @@ img {
     display: block !important;
   }
 
-  /* Language selector on the right, inside header padding so it doesn't go off-screen */
+  /* Language dropdown on the RIGHT side of header (opposite hamburger), inside padding */
   .header-actions {
     gap: var(--spacing-sm);
     flex-shrink: 0;
+    flex: 0 0 auto;
     display: flex !important;
     align-items: center !important;
-    order: 3;
-    margin-left: auto;
+    order: 2;
+    margin-left: auto !important;
     margin-right: 0;
     align-self: center;
     min-width: 0;
@@ -3930,8 +3940,9 @@ img {
   }
 
   .header-actions {
-    order: 3;
+    order: 2;
     align-self: center;
+    margin-left: auto !important;
   }
 
   .submit-listing-header-btn {
