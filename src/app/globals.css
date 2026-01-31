@@ -502,7 +502,12 @@ img {
   flex-shrink: 0;
 }
 
-/* Mobile + Tablet: language dropdown stays on right via .header-actions margin-left: auto (no fixed %) */
+/* Mobile + Tablet: language dropdown on right */
+@media (max-width: 1024px) {
+  .header-actions .select {
+    margin-left: 73%;
+  }
+}
 
 @media (max-width: 768px) {
   .header-lang-select {
