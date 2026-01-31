@@ -217,8 +217,10 @@ img {
 
 @media (max-width: 768px) {
   .header-bar {
-    padding: 0 var(--spacing-sm);
+    padding: 0 12px 0 10px;
     position: relative;
+    box-sizing: border-box;
+    overflow: visible;
   }
 }
 
@@ -464,16 +466,12 @@ img {
   flex-shrink: 0;
 }
 
-/* Mobile: ensure language dropdown doesn't get cut off */
+/* Mobile: language dropdown stays on right but inside header (no overflow) */
 @media (max-width: 768px) {
-  .header-actions {
-    margin-right: 8px;
-    gap: 8px;
-  }
-  
   .header-lang-select {
-    min-width: 65px;
-    padding: 8px 24px 8px 8px;
+    min-width: 60px;
+    max-width: 76px;
+    padding: 8px 22px 8px 8px;
     font-size: 0.85rem;
   }
 }
@@ -3822,7 +3820,7 @@ img {
     display: block !important;
   }
 
-  /* Language selector in header - login/logout are in drawer on mobile */
+  /* Language selector on the right, inside header padding so it doesn't go off-screen */
   .header-actions {
     gap: var(--spacing-sm);
     flex-shrink: 0;
@@ -3830,7 +3828,7 @@ img {
     align-items: center !important;
     order: 3;
     margin-left: auto;
-    margin-right: 12px;
+    margin-right: 0;
     align-self: center;
     min-width: 0;
     z-index: 2;
@@ -3839,11 +3837,13 @@ img {
 
   .header-actions .select {
     font-size: 0.85rem;
-    padding: 8px 28px 8px 10px;
-    min-width: 68px;
+    padding: 8px 26px 8px 10px;
+    min-width: 64px;
+    max-width: 80px;
     min-height: 36px;
     align-self: center;
     flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   /* Hide login/logout buttons in header on mobile - they're in drawer */
@@ -3969,13 +3969,10 @@ img {
   }
 
   .header-actions .select {
-    min-width: 65px;
+    min-width: 58px;
+    max-width: 72px;
     font-size: 0.8rem;
-    padding: 6px 24px 6px 8px;
-  }
-  
-  .header-actions {
-    margin-right: 10px;
+    padding: 6px 20px 6px 8px;
   }
 }
 
