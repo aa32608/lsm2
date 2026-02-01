@@ -31,7 +31,11 @@ export default function HomeTab() {
     totalByEmail: 0,
     totalByWhatsapp: 0,
     top5Featured: [],
+    lastMonthKey: null,
+    thisMonthKey: null,
   });
+  const [chartActiveId, setChartActiveId] = useState(null);
+  const [chartTooltipPos, setChartTooltipPos] = useState({ x: 0, y: 0 });
 
   const router = useRouter();
 
@@ -39,7 +43,13 @@ export default function HomeTab() {
     const fetchStats = () => {
       fetch(`${API_BASE}/api/listing-stats-aggregate`)
         .then((res) => res.json())
-        .then((data) => setAggregateStats((prev) => ({ ...prev, ...data, top5Featured: data.top5Featured || prev.top5Featured || [] })))
+        .then((data) => setAggregateStats((prev) => ({
+          ...prev,
+          ...data,
+          top5Featured: data.top5Featured || prev.top5Featured || [],
+          lastMonthKey: data.lastMonthKey ?? prev.lastMonthKey,
+          thisMonthKey: data.thisMonthKey ?? prev.thisMonthKey,
+        })))
         .catch(() => {});
     };
     fetchStats();
@@ -160,7 +170,12 @@ export default function HomeTab() {
                     </li>
                   ))}
                 </ul>
-                <div className="top-featured-chart top-featured-line-chart" role="img" aria-label={t("homeTopFeaturedSubtitle")}>
+                <div
+                  className="top-featured-chart top-featured-line-chart"
+                  role="img"
+                  aria-label={t("homeTopFeaturedSubtitle")}
+                  onMouseLeave={() => setChartActiveId(null)}
+                >
                   {(() => {
                     const items = aggregateStats.top5Featured;
                     const lastMonthKey = aggregateStats.lastMonthKey || "";
@@ -171,11 +186,29 @@ export default function HomeTab() {
                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                       return `${monthNames[parseInt(m, 10) - 1] || m} ${y}`;
                     };
-                    const series = items.map((item) => {
+                    const greenShades = ["#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
+                    const redShades = ["#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5"];
+                    const series = items.map((item, idx) => {
                       const lastTotal = (item.lastMonthViews ?? 0) + (item.lastMonthContacts ?? 0);
                       const thisTotal = (item.views ?? 0) + (item.contacts ?? 0);
                       const increased = thisTotal >= lastTotal;
-                      return { id: item.id, name: item.name, lastTotal, thisTotal, increased };
+                      const shade = increased ? greenShades[idx % greenShades.length] : redShades[idx % redShades.length];
+                      const shadeLight = increased ? greenShades[Math.min(idx + 1, greenShades.length - 1)] : redShades[Math.min(idx + 1, redShades.length - 1)];
+                      return {
+                        id: item.id,
+                        name: item.name,
+                        category: item.category,
+                        city: item.city || item.location,
+                        lastTotal,
+                        thisTotal,
+                        lastMonthViews: item.lastMonthViews ?? 0,
+                        lastMonthContacts: item.lastMonthContacts ?? 0,
+                        views: item.views ?? 0,
+                        contacts: item.contacts ?? 0,
+                        increased,
+                        stroke: shade,
+                        strokeLight: shadeLight,
+                      };
                     });
                     const maxY = Math.max(1, ...series.flatMap((s) => [s.lastTotal, s.thisTotal]));
                     const padding = { left: 36, right: 16, top: 12, bottom: 28 };
@@ -185,19 +218,28 @@ export default function HomeTab() {
                     const chartHeight = height - padding.top - padding.bottom;
                     const xScale = (i) => padding.left + (i / 1) * chartWidth;
                     const yScale = (v) => padding.top + chartHeight - (v / maxY) * chartHeight;
+                    const activeSeries = series.find((s) => s.id === chartActiveId);
                     return (
                       <div className="top-featured-line-chart-inner">
                         <div className="top-featured-line-chart-y-label">{t("chartAmount")}</div>
-                        <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" className="top-featured-line-chart-svg">
+                        <svg
+                          width="100%"
+                          height={height}
+                          viewBox={`0 0 ${width} ${height}`}
+                          preserveAspectRatio="xMidYMid meet"
+                          className="top-featured-line-chart-svg"
+                          onMouseMove={(e) => {
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setChartTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+                          }}
+                        >
                           <defs>
-                            <linearGradient id="lineGradGreen" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="var(--chart-green, #10b981)" />
-                              <stop offset="100%" stopColor="var(--chart-green-light, #34d399)" />
-                            </linearGradient>
-                            <linearGradient id="lineGradRed" x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="var(--chart-red, #ef4444)" />
-                              <stop offset="100%" stopColor="var(--chart-red-light, #f87171)" />
-                            </linearGradient>
+                            {series.map((s, idx) => (
+                              <linearGradient key={s.id} id={`lineGrad-${s.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor={s.stroke} />
+                                <stop offset="100%" stopColor={s.strokeLight} />
+                              </linearGradient>
+                            ))}
                           </defs>
                           {/* Y-axis line */}
                           <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="var(--border)" strokeWidth="1" />
@@ -213,41 +255,85 @@ export default function HomeTab() {
                           {/* X-axis labels */}
                           <text x={xScale(0)} y={height - 6} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{lastMonthKey ? formatMonth(lastMonthKey) : t("lastMonth")}</text>
                           <text x={xScale(1)} y={height - 6} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{thisMonthKey ? formatMonth(thisMonthKey) : t("thisMonth")}</text>
-                          {/* Lines: one per listing — green if increased, red if decreased */}
+                          {/* Lines: one per listing — unique gradient, interactable */}
                           {series.map((s) => {
                             const xA = xScale(0);
                             const xB = xScale(1);
                             const yA = yScale(s.lastTotal);
                             const yB = yScale(s.thisTotal);
-                            const stroke = s.increased ? "url(#lineGradGreen)" : "url(#lineGradRed)";
+                            const isActive = chartActiveId === s.id;
                             return (
-                              <line
+                              <g
                                 key={s.id}
-                                x1={xA}
-                                y1={yA}
-                                x2={xB}
-                                y2={yB}
-                                stroke={stroke}
-                                strokeWidth="2.5"
-                                strokeLinecap="round"
-                                className={s.increased ? "chart-line chart-line--increase" : "chart-line chart-line--decrease"}
-                              />
+                                onMouseEnter={() => setChartActiveId(s.id)}
+                                onClick={() => setChartActiveId((prev) => (prev === s.id ? null : s.id))}
+                                style={{ cursor: "pointer" }}
+                              >
+                                {/* Invisible wide hit area */}
+                                <line x1={xA} y1={yA} x2={xB} y2={yB} stroke="transparent" strokeWidth="16" strokeLinecap="round" />
+                                <line
+                                  x1={xA}
+                                  y1={yA}
+                                  x2={xB}
+                                  y2={yB}
+                                  stroke={`url(#lineGrad-${s.id})`}
+                                  strokeWidth={isActive ? 4 : 2.5}
+                                  strokeLinecap="round"
+                                  className={s.increased ? "chart-line chart-line--increase" : "chart-line chart-line--decrease"}
+                                />
+                              </g>
                             );
                           })}
                           {/* Points at each data position */}
-                          {series.map((s) => (
-                            <g key={`points-${s.id}`}>
-                              <circle cx={xScale(0)} cy={yScale(s.lastTotal)} r="4" fill={s.increased ? "var(--chart-green, #10b981)" : "var(--chart-red, #ef4444)"} stroke="var(--surface)" strokeWidth="1" />
-                              <circle cx={xScale(1)} cy={yScale(s.thisTotal)} r="4" fill={s.increased ? "var(--chart-green, #10b981)" : "var(--chart-red, #ef4444)"} stroke="var(--surface)" strokeWidth="1" />
-                            </g>
-                          ))}
+                          {series.map((s) => {
+                            const isActive = chartActiveId === s.id;
+                            return (
+                              <g
+                                key={`points-${s.id}`}
+                                onMouseEnter={() => setChartActiveId(s.id)}
+                                onClick={() => setChartActiveId((prev) => (prev === s.id ? null : s.id))}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <circle cx={xScale(0)} cy={yScale(s.lastTotal)} r={isActive ? 6 : 4} fill={s.stroke} stroke="var(--surface)" strokeWidth="1" />
+                                <circle cx={xScale(1)} cy={yScale(s.thisTotal)} r={isActive ? 6 : 4} fill={s.stroke} stroke="var(--surface)" strokeWidth="1" />
+                              </g>
+                            );
+                          })}
                         </svg>
+                        {/* Tooltip / popover when hovering or clicking a line */}
+                        {activeSeries && (
+                          <div
+                            className="top-featured-chart-tooltip"
+                            role="tooltip"
+                            aria-live="polite"
+                            style={{ left: Math.min(chartTooltipPos.x + 12, 240), top: Math.min(chartTooltipPos.y, 140) }}
+                          >
+                            <div className="top-featured-chart-tooltip-name">{activeSeries.name || activeSeries.id}</div>
+                            <div className="top-featured-chart-tooltip-meta">
+                              {t(activeSeries.category) || activeSeries.category} {activeSeries.city ? `• ${activeSeries.city}` : ""}
+                            </div>
+                            <div className="top-featured-chart-tooltip-stats">
+                              <span>{formatMonth(lastMonthKey) || t("lastMonth")}: 👁 {activeSeries.lastMonthViews} · 📞 {activeSeries.lastMonthContacts}</span>
+                              <span>{formatMonth(thisMonthKey) || t("thisMonth")}: 👁 {activeSeries.views} · 📞 {activeSeries.contacts}</span>
+                            </div>
+                            <Link href={`/listings/${activeSeries.id}`} className="top-featured-chart-tooltip-link">
+                              {t("view")} →
+                            </Link>
+                          </div>
+                        )}
                         <div className="top-featured-line-chart-legend">
                           {series.slice(0, 5).map((s) => (
-                            <span key={s.id} className="top-featured-line-chart-legend-item" title={s.name}>
-                              <span className={`top-featured-line-chart-legend-dot ${s.increased ? "chart-line--increase" : "chart-line--decrease"}`} />
+                            <button
+                              key={s.id}
+                              type="button"
+                              className={`top-featured-line-chart-legend-item ${chartActiveId === s.id ? "is-active" : ""}`}
+                              onClick={() => setChartActiveId((prev) => (prev === s.id ? null : s.id))}
+                              onMouseEnter={() => setChartActiveId(s.id)}
+                              title={s.name}
+                            >
+                              <span className={`top-featured-line-chart-legend-dot ${s.increased ? "chart-line--increase" : "chart-line--decrease"}`} style={{ background: s.stroke }} />
                               {s.name?.slice(0, 14) || s.id}{s.name?.length > 14 ? "…" : ""}
-                            </span>
+                            </button>
                           ))}
                         </div>
                       </div>

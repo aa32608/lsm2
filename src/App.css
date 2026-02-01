@@ -4126,6 +4126,55 @@ textarea:hover {
   box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25);
 }
 
+/* Dismissible renew overlay on expired MyListingCard — full card content always visible */
+.my-listing-renew-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: linear-gradient(to top, rgba(254, 243, 199, 0.98), rgba(254, 243, 199, 0.95));
+  border-top: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  padding: 0.75rem 1rem;
+}
+.my-listing-renew-overlay-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.my-listing-renew-overlay-text {
+  font-size: 0.9rem;
+  color: #78350f;
+  font-weight: 500;
+}
+.my-listing-renew-overlay-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.my-listing-renew-overlay-dismiss {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: #78350f;
+  font-size: 1.25rem;
+  line-height: 1;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.my-listing-renew-overlay-dismiss:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: #92400e;
+}
+
 .btn-free-trial {
   background: linear-gradient(135deg, #166534 0%, #15803d 100%) !important;
   color: #fff !important;

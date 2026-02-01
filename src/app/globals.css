@@ -5050,6 +5050,65 @@ img {
   background: var(--danger, #ef4444);
 }
 
+.top-featured-line-chart-inner {
+  position: relative;
+}
+
+.top-featured-chart-tooltip {
+  position: absolute;
+  z-index: 10;
+  min-width: 180px;
+  max-width: 260px;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.top-featured-chart-tooltip-name {
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+.top-featured-chart-tooltip-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.top-featured-chart-tooltip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+.top-featured-chart-tooltip-link {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+.top-featured-chart-tooltip-link:hover {
+  text-decoration: underline;
+}
+.top-featured-line-chart-legend button.top-featured-line-chart-legend-item {
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+.top-featured-line-chart-legend-item:hover,
+.top-featured-line-chart-legend-item.is-active {
+  background: var(--surface-hover);
+}
+
 @media (max-width: 768px) {
   .top-featured-layout {
     grid-template-columns: 1fr;

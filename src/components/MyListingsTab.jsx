@@ -143,19 +143,22 @@ export default function MyListingsTab() {
     [myListingsRaw]
   );
 
-  const { avgViews, avgContacts } = useMemo(() => {
-    if (!myListingsRaw.length) return { avgViews: null, avgContacts: null };
-    let sumV = 0, sumC = 0;
-    myListingsRaw.forEach((l) => {
-      sumV += Number(l.views) || 0;
-      sumC += Number(l.contacts) || 0;
-    });
+  const lastMonthKey = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }, []);
+
+  const getLastMonthStats = useCallback((listing) => {
+    const monthly = listing?.monthlyStats?.[lastMonthKey];
     return {
-      avgViews: sumV / myListingsRaw.length,
-      avgContacts: sumC / myListingsRaw.length,
+      lastMonthViews: monthly ? Number(monthly.views) || 0 : 0,
+      lastMonthContacts: monthly ? Number(monthly.contacts) || 0 : 0,
     };
-  }, [myListingsRaw]);
-  
+  }, [lastMonthKey]);
+
   // Handlers
   const clearAllFilters = () => {
     setQ("");
@@ -358,26 +361,29 @@ export default function MyListingsTab() {
             </div>
           ) : (
             <div className="my-listings-grid" role="list" aria-label={t("yourListings")}>
-              {myListings.map((l) => (
-                <MyListingCard
-                  key={l.id}
-                  listing={l}
-                  t={t}
-                  user={user}
-                  userProfile={userProfile}
-                  categoryIcons={categoryIcons}
-                  getDaysUntilExpiry={getDaysUntilExpiry}
-                  getListingStats={getListingStats}
-                  getDescriptionPreview={getDescriptionPreview}
-                  openEdit={handleOpenEdit}
-                  startExtendFlow={handleStartExtendFlow}
-                  showMessage={showMessage}
-                  handleShareListing={handleShareListing}
-                  confirmDelete={confirmDelete}
-                  avgViews={avgViews}
-                  avgContacts={avgContacts}
-                />
-              ))}
+              {myListings.map((l) => {
+                const { lastMonthViews, lastMonthContacts } = getLastMonthStats(l);
+                return (
+                  <MyListingCard
+                    key={l.id}
+                    listing={l}
+                    t={t}
+                    user={user}
+                    userProfile={userProfile}
+                    categoryIcons={categoryIcons}
+                    getDaysUntilExpiry={getDaysUntilExpiry}
+                    getListingStats={getListingStats}
+                    getDescriptionPreview={getDescriptionPreview}
+                    openEdit={handleOpenEdit}
+                    startExtendFlow={handleStartExtendFlow}
+                    showMessage={showMessage}
+                    handleShareListing={handleShareListing}
+                    confirmDelete={confirmDelete}
+                    lastMonthViews={lastMonthViews}
+                    lastMonthContacts={lastMonthContacts}
+                  />
+                );
+              })}
             </div>
           )}
         </main>

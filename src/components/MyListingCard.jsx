@@ -1,8 +1,10 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "../firebase";
 import { ref as dbRef, update } from "firebase/database";
+
+const RENEW_DISMISSED_KEY = (id) => `bizcall_renew_dismissed_${id}`;
 
 const API_BASE =
   (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
@@ -23,8 +25,8 @@ const MyListingCard = React.memo(({
   confirmDelete,
   user,
   userProfile,
-  avgViews = null,
-  avgContacts = null,
+  lastMonthViews = null,
+  lastMonthContacts = null,
 }) => {
   const router = useRouter();
   const stats = getListingStats(l);
@@ -34,36 +36,43 @@ const MyListingCard = React.memo(({
   const currentPlan = l.plan || "1";
   const isFreeTrialEligible = (l.status === "pending" || l.status === "unpaid") && currentPlan === "1" && user && userProfile && !userProfile.hasUsedFreeTrial;
 
+  const [renewBannerDismissed, setRenewBannerDismissed] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !l.id) return;
+    setRenewBannerDismissed(sessionStorage.getItem(RENEW_DISMISSED_KEY(l.id)) === "1");
+  }, [l.id]);
+
   const views = Number(l.views) || 0;
   const contacts = Number(l.contacts) || 0;
+  const lastViews = lastMonthViews != null ? Number(lastMonthViews) : 0;
+  const lastContacts = lastMonthContacts != null ? Number(lastMonthContacts) : 0;
+  const lastTotal = lastViews + lastContacts;
+  const thisTotal = views + contacts;
   let perfClass = "";
   let perfText = "";
   let perfAriaLabel = "";
-  if (avgViews != null && avgContacts != null && (avgViews > 0 || avgContacts > 0)) {
-    const viewsPct = avgViews > 0 ? ((views - avgViews) / avgViews) * 100 : 0;
-    const contactsPct = avgContacts > 0 ? ((contacts - avgContacts) / avgContacts) * 100 : 0;
-    const avgPct = (viewsPct + contactsPct) / 2;
-    if (!Number.isNaN(avgPct)) {
-      perfClass = avgPct > 5 ? "my-listing-perf--positive" : avgPct < -5 ? "my-listing-perf--negative" : "";
-      perfText = avgPct > 5 ? `↑ ${Math.round(avgPct)}%` : avgPct < -5 ? `↓ ${Math.round(-avgPct)}%` : "";
-      perfAriaLabel = avgPct > 5
-        ? t("listingPerformingAboveAverage").replace("{{pct}}", Math.round(avgPct))
-        : avgPct < -5
-          ? t("listingPerformingBelowAverage").replace("{{pct}}", Math.round(-avgPct))
+  if (lastTotal > 0 || thisTotal > 0) {
+    const pct = lastTotal > 0 ? ((thisTotal - lastTotal) / lastTotal) * 100 : (thisTotal > 0 ? 100 : 0);
+    if (!Number.isNaN(pct)) {
+      perfClass = pct > 0 ? "my-listing-perf--positive" : pct < 0 ? "my-listing-perf--negative" : "";
+      perfText = pct > 0 ? `↑ ${Math.round(pct)}%` : pct < 0 ? `↓ ${Math.round(-pct)}%` : "—";
+      perfAriaLabel = pct > 0
+        ? t("listingPerformingAboveAverage").replace("{{pct}}", Math.round(pct))
+        : pct < 0
+          ? t("listingPerformingBelowAverage").replace("{{pct}}", Math.round(-pct))
           : t("listingPerformingAverage");
     }
   }
 
+  const dismissRenewBanner = () => {
+    if (typeof window !== "undefined" && l.id) {
+      sessionStorage.setItem(RENEW_DISMISSED_KEY(l.id), "1");
+      setRenewBannerDismissed(true);
+    }
+  };
+
   return (
     <article className={`my-listing-card my-listing-card-horizontal ${isExpired ? "my-listing-card--paused" : ""}`} role="listitem">
-      {isExpired && (
-        <div className="my-listing-paused-banner" role="alert" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem 1rem", marginBottom: "0.75rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
-          <span style={{ color: "var(--text-muted)" }}>{t("listingPausedRenewToReactivate")}</span>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => startExtendFlow(l)} aria-label={t("renewNow")}>
-            {t("renewNow")}
-          </button>
-        </div>
-      )}
       <div className="my-listing-card-main">
         <header className="my-listing-header">
           <div className="my-listing-header-top">
@@ -135,7 +144,7 @@ const MyListingCard = React.memo(({
             <span className="my-listing-stat my-listing-stat-breakdown" aria-label={`${t("contactByPhone")}: ${l.contactByPhone ?? 0}, ${t("contactByEmail")}: ${l.contactByEmail ?? 0}, ${t("contactByWhatsapp")}: ${l.contactByWhatsapp ?? 0}`}>
               📞{l.contactByPhone ?? 0} ✉️{l.contactByEmail ?? 0} 💬{l.contactByWhatsapp ?? 0}
             </span>
-            {avgViews != null && avgContacts != null && (avgViews > 0 || avgContacts > 0) && (
+            {(lastTotal > 0 || thisTotal > 0) && perfText && (
               <span className={`my-listing-perf ${perfClass}`} aria-label={perfAriaLabel} title={perfAriaLabel}>
                 {perfText}
               </span>
@@ -343,6 +352,29 @@ const MyListingCard = React.memo(({
           </div>
         </footer>
       </div>
+
+      {/* Dismissible renew overlay when expired — full card content always visible */}
+      {isExpired && !renewBannerDismissed && (
+        <div className="my-listing-renew-overlay" role="alert">
+          <div className="my-listing-renew-overlay-content">
+            <span className="my-listing-renew-overlay-text">{t("listingPausedRenewToReactivate")}</span>
+            <div className="my-listing-renew-overlay-actions">
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => startExtendFlow(l)} aria-label={t("renewNow")}>
+                {t("renewNow")}
+              </button>
+              <button
+                type="button"
+                className="my-listing-renew-overlay-dismiss"
+                onClick={dismissRenewBanner}
+                aria-label={t("close")}
+                title={t("close")}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 });
