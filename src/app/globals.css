@@ -4081,7 +4081,7 @@ img {
   .hero-btn-primary,
   .hero-btn-secondary {
     width: 100%;
-    max-width: 320px;
+    max-width: 360px;
     margin-left: auto;
     margin-right: auto;
   }
@@ -4420,7 +4420,7 @@ img {
     padding: 0.875rem 1.5rem;
     font-size: 1rem;
     width: 100%;
-    max-width: 280px;
+    max-width: 360px;
   }
   
   .hero-actions {
@@ -5207,7 +5207,7 @@ img {
   .hero-actions--home {
     flex-direction: column;
     width: 100%;
-    max-width: 320px;
+    max-width: 380px;
     margin-left: auto;
     margin-right: auto;
   }
