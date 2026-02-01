@@ -659,14 +659,31 @@ app.post("/api/listing-contact", async (req, res) => {
   }
 });
 
+// Helper for last-month key (YYYY-MM) for chart comparison
+function getLastMonthKeyAPI() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+function getThisMonthKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
 // Aggregate stats for homepage social proof + top 5 featured listings (real-time from DB)
 app.get("/api/listing-stats-aggregate", async (req, res) => {
   if (!isFirebaseInitialized) {
-    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [] });
+    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [], lastMonthKey: null, thisMonthKey: null });
   }
   try {
     const snapshot = await db.ref("listings").once("value");
     const listings = snapshot.val() || {};
+    const lastMonthKey = getLastMonthKeyAPI();
+    const thisMonthKey = getThisMonthKey();
     let totalViews = 0, totalContacts = 0, totalByPhone = 0, totalByEmail = 0, totalByWhatsapp = 0;
     const featured = [];
     Object.entries(listings).forEach(([listingId, l]) => {
@@ -678,6 +695,9 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
       totalByEmail += Number(l.contactByEmail) || 0;
       totalByWhatsapp += Number(l.contactByWhatsapp) || 0;
       if (String(l.plan) === "12" && l.status === "verified") {
+        const monthly = l.monthlyStats && l.monthlyStats[lastMonthKey] ? l.monthlyStats[lastMonthKey] : null;
+        const lastMonthViews = monthly ? Number(monthly.views) || 0 : 0;
+        const lastMonthContacts = monthly ? Number(monthly.contacts) || 0 : 0;
         featured.push({
           id: listingId,
           name: l.name || "",
@@ -686,15 +706,17 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
           city: l.city || l.location || "",
           views,
           contacts,
+          lastMonthViews,
+          lastMonthContacts,
         });
       }
     });
     featured.sort((a, b) => (b.views + b.contacts) - (a.views + a.contacts));
     const top5Featured = featured.slice(0, 5);
-    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured });
+    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured, lastMonthKey, thisMonthKey });
   } catch (err) {
     console.error("[API] listing-stats-aggregate error:", err);
-    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [] });
+    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [], lastMonthKey: null, thisMonthKey: null });
   }
 });
 
@@ -1513,6 +1535,35 @@ cron.schedule("0 0 * * *", async () => {
 
   } catch (err) {
      console.error("[Cron] Maintenance error:", err);
+  }
+});
+
+// Runs on the 1st of each month at 00:05 — snapshot each listing's views/contacts for last month (for line chart comparison)
+function getLastMonthKey() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+cron.schedule("5 0 1 * *", async () => {
+  console.log("[Cron] Running monthly stats snapshot…");
+  if (!isFirebaseInitialized) return;
+  try {
+    const lastMonthKey = getLastMonthKey();
+    const snapshot = await db.ref("listings").once("value");
+    if (!snapshot.exists()) return;
+    const listings = snapshot.val();
+    const updates = {};
+    for (const [id, listing] of Object.entries(listings)) {
+      const views = Number(listing.views) || 0;
+      const contacts = Number(listing.contacts) || 0;
+      updates[`listings/${id}/monthlyStats/${lastMonthKey}`] = { views, contacts };
+    }
+    await db.ref().update(updates);
+    console.log(`[Cron] Monthly snapshot saved for ${Object.keys(listings).length} listings (${lastMonthKey}).`);
+  } catch (err) {
+    console.error("[Cron] Monthly snapshot error:", err);
   }
 });
 

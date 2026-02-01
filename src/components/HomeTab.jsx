@@ -160,28 +160,98 @@ export default function HomeTab() {
                     </li>
                   ))}
                 </ul>
-                <div className="top-featured-chart" role="img" aria-label={t("homeTopFeaturedSubtitle")}>
+                <div className="top-featured-chart top-featured-line-chart" role="img" aria-label={t("homeTopFeaturedSubtitle")}>
                   {(() => {
-                    const maxVal = Math.max(1, ...aggregateStats.top5Featured.map((x) => (x.views || 0) + (x.contacts || 0)));
-                    return aggregateStats.top5Featured.map((item, idx) => {
-                      const total = (item.views || 0) + (item.contacts || 0);
-                      const pct = maxVal > 0 ? (total / maxVal) * 100 : 0;
-                      return (
-                        <div key={item.id} className="top-featured-chart-bar-wrap">
-                          <span className="top-featured-chart-label" title={item.name}>
-                            {item.name?.slice(0, 20) || `#${idx + 1}`}{item.name?.length > 20 ? "…" : ""}
-                          </span>
-                          <div className="top-featured-chart-bar-bg">
-                            <div
-                              className="top-featured-chart-bar"
-                              style={{ width: `${pct}%` }}
-                              title={`${item.views ?? 0} views, ${item.contacts ?? 0} contacts`}
-                            />
-                          </div>
-                          <span className="top-featured-chart-value">{total}</span>
-                        </div>
-                      );
+                    const items = aggregateStats.top5Featured;
+                    const lastMonthKey = aggregateStats.lastMonthKey || "";
+                    const thisMonthKey = aggregateStats.thisMonthKey || "";
+                    const formatMonth = (key) => {
+                      if (!key || key.length < 7) return key;
+                      const [y, m] = key.split("-");
+                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      return `${monthNames[parseInt(m, 10) - 1] || m} ${y}`;
+                    };
+                    const series = items.map((item) => {
+                      const lastTotal = (item.lastMonthViews ?? 0) + (item.lastMonthContacts ?? 0);
+                      const thisTotal = (item.views ?? 0) + (item.contacts ?? 0);
+                      const increased = thisTotal >= lastTotal;
+                      return { id: item.id, name: item.name, lastTotal, thisTotal, increased };
                     });
+                    const maxY = Math.max(1, ...series.flatMap((s) => [s.lastTotal, s.thisTotal]));
+                    const padding = { left: 36, right: 16, top: 12, bottom: 28 };
+                    const width = 280;
+                    const height = 200;
+                    const chartWidth = width - padding.left - padding.right;
+                    const chartHeight = height - padding.top - padding.bottom;
+                    const xScale = (i) => padding.left + (i / 1) * chartWidth;
+                    const yScale = (v) => padding.top + chartHeight - (v / maxY) * chartHeight;
+                    return (
+                      <div className="top-featured-line-chart-inner">
+                        <div className="top-featured-line-chart-y-label">{t("chartAmount")}</div>
+                        <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet" className="top-featured-line-chart-svg">
+                          <defs>
+                            <linearGradient id="lineGradGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="var(--chart-green, #10b981)" />
+                              <stop offset="100%" stopColor="var(--chart-green-light, #34d399)" />
+                            </linearGradient>
+                            <linearGradient id="lineGradRed" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="var(--chart-red, #ef4444)" />
+                              <stop offset="100%" stopColor="var(--chart-red-light, #f87171)" />
+                            </linearGradient>
+                          </defs>
+                          {/* Y-axis line */}
+                          <line x1={padding.left} y1={padding.top} x2={padding.left} y2={padding.top + chartHeight} stroke="var(--border)" strokeWidth="1" />
+                          {/* X-axis line */}
+                          <line x1={padding.left} y1={padding.top + chartHeight} x2={padding.left + chartWidth} y2={padding.top + chartHeight} stroke="var(--border)" strokeWidth="1" />
+                          {/* Y-axis ticks */}
+                          {[0, Math.ceil(maxY / 2), maxY].filter((v, i, a) => a.indexOf(v) === i).map((tick) => (
+                            <g key={tick}>
+                              <line x1={padding.left} y1={yScale(tick)} x2={padding.left + chartWidth} y2={yScale(tick)} stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
+                              <text x={padding.left - 6} y={yScale(tick) + 4} textAnchor="end" fontSize="10" fill="var(--text-muted)">{tick}</text>
+                            </g>
+                          ))}
+                          {/* X-axis labels */}
+                          <text x={xScale(0)} y={height - 6} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{lastMonthKey ? formatMonth(lastMonthKey) : t("lastMonth")}</text>
+                          <text x={xScale(1)} y={height - 6} textAnchor="middle" fontSize="10" fill="var(--text-muted)">{thisMonthKey ? formatMonth(thisMonthKey) : t("thisMonth")}</text>
+                          {/* Lines: one per listing — green if increased, red if decreased */}
+                          {series.map((s) => {
+                            const xA = xScale(0);
+                            const xB = xScale(1);
+                            const yA = yScale(s.lastTotal);
+                            const yB = yScale(s.thisTotal);
+                            const stroke = s.increased ? "url(#lineGradGreen)" : "url(#lineGradRed)";
+                            return (
+                              <line
+                                key={s.id}
+                                x1={xA}
+                                y1={yA}
+                                x2={xB}
+                                y2={yB}
+                                stroke={stroke}
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                className={s.increased ? "chart-line chart-line--increase" : "chart-line chart-line--decrease"}
+                              />
+                            );
+                          })}
+                          {/* Points at each data position */}
+                          {series.map((s) => (
+                            <g key={`points-${s.id}`}>
+                              <circle cx={xScale(0)} cy={yScale(s.lastTotal)} r="4" fill={s.increased ? "var(--chart-green, #10b981)" : "var(--chart-red, #ef4444)"} stroke="var(--surface)" strokeWidth="1" />
+                              <circle cx={xScale(1)} cy={yScale(s.thisTotal)} r="4" fill={s.increased ? "var(--chart-green, #10b981)" : "var(--chart-red, #ef4444)"} stroke="var(--surface)" strokeWidth="1" />
+                            </g>
+                          ))}
+                        </svg>
+                        <div className="top-featured-line-chart-legend">
+                          {series.slice(0, 5).map((s) => (
+                            <span key={s.id} className="top-featured-line-chart-legend-item" title={s.name}>
+                              <span className={`top-featured-line-chart-legend-dot ${s.increased ? "chart-line--increase" : "chart-line--decrease"}`} />
+                              {s.name?.slice(0, 14) || s.id}{s.name?.length > 14 ? "…" : ""}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
                   })()}
                 </div>
               </div>
