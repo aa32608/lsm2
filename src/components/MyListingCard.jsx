@@ -33,7 +33,15 @@ const MyListingCard = React.memo(({
   const isFreeTrialEligible = (l.status === "pending" || l.status === "unpaid") && currentPlan === "1" && user && userProfile && !userProfile.hasUsedFreeTrial;
 
   return (
-    <article className="my-listing-card my-listing-card-horizontal" role="listitem">
+    <article className={`my-listing-card my-listing-card-horizontal ${isExpired ? "my-listing-card--paused" : ""}`} role="listitem">
+      {isExpired && (
+        <div className="my-listing-paused-banner" role="alert" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "0.75rem 1rem", marginBottom: "0.75rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem", flexWrap: "wrap" }}>
+          <span style={{ color: "var(--text-muted)" }}>{t("listingPausedRenewToReactivate")}</span>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => startExtendFlow(l)} aria-label={t("renewNow")}>
+            {t("renewNow")}
+          </button>
+        </div>
+      )}
       <div className="my-listing-card-main">
         <header className="my-listing-header">
           <div className="my-listing-header-top">

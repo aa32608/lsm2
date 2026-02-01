@@ -117,13 +117,18 @@ const PostListingDrawer = () => {
 
   async function createListingInFirebase(obj) {
     const listingId = obj.id || "lst_" + Date.now();
+    const planId = String(obj.plan || "1");
+    const isPaidPlan = ["3", "6", "12"].includes(planId);
     const listingData = {
       ...obj,
       id: listingId,
       userId: user?.uid || null,
       userEmail: user?.email || null,
       createdAt: Date.now(),
-      expiresAt: Date.now() + parseInt(obj.plan) * 30 * 24 * 60 * 60 * 1000,
+      expiresAt: Date.now() + parseInt(planId) * 30 * 24 * 60 * 60 * 1000,
+      featured: isPaidPlan ? !!obj.featured : false,
+      views: 0,
+      contacts: 0,
     };
     await set(dbRef(db, `listings/${listingId}`), listingData);
     return listingId;
@@ -242,7 +247,8 @@ const PostListingDrawer = () => {
         socialLink: "",
         imagePreview: null,
         images: [],
-        plan: "1"
+        plan: "1",
+        featured: false
       });
       
     } catch (err) {
@@ -684,7 +690,7 @@ const PostListingDrawer = () => {
                 
                         {/* Plan Selection */}
                         <div className="plan-selection-section">
-                          <h4 className="plan-selection-title">{t("selectPlan")}</h4>
+                          <h4 className="plan-selection-title">{t("getVisibleToLocalCustomers")}</h4>
                           
                           {user && userProfile && !userProfile.hasUsedFreeTrial && (
                             <div className="free-trial-banner">
@@ -729,6 +735,25 @@ const PostListingDrawer = () => {
                               </div>
                             )})}
                           </div>
+
+                          <p className="plan-featured-copy text-sm text-muted" style={{ marginTop: '0.75rem' }}>
+                            {t("featuredListingsGetMoreViews")}
+                          </p>
+
+                          {["3", "6", "12"].includes(form.plan) && (
+                            <div className="plan-featured-option field-group" style={{ marginTop: '0.75rem' }}>
+                              <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!form.featured}
+                                  onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+                                  aria-describedby="featured-tooltip"
+                                />
+                                <span>{t("featured")}</span>
+                                <span id="featured-tooltip" className="tooltip-icon" title={t("featuredBenefitsTooltip")} aria-label={t("featuredBenefitsTooltip")} style={{ cursor: 'help', opacity: 0.8 }}>ℹ️</span>
+                              </label>
+                            </div>
+                          )}
                         </div>
 
                         <button

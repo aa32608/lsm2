@@ -261,6 +261,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     imagePreview: null,
     images: [],
     plan: "1",
+    featured: false,
   });
 
   // React Query for listings - optimized for 20k+ listings
@@ -368,9 +369,18 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       arr = arr.filter((l) => (t(l.category) === catFilter || l.category === catFilter));
     }
     if (locFilter) arr = arr.filter((l) => l.locationCity === locFilter || l.location === locFilter);
-    
+
+    // Featured listings first, then by selected sort
+    const featuredFirst = (a, b) => {
+      const aF = a.featured ? 1 : 0;
+      const bF = b.featured ? 1 : 0;
+      if (bF !== aF) return bF - aF;
+      return 0;
+    };
     if (sortBy === "topRated") {
       arr.sort((a, b) => {
+        const cmp = featuredFirst(a, b);
+        if (cmp !== 0) return cmp;
         const aStats = feedbackAverages[a.id] || {};
         const bStats = feedbackAverages[b.id] || {};
         const bAvg = bStats.avg ?? -1;
@@ -382,11 +392,25 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         return (b.createdAt || 0) - (a.createdAt || 0);
       });
     } else if (sortBy === "newest") {
-      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      arr.sort((a, b) => {
+        const cmp = featuredFirst(a, b);
+        if (cmp !== 0) return cmp;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
     } else if (sortBy === "expiring") {
-      arr.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
+      arr.sort((a, b) => {
+        const cmp = featuredFirst(a, b);
+        if (cmp !== 0) return cmp;
+        return (a.expiresAt || 0) - (b.expiresAt || 0);
+      });
     } else if (sortBy === "az") {
-      arr.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+      arr.sort((a, b) => {
+        const cmp = featuredFirst(a, b);
+        if (cmp !== 0) return cmp;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+    } else {
+      arr.sort(featuredFirst);
     }
     return arr;
   }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, t]);
@@ -1075,7 +1099,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   };
 
   const getListingStats = useCallback((listing) => {
-    if (!listing) return { views: 0, likes: 0, avgRating: 0, feedbackCount: 0, engagement: 0 };
+    if (!listing) return { views: 0, contacts: 0, likes: 0, avgRating: 0, feedbackCount: 0, engagement: 0 };
     const stats = feedbackAverages[listing.id] || {};
     const feedbackCount = listing.feedbackCount ?? stats.count ?? 0;
     const avgRating = listing.avgRating ?? stats.avg ?? 0;
@@ -1083,6 +1107,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     
     return {
       views: listing.views || 0,
+      contacts: listing.contacts || 0,
       likes: listing.likes || 0,
       avgRating,
       feedbackCount,

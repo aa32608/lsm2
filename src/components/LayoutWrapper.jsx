@@ -40,7 +40,18 @@ const LegalModalsLoader = ({ showTerms, showPrivacy, onCloseTerms, onClosePrivac
 
 // Helper component to consume context
 const LayoutContent = ({ children }) => {
-  const { showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen, showAuthModal, message, setMessage } = useApp();
+  const {
+    showTerms, setShowTerms, showPrivacy, setShowPrivacy, t, sidebarOpen, setSidebarOpen,
+    showAuthModal, message, setMessage, user, myListingsRaw, getDaysUntilExpiry,
+    setExtendModalOpen, setExtendTarget, setSelectedExtendPlan
+  } = useApp();
+
+  // Expiring listing (≤5 days left) for banner
+  const expiringListing = myListingsRaw?.find((l) => {
+    if (l.status !== "verified" || !l.expiresAt) return false;
+    const days = getDaysUntilExpiry(l.expiresAt);
+    return days !== null && days > 0 && days <= 5;
+  });
 
   // Load Dodo payments as soon as user enters the website (any tab/page)
   useEffect(() => {
@@ -48,11 +59,26 @@ const LayoutContent = ({ children }) => {
     fetch(`${API_BASE}/api/payments-warmup`, { method: "GET", headers: { "Content-Type": "application/json" } }).catch(() => {});
   }, []);
 
+  const openRenewModal = () => {
+    if (expiringListing) {
+      setExtendTarget(expiringListing);
+      setSelectedExtendPlan("1");
+      setExtendModalOpen(true);
+    }
+  };
+
   return (
     <div className="app-container">
       <Header sidebarOpen={sidebarOpen} onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+      {user && expiringListing && (
+        <div className="expiry-banner" role="alert" style={{ background: "var(--warning)", color: "#1f2937", padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+          <span>{t("listingExpiresInDays").replace("{{days}}", String(getDaysUntilExpiry(expiringListing.expiresAt)))}</span>
+          <button type="button" className="btn btn-primary btn-sm" onClick={openRenewModal} aria-label={t("renewNow")}>
+            {t("renewNow")}
+          </button>
+        </div>
+      )}
       <main className="main-content">
         <div className="main-content-wrapper">
           {children}

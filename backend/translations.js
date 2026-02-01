@@ -57,9 +57,27 @@ export const EMAIL_TRANSLATIONS = {
         mk: "⚠️ Потребна е Акција: Вашиот Оглас Истекува Наскоро"
       },
       text: {
-        en: (name, date, url) => `Hello,\n\nYour listing "${name}" is set to expire on ${date}. ⏳\n\nTo ensure your service remains visible to potential customers, please renew your listing before it expires. If you do not renew, your listing will be removed from search results, and you may lose valuable leads.\n\n👉 Renew your listing here: ${url}\n\nDon't let your business disappear from the map!\n\nBest regards,\nThe BizCall Team`,
-        sq: (name, date, url) => `Përshëndetje,\n\nShpallja juaj "${name}" është caktuar të skadojë më ${date}. ⏳\n\nPër të siguruar që shërbimi juaj të mbetet i dukshëm për klientët potencialë, ju lutemi rinovoni shpalljen tuaj para se të skadojë. Nëse nuk e rinovoni, shpallja juaj do të hiqet nga rezultatet e kërkimit dhe mund të humbni klientë të rëndësishëm.\n\n👉 Rinovoni shpalljen tuaj këtu: ${url}\n\nMos lejoni që biznesi juaj të zhduket nga harta!\n\nMe respekt,\nEkipi i BizCall`,
-        mk: (name, date, url) => `Здраво,\n\nВашиот оглас "${name}" истекува на ${date}. ⏳\n\nЗа да се осигурате дека вашата услуга останува видлива за потенцијалните клиенти, ве молиме обновете го вашиот оглас пред да истече. Ако не го обновите, вашиот оглас ќе биде отстранет од резултатите од пребарувањето и може да изгубите вредни контакти.\n\n👉 Обновете го вашиот оглас тука: ${url}\n\nНе дозволувајте вашиот бизнис да исчезне од мапата!\n\nСо почит,\nТимот на BizCall`
+        en: (name, date, url, viewsContacts = null) => {
+          let stats = "";
+          if (viewsContacts && (viewsContacts.views > 0 || viewsContacts.contacts > 0)) {
+            stats = `\nSo far your listing had ${viewsContacts.views || 0} views and ${viewsContacts.contacts || 0} contact attempts (calls/messages/emails). `;
+          }
+          return `Hello,\n\nYour listing "${name}" is set to expire on ${date}. ⏳${stats}\nTo ensure your service remains visible to potential customers, please renew your listing before it expires. If you do not renew, your listing will be removed from search results, and you may lose valuable leads.\n\n👉 Renew your listing here: ${url}\n\nDon't let your business disappear from the map!\n\nBest regards,\nThe BizCall Team`;
+        },
+        sq: (name, date, url, viewsContacts = null) => {
+          let stats = "";
+          if (viewsContacts && (viewsContacts.views > 0 || viewsContacts.contacts > 0)) {
+            stats = `\nDeri tani shpallja juaj ka pasur ${viewsContacts.views || 0} shikime dhe ${viewsContacts.contacts || 0} përpjekje kontakti. `;
+          }
+          return `Përshëndetje,\n\nShpallja juaj "${name}" është caktuar të skadojë më ${date}. ⏳${stats}\nPër të siguruar që shërbimi juaj të mbetet i dukshëm për klientët potencialë, ju lutemi rinovoni shpalljen tuaj para se të skadojë. Nëse nuk e rinovoni, shpallja juaj do të hiqet nga rezultatet e kërkimit dhe mund të humbni klientë të rëndësishëm.\n\n👉 Rinovoni shpalljen tuaj këtu: ${url}\n\nMos lejoni që biznesi juaj të zhduket nga harta!\n\nMe respekt,\nEkipi i BizCall`;
+        },
+        mk: (name, date, url, viewsContacts = null) => {
+          let stats = "";
+          if (viewsContacts && (viewsContacts.views > 0 || viewsContacts.contacts > 0)) {
+            stats = `\nДосега вашиот оглас имаше ${viewsContacts.views || 0} прегледи и ${viewsContacts.contacts || 0} обиди за контакт. `;
+          }
+          return `Здраво,\n\nВашиот оглас "${name}" истекува на ${date}. ⏳${stats}\nЗа да се осигурате дека вашата услуга останува видлива за потенцијалните клиенти, ве молиме обновете го вашиот оглас пред да истече. Ако не го обновите, вашиот оглас ќе биде отстранет од резултатите од пребарувањето и може да изгубите вредни контакти.\n\n👉 Обновете го вашиот оглас тука: ${url}\n\nНе дозволувајте вашиот бизнис да исчезне од мапата!\n\nСо почит,\nТимот на BizCall`;
+        }
       }
     },
     expired_deleted: {

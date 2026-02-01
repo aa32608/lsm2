@@ -1,10 +1,14 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import { ref as dbRef, get, onValue } from "firebase/database";
 import Link from "next/link";
 import GoogleAd from "./GoogleAd";
+
+const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ? "http://localhost:5000"
+  : "https://lsm-wozo.onrender.com";
 
 export default function ListingDetailClient({ id, initialListing }) {
   const router = useRouter();
@@ -30,6 +34,7 @@ export default function ListingDetailClient({ id, initialListing }) {
   const [showMaximize, setShowMaximize] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const viewRecordedRef = useRef(false);
 
   // Feedback local state
   const [rating, setRating] = useState(5);
@@ -111,6 +116,27 @@ export default function ListingDetailClient({ id, initialListing }) {
 
     fetchListing();
   }, [id, db, initialListing, allListings, showMessage, t]);
+
+  // Record view when listing is loaded (once per page)
+  useEffect(() => {
+    if (!listing?.id || viewRecordedRef.current) return;
+    viewRecordedRef.current = true;
+    fetch(`${API_BASE}/api/listing-view`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id }),
+    }).catch(() => {});
+  }, [listing?.id]);
+
+  // Record contact attempt (phone, email, whatsapp)
+  const recordContact = (type) => {
+    if (!listing?.id) return;
+    fetch(`${API_BASE}/api/listing-contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id, type }),
+    }).catch(() => {});
+  };
 
   // Load Feedback for this listing
   useEffect(() => {
@@ -403,6 +429,10 @@ export default function ListingDetailClient({ id, initialListing }) {
                )}
             </header>
 
+            <div className="detail-result-stats" style={{ display: "flex", gap: "1rem", marginBottom: "0.75rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
+              <span>👁 {t("viewsCount").replace("{{count}}", String(listing.views ?? 0))}</span>
+              <span>📞 {t("callsMessagesEmails").replace("{{count}}", String(listing.contacts ?? 0))}</span>
+            </div>
             <div className="detail-actions-bar" role="group" aria-label="Contact and action buttons">
                {listing.contact && (
                  <>
@@ -410,6 +440,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                      href={`tel:${listing.contact}`} 
                      className="detail-action-btn detail-action-call"
                      aria-label={`${t("callAction")}: ${listing.contact}`}
+                     onClick={() => recordContact("phone")}
                    >
                      <span aria-hidden="true">📞</span> {t("callAction")}
                    </a>
@@ -419,6 +450,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                      target="_blank" 
                      rel="noreferrer noopener"
                      aria-label={t("openWhatsApp")}
+                     onClick={() => recordContact("whatsapp")}
                    >
                      <span aria-hidden="true">💬</span> {t("whatsapp")}
                    </a>
@@ -429,6 +461,7 @@ export default function ListingDetailClient({ id, initialListing }) {
                    href={`mailto:${listing.userEmail}`} 
                    className="detail-action-btn detail-action-email"
                    aria-label={`${t("sendEmail")}: ${listing.userEmail}`}
+                   onClick={() => recordContact("email")}
                  >
                    <span aria-hidden="true">✉️</span> {t("emailAction")}
                  </a>

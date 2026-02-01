@@ -1,8 +1,12 @@
 "use client";
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
+
+const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ? "http://localhost:5000"
+  : "https://lsm-wozo.onrender.com";
 
 export default function HomeTab() {
   const {
@@ -19,8 +23,17 @@ export default function HomeTab() {
     verifiedListingCount,
     publicListings,
   } = useApp();
+
+  const [aggregateStats, setAggregateStats] = useState({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
   
   const router = useRouter();
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/listing-stats-aggregate`)
+      .then((res) => res.json())
+      .then((data) => setAggregateStats(data))
+      .catch(() => {});
+  }, []);
 
   const handlePostClick = () => {
     if (!user) {
@@ -59,18 +72,18 @@ export default function HomeTab() {
             <button
               className="btn btn-primary hero-btn-primary"
               onClick={handlePostClick}
-              aria-label={t("homeSimpleCtaPost")}
+              aria-label={t("getMoreCallsForBusiness")}
             >
               <span className="btn-icon" aria-hidden="true">📝</span>
-              <span>{t("homeSimpleCtaPost")}</span>
+              <span>{t("getMoreCallsForBusiness")}</span>
             </button>
             <Link
               href="/listings"
               className="btn btn-secondary hero-btn-secondary"
-              aria-label={t("homeSimpleCtaBrowse")}
+              aria-label={t("getVisibleToLocalCustomers")}
             >
               <span className="btn-icon" aria-hidden="true">🔍</span>
-              <span>{t("homeSimpleCtaBrowse")}</span>
+              <span>{t("getVisibleToLocalCustomers")}</span>
             </Link>
           </div>
           
@@ -78,6 +91,32 @@ export default function HomeTab() {
             <span className="trust-icon" aria-hidden="true">💡</span>
             {t("homeSimpleTrustLine")}
           </p>
+        </div>
+      </section>
+
+      {/* SOCIAL PROOF: Local Businesses Joining BizCall */}
+      <section className="social-proof-section" aria-labelledby="social-proof-title">
+        <div className="container">
+          <h2 id="social-proof-title" className="section-title">
+            {t("localBusinessesJoiningBizCall")}
+          </h2>
+          <div className="social-proof-stats">
+            <div className="social-proof-stat">
+              <span className="social-proof-value">{aggregateStats.totalViews?.toLocaleString?.() ?? aggregateStats.totalViews ?? 0}</span>
+              <span className="social-proof-label">{t("overViews").replace("{{count}}", aggregateStats.totalViews != null ? String(aggregateStats.totalViews) : "0")}</span>
+            </div>
+            <div className="social-proof-stat">
+              <span className="social-proof-value">{aggregateStats.totalContacts?.toLocaleString?.() ?? aggregateStats.totalContacts ?? 0}</span>
+              <span className="social-proof-label">{t("overContactAttempts").replace("{{count}}", aggregateStats.totalContacts != null ? String(aggregateStats.totalContacts) : "0")}</span>
+            </div>
+            {(aggregateStats.totalByPhone > 0 || aggregateStats.totalByEmail > 0 || aggregateStats.totalByWhatsapp > 0) && (
+              <div className="social-proof-breakdown">
+                {aggregateStats.totalByPhone > 0 && <span>📞 {aggregateStats.totalByPhone} {t("contactByPhone")}</span>}
+                {aggregateStats.totalByEmail > 0 && <span>✉️ {aggregateStats.totalByEmail} {t("contactByEmail")}</span>}
+                {aggregateStats.totalByWhatsapp > 0 && <span>💬 {aggregateStats.totalByWhatsapp} {t("contactByWhatsapp")}</span>}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -149,7 +188,7 @@ export default function HomeTab() {
         </div>
       </section>
 
-      {/* FEATURES SECTION - Moved before Categories */}
+      {/* TRUST SIGNALS + FEATURES */}
       <section 
         className="features-section" 
         aria-labelledby="features-title"
@@ -160,6 +199,25 @@ export default function HomeTab() {
               <span className="section-icon" aria-hidden="true">🌟</span>
               {t("whyChooseUs")}
             </h2>
+          </div>
+          
+          <div className="trust-signals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <span className="trust-signal-icon" aria-hidden="true">💰</span>
+              <span className="trust-signal-text">{t("trustNoCommissions")}</span>
+            </div>
+            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <span className="trust-signal-icon" aria-hidden="true">📞</span>
+              <span className="trust-signal-text">{t("trustDirectContact")}</span>
+            </div>
+            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <span className="trust-signal-icon" aria-hidden="true">↩️</span>
+              <span className="trust-signal-text">{t("trustCancelAnytime")}</span>
+            </div>
+            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+              <span className="trust-signal-icon" aria-hidden="true">🇲🇰</span>
+              <span className="trust-signal-text">{t("trustLocalPlatform")}</span>
+            </div>
           </div>
           
           <div className="features-grid">

@@ -58,7 +58,7 @@ const ExtendListingModal = () => {
                 </>
               ) : (
                 <p className="text-body mb-lg">
-                  {t("extendDescription")}
+                  {t("getVisibleToLocalCustomers")}
                 </p>
               )}
               

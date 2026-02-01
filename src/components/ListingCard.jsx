@@ -14,7 +14,7 @@ const ListingCard = React.memo(({
   toggleFav,
   isFavorite,
 }) => {
-  const stats = getListingStats ? getListingStats(l) : { avgRating: 0, feedbackCount: 0, engagement: 0 };
+  const stats = getListingStats ? getListingStats(l) : { avgRating: 0, feedbackCount: 0, engagement: 0, views: 0, contacts: 0 };
   const [imgIndex, setImgIndex] = useState(0);
 
   // Determine images to display
@@ -83,10 +83,12 @@ const ListingCard = React.memo(({
     }
   };
 
+  const isFeatured = !!l.featured;
+
   return (
     <Link
       href={listingUrl}
-      className={`listing-card ${className}`}
+      className={`listing-card ${className} ${isFeatured ? "listing-card--featured" : ""}`}
       aria-label={`${t("viewListing")}: ${l.name}`}
       onClick={handleCardClick}
     >
@@ -119,7 +121,8 @@ const ListingCard = React.memo(({
         )}
         
         <div className="listing-card-badges">
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+             {isFeatured && <span className="pill pill-featured" title={t("featuredBenefitsTooltip")}>{t("featured")}</span>}
              {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
            {l.status === "verified" && (
@@ -157,6 +160,16 @@ const ListingCard = React.memo(({
 
         <div className="listing-card-footer">
           <div className="listing-stats">
+            {(stats.views != null && stats.views > 0) && (
+              <span className="listing-stat" style={{ color: 'var(--text-muted)' }} title={t("viewsCount")?.replace("{{count}}", stats.views) || `${stats.views} views`}>
+                👁 {stats.views}
+              </span>
+            )}
+            {(stats.contacts != null && stats.contacts > 0) && (
+              <span className="listing-stat" style={{ color: 'var(--text-muted)' }} title={t("callsMessagesEmails")?.replace("{{count}}", stats.contacts) || `${stats.contacts} contacts`}>
+                📞 {stats.contacts}
+              </span>
+            )}
             {stats.avgRating > 0 && (
               <span className="listing-stat highlight" style={{ color: 'var(--accent)' }}>
                 ⭐ {Number(stats.avgRating || 0).toFixed(1)}

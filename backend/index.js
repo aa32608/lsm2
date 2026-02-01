@@ -568,6 +568,88 @@ app.get("/api/email-status", async (req, res) => {
 });
 
 
+/* ----------------------- LISTING ANALYTICS (views, contacts) ----------------------- */
+// Increment view count for a listing (called when user opens listing detail page)
+app.post("/api/listing-view", async (req, res) => {
+  const { listingId } = req.body;
+  if (!listingId) {
+    return res.status(400).json({ error: "Missing listingId" });
+  }
+  if (!isFirebaseInitialized) {
+    return res.status(503).json({ error: "Service unavailable" });
+  }
+  try {
+    const listingRef = db.ref(`listings/${listingId}`);
+    await listingRef.transaction((current) => {
+      const data = current || {};
+      const views = (Number(data.views) || 0) + 1;
+      return { ...data, views };
+    });
+    // TODO: If listing reaches milestone (e.g. 10, 50, 100 views), send email to owner with views/contacts stats
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[API] listing-view error:", err);
+    res.status(500).json({ error: err.message || "Failed to record view" });
+  }
+});
+
+// Increment contact attempt count (phone, email, whatsapp). type: "phone" | "email" | "whatsapp"
+app.post("/api/listing-contact", async (req, res) => {
+  const { listingId, type } = req.body;
+  if (!listingId) {
+    return res.status(400).json({ error: "Missing listingId" });
+  }
+  if (!isFirebaseInitialized) {
+    return res.status(503).json({ error: "Service unavailable" });
+  }
+  const contactType = (type && ["phone", "email", "whatsapp"].includes(type)) ? type : "phone";
+  try {
+    const listingRef = db.ref(`listings/${listingId}`);
+    await listingRef.transaction((current) => {
+      const data = current || {};
+      const contacts = (Number(data.contacts) || 0) + 1;
+      const contactByPhone = Number(data.contactByPhone) || 0;
+      const contactByEmail = Number(data.contactByEmail) || 0;
+      const contactByWhatsapp = Number(data.contactByWhatsapp) || 0;
+      return {
+        ...data,
+        contacts,
+        contactByPhone: contactType === "phone" ? contactByPhone + 1 : contactByPhone,
+        contactByEmail: contactType === "email" ? contactByEmail + 1 : contactByEmail,
+        contactByWhatsapp: contactType === "whatsapp" ? contactByWhatsapp + 1 : contactByWhatsapp,
+      };
+    });
+    // TODO: If listing reaches contact milestone (e.g. 5, 25 contacts), send email to owner with views/contacts stats
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[API] listing-contact error:", err);
+    res.status(500).json({ error: err.message || "Failed to record contact" });
+  }
+});
+
+// Aggregate stats for homepage social proof (total views, total contacts across all listings)
+app.get("/api/listing-stats-aggregate", async (req, res) => {
+  if (!isFirebaseInitialized) {
+    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
+  }
+  try {
+    const snapshot = await db.ref("listings").once("value");
+    const listings = snapshot.val() || {};
+    let totalViews = 0, totalContacts = 0, totalByPhone = 0, totalByEmail = 0, totalByWhatsapp = 0;
+    Object.values(listings).forEach((l) => {
+      totalViews += Number(l.views) || 0;
+      totalContacts += Number(l.contacts) || 0;
+      totalByPhone += Number(l.contactByPhone) || 0;
+      totalByEmail += Number(l.contactByEmail) || 0;
+      totalByWhatsapp += Number(l.contactByWhatsapp) || 0;
+    });
+    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp });
+  } catch (err) {
+    console.error("[API] listing-stats-aggregate error:", err);
+    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
+  }
+});
+
 /* ----------------------- DODO PAYMENTS ----------------------- */
 
 app.post("/api/create-payment", async (req, res) => {
@@ -597,6 +679,7 @@ app.post("/api/create-payment", async (req, res) => {
             updates[`listings/${listingId}/expiresAt`] = now + durationMs;
             updates[`listings/${listingId}/plan`] = "free_trial";
             updates[`listings/${listingId}/pricePaid`] = 0;
+            updates[`listings/${listingId}/featured`] = false;
             updates[`users/${userId}/hasUsedFreeTrial`] = true;
 
             await db.ref().update(updates);
@@ -834,8 +917,9 @@ cron.schedule("0 0 * * *", async () => {
                             
                             const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject[userLang] || 
                                           EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en;
-                            const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
-                                        EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
+                            const viewsContacts = { views: listing.views || 0, contacts: listing.contacts || 0 };
+                            const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link, viewsContacts) || 
+                                        EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link, viewsContacts);
 
                             const emailResult = await sendEmail(email, subject, text, false, null, "expiring_soon");
                             if (emailResult.ok) {
@@ -973,6 +1057,7 @@ cron.schedule("0 0 * * *", async () => {
 
 /* ----------------------- WEEKLY MARKETING EMAILS ----------------------- */
 
+// TODO: In weekly marketing emails, optionally include random featured/success listing highlight and views/contacts stats
 async function sendMarketingEmails() {
   console.log("[Marketing] ========================================");
   console.log("[Marketing] Starting weekly marketing email batch...");
@@ -1260,8 +1345,9 @@ cron.schedule("0 9 * * *", async () => {
         
         const subject = EMAIL_TRANSLATIONS.listing.expiring_soon.subject[userLang] || 
                        EMAIL_TRANSLATIONS.listing.expiring_soon.subject.en;
-        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link) || 
-                    EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link);
+        const viewsContacts = { views: listing.views || 0, contacts: listing.contacts || 0 };
+        const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link, viewsContacts) || 
+                    EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link, viewsContacts);
         
         const emailResult = await sendEmail(userEmail, subject, text, false, null, "expiring_soon");
         if (emailResult.ok) {
