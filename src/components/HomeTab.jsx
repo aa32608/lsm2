@@ -429,10 +429,6 @@ export default function HomeTab() {
           
           <div className="trust-signals-grid">
             <div className="trust-signal-card">
-              <span className="trust-signal-icon" aria-hidden="true">💰</span>
-              <span className="trust-signal-text">{t("trustNoCommissions")}</span>
-            </div>
-            <div className="trust-signal-card">
               <span className="trust-signal-icon" aria-hidden="true">📞</span>
               <span className="trust-signal-text">{t("trustDirectContact")}</span>
             </div>
