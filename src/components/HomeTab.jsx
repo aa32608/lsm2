@@ -24,15 +24,27 @@ export default function HomeTab() {
     publicListings,
   } = useApp();
 
-  const [aggregateStats, setAggregateStats] = useState({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
-  
+  const [aggregateStats, setAggregateStats] = useState({
+    totalViews: 0,
+    totalContacts: 0,
+    totalByPhone: 0,
+    totalByEmail: 0,
+    totalByWhatsapp: 0,
+    top5Featured: [],
+  });
+
   const router = useRouter();
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/listing-stats-aggregate`)
-      .then((res) => res.json())
-      .then((data) => setAggregateStats(data))
-      .catch(() => {});
+    const fetchStats = () => {
+      fetch(`${API_BASE}/api/listing-stats-aggregate`)
+        .then((res) => res.json())
+        .then((data) => setAggregateStats((prev) => ({ ...prev, ...data, top5Featured: data.top5Featured || prev.top5Featured || [] })))
+        .catch(() => {});
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const handlePostClick = () => {
@@ -54,28 +66,28 @@ export default function HomeTab() {
   const categoriesPerGroup = 3;
 
   return (
-    <div className="app-main-content">
+    <div className="app-main-content home-page">
       {/* HERO SECTION */}
       <section 
-        className="hero-section" 
+        className="hero-section hero-section--home" 
         aria-labelledby="hero-title"
       >
-        <div className="container">
-          <h1 id="hero-title" className="hero-title">
+        <div className="container hero-container">
+          <h1 id="hero-title" className="hero-title hero-title--home">
             {t("homeSimpleTitle")}
           </h1>
-          <p className="hero-subtitle">
+          <p className="hero-subtitle hero-subtitle--home">
             {t("homeSimpleSubtitle")}
           </p>
           
-          <div className="hero-actions" role="group" aria-label={t("mainActions")}>
+          <div className="hero-actions hero-actions--home" role="group" aria-label={t("mainActions")}>
             <button
               className="btn btn-primary hero-btn-primary"
               onClick={handlePostClick}
               aria-label={t("getMoreCallsForBusiness")}
             >
               <span className="btn-icon" aria-hidden="true">📝</span>
-              <span>{t("getMoreCallsForBusiness")}</span>
+              <span className="btn-text">{t("getMoreCallsForBusiness")}</span>
             </button>
             <Link
               href="/listings"
@@ -83,7 +95,7 @@ export default function HomeTab() {
               aria-label={t("getVisibleToLocalCustomers")}
             >
               <span className="btn-icon" aria-hidden="true">🔍</span>
-              <span>{t("getVisibleToLocalCustomers")}</span>
+              <span className="btn-text">{t("getVisibleToLocalCustomers")}</span>
             </Link>
           </div>
           
@@ -96,8 +108,8 @@ export default function HomeTab() {
 
       {/* SOCIAL PROOF: Local Businesses Joining BizCall */}
       <section className="social-proof-section" aria-labelledby="social-proof-title">
-        <div className="container">
-          <h2 id="social-proof-title" className="section-title">
+        <div className="container social-proof-container">
+          <h2 id="social-proof-title" className="section-title social-proof-title">
             {t("localBusinessesJoiningBizCall")}
           </h2>
           <div className="social-proof-stats">
@@ -117,6 +129,64 @@ export default function HomeTab() {
               </div>
             )}
           </div>
+
+          {/* Top 5 featured listings + analytics chart (real-time) */}
+          {(aggregateStats.top5Featured?.length ?? 0) > 0 && (
+            <div className="top-featured-section" aria-labelledby="top-featured-title">
+              <h2 id="top-featured-title" className="section-title top-featured-title">
+                {t("homeTopFeaturedTitle")}
+              </h2>
+              <p className="top-featured-subtitle">{t("homeTopFeaturedSubtitle")}</p>
+              <div className="top-featured-layout">
+                <ul className="top-featured-list" role="list">
+                  {aggregateStats.top5Featured.map((item, idx) => (
+                    <li key={item.id} className="top-featured-item">
+                      <div className="top-featured-item-main">
+                        <span className="top-featured-item-name">{item.name || t("listing")}</span>
+                        <span className="top-featured-item-meta">
+                          {t(item.category) || item.category} {item.city ? `• ${item.city}` : item.location ? `• ${item.location}` : ""}
+                        </span>
+                        <span className="top-featured-item-stats">
+                          👁 {item.views ?? 0} · 📞 {item.contacts ?? 0}
+                        </span>
+                      </div>
+                      <Link
+                        href={`/listings/${item.id}`}
+                        className="btn btn-primary btn-sm top-featured-view-btn"
+                        aria-label={`${t("view")} ${item.name}`}
+                      >
+                        {t("view")}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <div className="top-featured-chart" role="img" aria-label={t("homeTopFeaturedSubtitle")}>
+                  {(() => {
+                    const maxVal = Math.max(1, ...aggregateStats.top5Featured.map((x) => (x.views || 0) + (x.contacts || 0)));
+                    return aggregateStats.top5Featured.map((item, idx) => {
+                      const total = (item.views || 0) + (item.contacts || 0);
+                      const pct = maxVal > 0 ? (total / maxVal) * 100 : 0;
+                      return (
+                        <div key={item.id} className="top-featured-chart-bar-wrap">
+                          <span className="top-featured-chart-label" title={item.name}>
+                            {item.name?.slice(0, 20) || `#${idx + 1}`}{item.name?.length > 20 ? "…" : ""}
+                          </span>
+                          <div className="top-featured-chart-bar-bg">
+                            <div
+                              className="top-featured-chart-bar"
+                              style={{ width: `${pct}%` }}
+                              title={`${item.views ?? 0} views, ${item.contacts ?? 0} contacts`}
+                            />
+                          </div>
+                          <span className="top-featured-chart-value">{total}</span>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -201,20 +271,20 @@ export default function HomeTab() {
             </h2>
           </div>
           
-          <div className="trust-signals-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+          <div className="trust-signals-grid">
+            <div className="trust-signal-card">
               <span className="trust-signal-icon" aria-hidden="true">💰</span>
               <span className="trust-signal-text">{t("trustNoCommissions")}</span>
             </div>
-            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div className="trust-signal-card">
               <span className="trust-signal-icon" aria-hidden="true">📞</span>
               <span className="trust-signal-text">{t("trustDirectContact")}</span>
             </div>
-            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div className="trust-signal-card">
               <span className="trust-signal-icon" aria-hidden="true">↩️</span>
               <span className="trust-signal-text">{t("trustCancelAnytime")}</span>
             </div>
-            <div className="trust-signal-card" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', background: 'var(--surface)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+            <div className="trust-signal-card">
               <span className="trust-signal-icon" aria-hidden="true">🇲🇰</span>
               <span className="trust-signal-text">{t("trustLocalPlatform")}</span>
             </div>

@@ -569,6 +569,16 @@ app.get("/api/email-status", async (req, res) => {
 
 
 /* ----------------------- LISTING ANALYTICS (views, contacts) ----------------------- */
+// Server-side dedupe: 5 min per IP per listing (each user has own cooldown, not global)
+const viewDedupe = new Map(); // key: "ip_listingId" -> timestamp
+const VIEW_DEDUPE_MS = 5 * 60 * 1000;
+function cleanupViewDedupe() {
+  const now = Date.now();
+  for (const [k, ts] of viewDedupe.entries()) {
+    if (now - ts > VIEW_DEDUPE_MS) viewDedupe.delete(k);
+  }
+}
+
 // Increment view count for a listing (called when user opens listing detail page)
 app.post("/api/listing-view", async (req, res) => {
   const { listingId } = req.body;
@@ -578,6 +588,12 @@ app.post("/api/listing-view", async (req, res) => {
   if (!isFirebaseInitialized) {
     return res.status(503).json({ error: "Service unavailable" });
   }
+  const ip = (req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim() || "unknown";
+  const viewKey = `${ip}_${listingId}`;
+  cleanupViewDedupe();
+  if (viewDedupe.has(viewKey)) {
+    return res.json({ ok: true, skipped: true });
+  }
   try {
     const listingRef = db.ref(`listings/${listingId}`);
     await listingRef.transaction((current) => {
@@ -585,13 +601,23 @@ app.post("/api/listing-view", async (req, res) => {
       const views = (Number(data.views) || 0) + 1;
       return { ...data, views };
     });
-    // TODO: If listing reaches milestone (e.g. 10, 50, 100 views), send email to owner with views/contacts stats
+    viewDedupe.set(viewKey, Date.now());
     res.json({ ok: true });
   } catch (err) {
     console.error("[API] listing-view error:", err);
     res.status(500).json({ error: err.message || "Failed to record view" });
   }
 });
+
+// Server-side contact dedupe: 40 sec per IP + listingId + type (each user has own cooldown)
+const contactDedupe = new Map(); // key: "ip_listingId_type" -> timestamp
+const CONTACT_DEDUPE_MS = 40 * 1000;
+function cleanupContactDedupe() {
+  const now = Date.now();
+  for (const [k, ts] of contactDedupe.entries()) {
+    if (now - ts > CONTACT_DEDUPE_MS) contactDedupe.delete(k);
+  }
+}
 
 // Increment contact attempt count (phone, email, whatsapp). type: "phone" | "email" | "whatsapp"
 app.post("/api/listing-contact", async (req, res) => {
@@ -603,6 +629,12 @@ app.post("/api/listing-contact", async (req, res) => {
     return res.status(503).json({ error: "Service unavailable" });
   }
   const contactType = (type && ["phone", "email", "whatsapp"].includes(type)) ? type : "phone";
+  const ip = (req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "").split(",")[0].trim() || "unknown";
+  const contactKey = `${ip}_${listingId}_${contactType}`;
+  cleanupContactDedupe();
+  if (contactDedupe.has(contactKey)) {
+    return res.json({ ok: true, skipped: true });
+  }
   try {
     const listingRef = db.ref(`listings/${listingId}`);
     await listingRef.transaction((current) => {
@@ -619,7 +651,7 @@ app.post("/api/listing-contact", async (req, res) => {
         contactByWhatsapp: contactType === "whatsapp" ? contactByWhatsapp + 1 : contactByWhatsapp,
       };
     });
-    // TODO: If listing reaches contact milestone (e.g. 5, 25 contacts), send email to owner with views/contacts stats
+    contactDedupe.set(contactKey, Date.now());
     res.json({ ok: true });
   } catch (err) {
     console.error("[API] listing-contact error:", err);
@@ -627,26 +659,42 @@ app.post("/api/listing-contact", async (req, res) => {
   }
 });
 
-// Aggregate stats for homepage social proof (total views, total contacts across all listings)
+// Aggregate stats for homepage social proof + top 5 featured listings (real-time from DB)
 app.get("/api/listing-stats-aggregate", async (req, res) => {
   if (!isFirebaseInitialized) {
-    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
+    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [] });
   }
   try {
     const snapshot = await db.ref("listings").once("value");
     const listings = snapshot.val() || {};
     let totalViews = 0, totalContacts = 0, totalByPhone = 0, totalByEmail = 0, totalByWhatsapp = 0;
-    Object.values(listings).forEach((l) => {
-      totalViews += Number(l.views) || 0;
-      totalContacts += Number(l.contacts) || 0;
+    const featured = [];
+    Object.entries(listings).forEach(([listingId, l]) => {
+      const views = Number(l.views) || 0;
+      const contacts = Number(l.contacts) || 0;
+      totalViews += views;
+      totalContacts += contacts;
       totalByPhone += Number(l.contactByPhone) || 0;
       totalByEmail += Number(l.contactByEmail) || 0;
       totalByWhatsapp += Number(l.contactByWhatsapp) || 0;
+      if (String(l.plan) === "12" && l.status === "verified") {
+        featured.push({
+          id: listingId,
+          name: l.name || "",
+          category: l.category || "",
+          location: l.location || "",
+          city: l.city || l.location || "",
+          views,
+          contacts,
+        });
+      }
     });
-    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp });
+    featured.sort((a, b) => (b.views + b.contacts) - (a.views + a.contacts));
+    const top5Featured = featured.slice(0, 5);
+    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured });
   } catch (err) {
     console.error("[API] listing-stats-aggregate error:", err);
-    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0 });
+    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [] });
   }
 });
 
@@ -679,7 +727,6 @@ app.post("/api/create-payment", async (req, res) => {
             updates[`listings/${listingId}/expiresAt`] = now + durationMs;
             updates[`listings/${listingId}/plan`] = "free_trial";
             updates[`listings/${listingId}/pricePaid`] = 0;
-            updates[`listings/${listingId}/featured`] = false;
             updates[`users/${userId}/hasUsedFreeTrial`] = true;
 
             await db.ref().update(updates);

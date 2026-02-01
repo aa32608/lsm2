@@ -118,7 +118,6 @@ const PostListingDrawer = () => {
   async function createListingInFirebase(obj) {
     const listingId = obj.id || "lst_" + Date.now();
     const planId = String(obj.plan || "1");
-    const isPaidPlan = ["3", "6", "12"].includes(planId);
     const listingData = {
       ...obj,
       id: listingId,
@@ -126,7 +125,6 @@ const PostListingDrawer = () => {
       userEmail: user?.email || null,
       createdAt: Date.now(),
       expiresAt: Date.now() + parseInt(planId) * 30 * 24 * 60 * 60 * 1000,
-      featured: isPaidPlan ? !!obj.featured : false,
       views: 0,
       contacts: 0,
     };
@@ -247,8 +245,7 @@ const PostListingDrawer = () => {
         socialLink: "",
         imagePreview: null,
         images: [],
-        plan: "1",
-        featured: false
+        plan: "1"
       });
       
     } catch (err) {
@@ -705,15 +702,18 @@ const PostListingDrawer = () => {
                           <div className="plan-selection-grid">
                             {PLANS.map(plan => {
                               const isFreeTrialEligible = user && userProfile && !userProfile.hasUsedFreeTrial && plan.id === "1";
+                              const isFeaturedPlan = plan.id === "12";
                               return (
                               <div 
                                 key={plan.id}
-                                className={`plan-option ${form.plan === plan.id ? 'selected' : ''}`}
+                                className={`plan-option ${form.plan === plan.id ? 'selected' : ''} ${isFeaturedPlan ? 'plan-option--featured' : ''}`}
                                 onClick={() => setForm({ ...form, plan: plan.id })}
                               >
+                                {isFeaturedPlan && <span className="plan-option-featured-glow" aria-hidden="true" />}
                                 <div className="plan-option-content">
                                   <div className="plan-name-row">
                                     {t(`month${plan.id}`)}
+                                    {isFeaturedPlan && <span className="plan-badge-featured">{t("featured")}</span>}
                                     {isFreeTrialEligible && (
                                       <span className="plan-badge-free">
                                         {t("free")}
@@ -736,22 +736,20 @@ const PostListingDrawer = () => {
                             )})}
                           </div>
 
-                          <p className="plan-featured-copy text-sm text-muted" style={{ marginTop: '0.75rem' }}>
-                            {t("featuredListingsGetMoreViews")}
-                          </p>
-
-                          {["3", "6", "12"].includes(form.plan) && (
-                            <div className="plan-featured-option field-group" style={{ marginTop: '0.75rem' }}>
-                              <label className="field-label" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                                <input
-                                  type="checkbox"
-                                  checked={!!form.featured}
-                                  onChange={(e) => setForm({ ...form, featured: e.target.checked })}
-                                  aria-describedby="featured-tooltip"
-                                />
-                                <span>{t("featured")}</span>
-                                <span id="featured-tooltip" className="tooltip-icon" title={t("featuredBenefitsTooltip")} aria-label={t("featuredBenefitsTooltip")} style={{ cursor: 'help', opacity: 0.8 }}>ℹ️</span>
-                              </label>
+                          {form.plan === "12" && (
+                            <div className="featured-cta-block" role="region" aria-labelledby="featured-cta-title">
+                              <h4 id="featured-cta-title" className="featured-cta-title">
+                                <span className="featured-cta-icon" aria-hidden="true">✨</span>
+                                {t("featuredCtaTitle")}
+                              </h4>
+                              <p className="featured-cta-desc">{t("featuredCtaDesc")}</p>
+                              <ul className="featured-cta-benefits" aria-label={t("featuredBenefitsTooltip")}>
+                                <li><span className="featured-cta-check" aria-hidden="true">✓</span> {t("featuredListingsGetMoreViews")}</li>
+                                <li><span className="featured-cta-check" aria-hidden="true">✓</span> {t("featuredBenefitsTooltip")}</li>
+                              </ul>
+                              <p className="featured-cta-cta">
+                                <strong>{t("featuredCtaCta")}</strong> — {t("featuredPlanLabel")}
+                              </p>
                             </div>
                           )}
                         </div>

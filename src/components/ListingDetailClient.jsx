@@ -117,25 +117,46 @@ export default function ListingDetailClient({ id, initialListing }) {
     fetchListing();
   }, [id, db, initialListing, allListings, showMessage, t]);
 
-  // Record view when listing is loaded (once per page)
+  const VIEW_COOLDOWN_MS = 5 * 60 * 1000;   // 5 min per listing page (refresh doesn't count)
+  const CONTACT_COOLDOWN_MS = 40 * 1000;    // 40 sec per listing per contact type
+
+  // Record view when listing is loaded — 5 min cooldown per listing (sessionStorage with timestamp)
   useEffect(() => {
-    if (!listing?.id || viewRecordedRef.current) return;
+    if (!listing?.id || typeof window === "undefined") return;
+    const storageKey = `bizcall_view_${listing.id}`;
+    const raw = sessionStorage.getItem(storageKey);
+    const now = Date.now();
+    if (raw) {
+      const ts = parseInt(raw, 10);
+      if (!Number.isNaN(ts) && now - ts < VIEW_COOLDOWN_MS) return; // Still in cooldown
+    }
     viewRecordedRef.current = true;
     fetch(`${API_BASE}/api/listing-view`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId: listing.id }),
-    }).catch(() => {});
+    })
+      .then((res) => { if (res.ok) sessionStorage.setItem(storageKey, String(Date.now())); })
+      .catch(() => {});
   }, [listing?.id]);
 
-  // Record contact attempt (phone, email, whatsapp)
+  // Record contact attempt (phone, email, whatsapp) — 40 sec cooldown per listing per type
   const recordContact = (type) => {
-    if (!listing?.id) return;
+    if (!listing?.id || typeof window === "undefined") return;
+    const storageKey = `bizcall_contact_${listing.id}_${type}`;
+    const raw = sessionStorage.getItem(storageKey);
+    const now = Date.now();
+    if (raw) {
+      const ts = parseInt(raw, 10);
+      if (!Number.isNaN(ts) && now - ts < CONTACT_COOLDOWN_MS) return; // Still in cooldown
+    }
     fetch(`${API_BASE}/api/listing-contact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listingId: listing.id, type }),
-    }).catch(() => {});
+    })
+      .then((res) => { if (res.ok) sessionStorage.setItem(storageKey, String(Date.now())); })
+      .catch(() => {});
   };
 
   // Load Feedback for this listing

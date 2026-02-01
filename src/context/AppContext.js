@@ -261,7 +261,6 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     imagePreview: null,
     images: [],
     plan: "1",
-    featured: false,
   });
 
   // React Query for listings - optimized for 20k+ listings
@@ -370,16 +369,30 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
     if (locFilter) arr = arr.filter((l) => l.locationCity === locFilter || l.location === locFilter);
 
-    // Featured listings first, then by selected sort
-    const featuredFirst = (a, b) => {
-      const aF = a.featured ? 1 : 0;
-      const bF = b.featured ? 1 : 0;
+    // Featured = 12-month paid plan only; featured first, sorted by performance (views, contacts, rating)
+    const isFeatured12 = (l) => String(l.plan) === "12";
+    const featuredPerf = (a, b) => {
+      const aF = isFeatured12(a) ? 1 : 0;
+      const bF = isFeatured12(b) ? 1 : 0;
       if (bF !== aF) return bF - aF;
+      if (aF && bF) {
+        const aViews = Number(a.views) || 0;
+        const bViews = Number(b.views) || 0;
+        if (bViews !== aViews) return bViews - aViews;
+        const aContacts = Number(a.contacts) || 0;
+        const bContacts = Number(b.contacts) || 0;
+        if (bContacts !== aContacts) return bContacts - aContacts;
+        const aStats = feedbackAverages[a.id] || {};
+        const bStats = feedbackAverages[b.id] || {};
+        const aAvg = aStats.avg ?? -1;
+        const bAvg = bStats.avg ?? -1;
+        if (bAvg !== aAvg) return bAvg - aAvg;
+      }
       return 0;
     };
     if (sortBy === "topRated") {
       arr.sort((a, b) => {
-        const cmp = featuredFirst(a, b);
+        const cmp = featuredPerf(a, b);
         if (cmp !== 0) return cmp;
         const aStats = feedbackAverages[a.id] || {};
         const bStats = feedbackAverages[b.id] || {};
@@ -393,24 +406,28 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       });
     } else if (sortBy === "newest") {
       arr.sort((a, b) => {
-        const cmp = featuredFirst(a, b);
+        const cmp = featuredPerf(a, b);
         if (cmp !== 0) return cmp;
         return (b.createdAt || 0) - (a.createdAt || 0);
       });
     } else if (sortBy === "expiring") {
       arr.sort((a, b) => {
-        const cmp = featuredFirst(a, b);
+        const cmp = featuredPerf(a, b);
         if (cmp !== 0) return cmp;
         return (a.expiresAt || 0) - (b.expiresAt || 0);
       });
     } else if (sortBy === "az") {
       arr.sort((a, b) => {
-        const cmp = featuredFirst(a, b);
+        const cmp = featuredPerf(a, b);
         if (cmp !== 0) return cmp;
         return (a.name || "").localeCompare(b.name || "");
       });
     } else {
-      arr.sort(featuredFirst);
+      arr.sort((a, b) => {
+        const cmp = featuredPerf(a, b);
+        if (cmp !== 0) return cmp;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
     }
     return arr;
   }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, t]);

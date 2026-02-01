@@ -23,6 +23,8 @@ const MyListingCard = React.memo(({
   confirmDelete,
   user,
   userProfile,
+  avgViews = null,
+  avgContacts = null,
 }) => {
   const router = useRouter();
   const stats = getListingStats(l);
@@ -31,6 +33,26 @@ const MyListingCard = React.memo(({
   const isExpired = days !== null && days <= 0;
   const currentPlan = l.plan || "1";
   const isFreeTrialEligible = (l.status === "pending" || l.status === "unpaid") && currentPlan === "1" && user && userProfile && !userProfile.hasUsedFreeTrial;
+
+  const views = Number(l.views) || 0;
+  const contacts = Number(l.contacts) || 0;
+  let perfClass = "";
+  let perfText = "";
+  let perfAriaLabel = "";
+  if (avgViews != null && avgContacts != null && (avgViews > 0 || avgContacts > 0)) {
+    const viewsPct = avgViews > 0 ? ((views - avgViews) / avgViews) * 100 : 0;
+    const contactsPct = avgContacts > 0 ? ((contacts - avgContacts) / avgContacts) * 100 : 0;
+    const avgPct = (viewsPct + contactsPct) / 2;
+    if (!Number.isNaN(avgPct)) {
+      perfClass = avgPct > 5 ? "my-listing-perf--positive" : avgPct < -5 ? "my-listing-perf--negative" : "";
+      perfText = avgPct > 5 ? `↑ ${Math.round(avgPct)}%` : avgPct < -5 ? `↓ ${Math.round(-avgPct)}%` : "";
+      perfAriaLabel = avgPct > 5
+        ? t("listingPerformingAboveAverage").replace("{{pct}}", Math.round(avgPct))
+        : avgPct < -5
+          ? t("listingPerformingBelowAverage").replace("{{pct}}", Math.round(-avgPct))
+          : t("listingPerformingAverage");
+    }
+  }
 
   return (
     <article className={`my-listing-card my-listing-card-horizontal ${isExpired ? "my-listing-card--paused" : ""}`} role="listitem">
@@ -101,7 +123,23 @@ const MyListingCard = React.memo(({
             {getDescriptionPreview(l.description, 12)}
           </p>
 
-          <div className="my-listing-stats">
+          <div className="my-listing-stats my-listing-stats-row">
+            <span className="my-listing-stat" aria-label={`${t("viewsCount").replace("{{count}}", l.views ?? 0)}`}>
+              <span aria-hidden="true">👁</span>
+              {l.views ?? 0}
+            </span>
+            <span className="my-listing-stat" aria-label={`${t("callsMessagesEmails").replace("{{count}}", l.contacts ?? 0)}`}>
+              <span aria-hidden="true">📞</span>
+              {l.contacts ?? 0}
+            </span>
+            <span className="my-listing-stat my-listing-stat-breakdown" aria-label={`${t("contactByPhone")}: ${l.contactByPhone ?? 0}, ${t("contactByEmail")}: ${l.contactByEmail ?? 0}, ${t("contactByWhatsapp")}: ${l.contactByWhatsapp ?? 0}`}>
+              📞{l.contactByPhone ?? 0} ✉️{l.contactByEmail ?? 0} 💬{l.contactByWhatsapp ?? 0}
+            </span>
+            {avgViews != null && avgContacts != null && (avgViews > 0 || avgContacts > 0) && (
+              <span className={`my-listing-perf ${perfClass}`} aria-label={perfAriaLabel} title={perfAriaLabel}>
+                {perfText}
+              </span>
+            )}
             <span className="my-listing-stat" aria-label={`${t("ratingLabel")}: ${Number(stats.avgRating || 0).toFixed(1)} ${t("ratingStars")}`}>
               <span aria-hidden="true">⭐</span>
               {Number(stats.avgRating || 0).toFixed(1)}
@@ -109,10 +147,6 @@ const MyListingCard = React.memo(({
             <span className="my-listing-stat" aria-label={`${stats.feedbackCount} ${t("feedbackCountLabel")}`}>
               <span aria-hidden="true">💬</span>
               {stats.feedbackCount}
-            </span>
-            <span className="my-listing-stat" aria-label={`Engagement: ${stats.engagement}`}>
-              <span aria-hidden="true">🔥</span>
-              {stats.engagement}
             </span>
             {l.offerprice && (
               <span className="my-listing-pill my-listing-pill-price" aria-label={`${t("priceLabel")}: ${l.offerprice}`}>

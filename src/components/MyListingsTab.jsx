@@ -142,6 +142,19 @@ export default function MyListingsTab() {
     () => myListingsRaw.filter((l) => l.status === "verified").length,
     [myListingsRaw]
   );
+
+  const { avgViews, avgContacts } = useMemo(() => {
+    if (!myListingsRaw.length) return { avgViews: null, avgContacts: null };
+    let sumV = 0, sumC = 0;
+    myListingsRaw.forEach((l) => {
+      sumV += Number(l.views) || 0;
+      sumC += Number(l.contacts) || 0;
+    });
+    return {
+      avgViews: sumV / myListingsRaw.length,
+      avgContacts: sumC / myListingsRaw.length,
+    };
+  }, [myListingsRaw]);
   
   // Handlers
   const clearAllFilters = () => {
@@ -361,6 +374,8 @@ export default function MyListingsTab() {
                   showMessage={showMessage}
                   handleShareListing={handleShareListing}
                   confirmDelete={confirmDelete}
+                  avgViews={avgViews}
+                  avgContacts={avgContacts}
                 />
               ))}
             </div>

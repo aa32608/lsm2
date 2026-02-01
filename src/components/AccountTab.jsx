@@ -284,7 +284,7 @@ const AccountTab = () => {
       color: "blue"
     },
     {
-      label: t("views"),
+      label: t("totalViews"),
       value: myListingsRaw.reduce((acc, curr) => acc + (curr.views || 0), 0),
       icon: "👀",
       color: "green"
