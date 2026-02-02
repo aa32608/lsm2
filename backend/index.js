@@ -711,8 +711,12 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
         });
       }
     });
-    featured.sort((a, b) => (b.views + b.contacts) - (a.views + a.contacts));
-    const top5Featured = featured.slice(0, 5);
+    // Only show listings with positive gain (this month >= last month)
+    const withPositiveGain = featured.filter(
+      (item) => (item.views + item.contacts) >= (item.lastMonthViews + item.lastMonthContacts)
+    );
+    withPositiveGain.sort((a, b) => (b.views + b.contacts) - (a.views + a.contacts));
+    const top5Featured = withPositiveGain.slice(0, 5);
     res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured, lastMonthKey, thisMonthKey });
   } catch (err) {
     console.error("[API] listing-stats-aggregate error:", err);

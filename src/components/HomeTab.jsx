@@ -1,12 +1,8 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
-
-const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
-  ? "http://localhost:5000"
-  : "https://lsm-wozo.onrender.com";
 
 export default function HomeTab() {
   const {
@@ -22,40 +18,13 @@ export default function HomeTab() {
     activeListingCount,
     verifiedListingCount,
     publicListings,
+    aggregateStats = {},
   } = useApp();
 
-  const [aggregateStats, setAggregateStats] = useState({
-    totalViews: 0,
-    totalContacts: 0,
-    totalByPhone: 0,
-    totalByEmail: 0,
-    totalByWhatsapp: 0,
-    top5Featured: [],
-    lastMonthKey: null,
-    thisMonthKey: null,
-  });
   const [chartActiveId, setChartActiveId] = useState(null);
   const [chartTooltipPos, setChartTooltipPos] = useState({ x: 0, y: 0 });
 
   const router = useRouter();
-
-  useEffect(() => {
-    const fetchStats = () => {
-      fetch(`${API_BASE}/api/listing-stats-aggregate`)
-        .then((res) => res.json())
-        .then((data) => setAggregateStats((prev) => ({
-          ...prev,
-          ...data,
-          top5Featured: data.top5Featured || prev.top5Featured || [],
-          lastMonthKey: data.lastMonthKey ?? prev.lastMonthKey,
-          thisMonthKey: data.thisMonthKey ?? prev.thisMonthKey,
-        })))
-        .catch(() => {});
-    };
-    fetchStats();
-    const interval = setInterval(fetchStats, 60000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handlePostClick = () => {
     if (!user) {

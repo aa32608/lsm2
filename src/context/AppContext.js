@@ -33,6 +33,18 @@ const API_BASE =
     ? "http://localhost:5000"
     : "https://lsm-wozo.onrender.com";
 
+const AGGREGATE_STATS_CACHE_KEY = "bizcall_aggregate_stats";
+const defaultAggregateStats = () => ({
+  totalViews: 0,
+  totalContacts: 0,
+  totalByPhone: 0,
+  totalByEmail: 0,
+  totalByWhatsapp: 0,
+  top5Featured: [],
+  lastMonthKey: null,
+  thisMonthKey: null,
+});
+
 const AppContext = createContext();
 
 export const useApp = () => {
@@ -1187,6 +1199,51 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   const [extendTarget, setExtendTarget] = useState(null);
   const [selectedExtendPlan, setSelectedExtendPlan] = useState("1");
 
+  // Social proof aggregate stats — prefetch on app load, cache in sessionStorage for instant display
+  const [aggregateStats, setAggregateStats] = useState(() => {
+    if (typeof window === "undefined") return defaultAggregateStats();
+    try {
+      const cached = sessionStorage.getItem(AGGREGATE_STATS_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return { ...defaultAggregateStats(), ...parsed };
+      }
+    } catch (e) { /* ignore */ }
+    return defaultAggregateStats();
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStats = () => {
+      fetch(`${API_BASE}/api/listing-stats-aggregate`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          const next = {
+            totalViews: data.totalViews ?? 0,
+            totalContacts: data.totalContacts ?? 0,
+            totalByPhone: data.totalByPhone ?? 0,
+            totalByEmail: data.totalByEmail ?? 0,
+            totalByWhatsapp: data.totalByWhatsapp ?? 0,
+            top5Featured: data.top5Featured ?? [],
+            lastMonthKey: data.lastMonthKey ?? null,
+            thisMonthKey: data.thisMonthKey ?? null,
+          };
+          setAggregateStats((prev) => ({ ...prev, ...next }));
+          try {
+            sessionStorage.setItem(AGGREGATE_STATS_CACHE_KEY, JSON.stringify(next));
+          } catch (e) { /* ignore */ }
+        })
+        .catch(() => {});
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   const handleStartExtendFlow = useCallback((listing) => {
     // For pending/unpaid listings, handle payment flow instead
     if (listing.status === "pending" || listing.status === "unpaid") {
@@ -1353,6 +1410,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     extendModalOpen, setExtendModalOpen,
     extendTarget, setExtendTarget,
     selectedExtendPlan, setSelectedExtendPlan,
+    aggregateStats,
     // Auth Actions (Expose auth for components to use directly if needed, or wrap them)
     auth,
     db

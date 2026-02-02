@@ -3384,6 +3384,7 @@ img {
   display: flex;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
+  overflow: auto;
 }
 
 .my-listing-icon-bubble {
