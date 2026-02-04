@@ -819,20 +819,76 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     
     try {
       setFeedbackSaving(true);
+
+      // Load listing and validate status (no feedback on unpaid, inactive or expired listings)
+      let listing =
+        listings.find((l) => l.id === listingId) ||
+        userListings.find((l) => l.id === listingId) ||
+        null;
+
+      if (!listing && db) {
+        try {
+          const snap = await get(dbRef(db, `listings/${listingId}`));
+          if (snap.exists()) {
+            listing = { id: listingId, ...snap.val() };
+          }
+        } catch (e) {
+          console.error("[Feedback] Failed to load listing for feedback:", e);
+        }
+      }
+
+      const now = Date.now();
+      const isPendingOrUnpaid =
+        listing &&
+        (listing.status === "pending" || listing.status === "unpaid");
+      const isExpired =
+        listing && listing.expiresAt && listing.expiresAt <= now;
+
+      if (!listing || isPendingOrUnpaid || isExpired || listing.status !== "verified") {
+        showMessage(t("cannotLeaveFeedbackOnInactive") || t("feedbackSaveError"), "error");
+        return false;
+      }
+
       const feedbackRef = dbRef(db, `feedback/${listingId}`);
-      const newReviewRef = push(feedbackRef);
-      await set(newReviewRef, {
+
+      // Anti-abuse: limit to 1 review per user per listing (updates existing instead of creating many)
+      let existingKey = null;
+      let existingCreatedAt = null;
+      try {
+        const existingSnap = await get(feedbackRef);
+        if (existingSnap.exists()) {
+          const val = existingSnap.val() || {};
+          for (const [fid, fb] of Object.entries(val)) {
+            if (fb.userId === user.uid) {
+              existingKey = fid;
+              existingCreatedAt = fb.createdAt || null;
+              break;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[Feedback] Failed to check existing feedback:", e);
+      }
+
+      const payload = {
         listingId,
         userId: user.uid,
         userName: userProfile?.name || user.displayName || "Anonymous",
         rating: safeRating,
         comment: stripDangerous(safeComment),
-        createdAt: Date.now()
-      });
+        createdAt: existingCreatedAt || now,
+        updatedAt: now,
+      };
+
+      if (existingKey) {
+        await set(dbRef(db, `feedback/${listingId}/${existingKey}`), payload);
+      } else {
+        const newReviewRef = push(feedbackRef);
+        await set(newReviewRef, payload);
+      }
       
       // Notify listing owner via backend API (so email logic stays server-side)
       try {
-        const listing = listings.find((l) => l.id === listingId);
         const ownerEmail = listing?.userEmail;
 
         if (ownerEmail) {
@@ -1174,6 +1230,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     try {
       setLoading(true);
       await remove(dbRef(db, `listings/${id}`));
+      await remove(dbRef(db, `feedback/${id}`));
       showMessage(t("listingDeleted"), "success");
     } catch (err) {
       console.error(err);

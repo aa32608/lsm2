@@ -163,6 +163,30 @@ export const EMAIL_TRANSLATIONS = {
         sq: (listingName, reviewerName, rating, comment, url) => `Përshëndetje,\n\nLajm i madh! Keni marrë një vlerësim të ri ${rating}-yllësh për shpalljen tuaj "${listingName}". ⭐\n\nVlerësuesi: ${reviewerName}\nVlerësimi: ${rating}/5\nKomenti: "${comment}"\n\nShikoni shpalljen tuaj dhe të gjitha vlerësimet këtu: ${url}\n\nFaleminderit që jeni pjesë e BizCall MK!\n\nEkipi i BizCall`,
         mk: (listingName, reviewerName, rating, comment, url) => `Здраво,\n\nОдлични вести! Добивте нова ${rating}-ѕвездена рецензија на вашиот оглас "${listingName}". ⭐\n\nРецензент: ${reviewerName}\nОцена: ${rating}/5\nКоментар: "${comment}"\n\nПогледнете го вашиот оглас и сите рецензии тука: ${url}\n\nВи благодариме што сте дел од BizCall MK!\n\nТимот на BizCall`
       }
+    },
+    milestone_views: {
+      subject: {
+        en: (n) => `👀 Congrats! Your listing reached ${n} views`,
+        sq: (n) => `👀 Urime! Shpallja juaj arriti ${n} shikime`,
+        mk: (n) => `👀 Честитки! Вашиот оглас достигна ${n} прегледи`
+      },
+      text: {
+        en: (listingName, n, url) => `Hello,\n\nGreat news! Your listing "${listingName}" has reached ${n} views on BizCall MK. 👀\n\nMore people are discovering your service. Keep your listing updated to turn views into calls and messages.\n\n👉 View your listing: ${url}\n\nKeep up the great work!\n\nThe BizCall Team`,
+        sq: (listingName, n, url) => `Përshëndetje,\n\nLajm i madh! Shpallja juaj "${listingName}" ka arritur ${n} shikime në BizCall MK. 👀\n\nMë shumë njerëz po e zbulojnë shërbimin tuaj. Mbajeni shpalljen të përditësuar për t'i kthyer shikimet në thirrje dhe mesazhe.\n\n👉 Shikoni shpalljen tuaj: ${url}\n\nVazhdoni kështu!\n\nEkipi i BizCall`,
+        mk: (listingName, n, url) => `Здраво,\n\nОдлични вести! Вашиот оглас "${listingName}" достигна ${n} прегледи на BizCall MK. 👀\n\nПовеќе луѓе го откриваат вашиот сервис. Одржувајте го огласот ажуриран за да ги претворите прегледите во повици и пораки.\n\n👉 Погледнете го вашиот оглас: ${url}\n\nПродолжете така!\n\nТимот на BizCall`
+      }
+    },
+    milestone_contacts: {
+      subject: {
+        en: (n) => `📞 Congrats! Your listing reached ${n} contact attempts`,
+        sq: (n) => `📞 Urime! Shpallja juaj arriti ${n} përpjekje kontakti`,
+        mk: (n) => `📞 Честитки! Вашиот оглас достигна ${n} обиди за контакт`
+      },
+      text: {
+        en: (listingName, n, url) => `Hello,\n\nYour listing "${listingName}" has reached ${n} contact attempts (calls, messages, or emails) on BizCall MK. 📞\n\nPeople are reaching out—make sure your phone and email are up to date so you don't miss a lead.\n\n👉 Manage your listing: ${url}\n\nWell done!\n\nThe BizCall Team`,
+        sq: (listingName, n, url) => `Përshëndetje,\n\nShpallja juaj "${listingName}" ka arritur ${n} përpjekje kontakti (thirrje, mesazhe ose email) në BizCall MK. 📞\n\nNjerëzit po ju kontaktojnë—sigurohuni që telefoni dhe emaili janë të përditësuar që të mos humbni një klient.\n\n👉 Menaxhoni shpalljen tuaj: ${url}\n\nUrime!\n\nEkipi i BizCall`,
+        mk: (listingName, n, url) => `Здраво,\n\nВашиот оглас "${listingName}" достигна ${n} обиди за контакт (повици, пораки или е-пошта) на BizCall MK. 📞\n\nЛуѓето ве контактираат—осигурајте се дека телефонот и е-поштата се ажурирани за да не пропуштите контакт.\n\n👉 Менаџирајте го вашиот оглас: ${url}\n\nБраво!\n\nТимот на BizCall`
+      }
     }
   },
   errors: {

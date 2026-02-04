@@ -1486,6 +1486,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   async function deleteListing(listingId) {
     try {
       await remove(dbRef(db, `listings/${listingId}`));
+      await remove(dbRef(db, `feedback/${listingId}`));
     } catch (error) {
       console.error("Error deleting listing:", error);
     }

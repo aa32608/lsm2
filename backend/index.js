@@ -77,6 +77,37 @@ function myListingsUrl() {
   return buildSiteUrl("/mylistings");
 }
 
+// Milestone emails: send when a listing reaches impressive view/contact counts (once per milestone)
+const VIEW_MILESTONES = [100, 250, 500, 1000, 5000, 10000, 25000];
+const CONTACT_MILESTONES = [25, 50, 100, 250, 500, 1000];
+
+async function sendMilestoneEmailIfNeeded(listingId, type, data) {
+  if (!data || !isFirebaseInitialized) return;
+  const milestones = type === "views" ? VIEW_MILESTONES : CONTACT_MILESTONES;
+  const value = type === "views" ? (Number(data.views) || 0) : (Number(data.contacts) || 0);
+  const lastSent = type === "views" ? (Number(data.lastViewMilestoneSent) || 0) : (Number(data.lastContactMilestoneSent) || 0);
+  const milestone = milestones.filter((m) => value >= m && m > lastSent).pop();
+  if (milestone == null) return;
+  const ownerEmail = data.userEmail || data.email;
+  if (!ownerEmail) return;
+  const listingName = data.name || "Your listing";
+  const userLang = data.userId ? await getUserLanguage(data.userId) : "sq";
+  const t = EMAIL_TRANSLATIONS.listing[type === "views" ? "milestone_views" : "milestone_contacts"];
+  const subjectFn = t.subject[userLang] || t.subject.en;
+  const textFn = t.text[userLang] || t.text.en;
+  const url = listingPublicUrl(listingId);
+  const subject = typeof subjectFn === "function" ? subjectFn(milestone) : subjectFn;
+  const text = typeof textFn === "function" ? textFn(listingName, milestone, url) : textFn;
+  const reason = type === "views" ? `milestone_views_${milestone}` : `milestone_contacts_${milestone}`;
+  const emailResult = await sendEmail(ownerEmail, subject, text, false, null, reason);
+  if (emailResult.ok) {
+    await db.ref(`listings/${listingId}`).update(type === "views" ? { lastViewMilestoneSent: milestone } : { lastContactMilestoneSent: milestone });
+    console.log(`[API] Milestone email sent: ${type} ${milestone} for listing ${listingId}`);
+  } else if (!emailResult.skipped) {
+    console.error(`[API] Milestone email failed for listing ${listingId}:`, emailResult.error);
+  }
+}
+
 // Pre-initialize DodoPayments client at startup for faster payment processing
 let dodoClient = null;
 let productCache = {}; // Cache for preloaded products
@@ -602,6 +633,9 @@ app.post("/api/listing-view", async (req, res) => {
       return { ...data, views };
     });
     viewDedupe.set(viewKey, Date.now());
+    const snap = await listingRef.once("value");
+    const data = snap.val() || {};
+    sendMilestoneEmailIfNeeded(listingId, "views", data).catch((err) => console.error("[API] Milestone views check error:", err));
     res.json({ ok: true });
   } catch (err) {
     console.error("[API] listing-view error:", err);
@@ -652,6 +686,9 @@ app.post("/api/listing-contact", async (req, res) => {
       };
     });
     contactDedupe.set(contactKey, Date.now());
+    const snap = await listingRef.once("value");
+    const data = snap.val() || {};
+    sendMilestoneEmailIfNeeded(listingId, "contacts", data).catch((err) => console.error("[API] Milestone contacts check error:", err));
     res.json({ ok: true });
   } catch (err) {
     console.error("[API] listing-contact error:", err);
@@ -1079,6 +1116,7 @@ cron.schedule("0 0 * * *", async () => {
             // Perform deletions
             for (const item of listingsToDelete) {
                 await db.ref(`listings/${item.id}`).remove();
+                await db.ref(`feedback/${item.id}`).remove();
                 console.log(`[Cron] Deleted listing ${item.id} (Reason: ${item.reason})`);
                 
                 // Send Deletion Email (only for verified expired listings)
@@ -1118,6 +1156,7 @@ cron.schedule("0 0 * * *", async () => {
                 if (l.userId && !users[l.userId]) {
                      console.log(`[Cron] Removing listing ${lid} because user ${l.userId} does not exist.`);
                      await db.ref(`listings/${lid}`).remove();
+                     await db.ref(`feedback/${lid}`).remove();
                 }
             });
         }
@@ -1495,7 +1534,17 @@ cron.schedule("0 0 * * *", async () => {
              }
           }
 
-          // B. Delete Expired Listings (> 30 days post-expiry)
+          // B. Clear feedback after a week of expiry (but before deletion)
+          if (daysSinceExpiry >= 7 && daysSinceExpiry < 30) {
+             try {
+               await db.ref(`feedback/${id}`).remove();
+               console.log(`[Cron] Cleared feedback for expired listing ${id} (>${Math.floor(daysSinceExpiry)} days past expiry).`);
+             } catch (err) {
+               console.error(`[Cron] Failed to clear feedback for expired listing ${id}:`, err);
+             }
+          }
+
+          // C. Delete Expired Listings (> 30 days post-expiry)
           if (daysSinceExpiry >= 30) {
              const userEmail = listing.userEmail || listing.email;
              // Send notification
@@ -1518,8 +1567,9 @@ cron.schedule("0 0 * * *", async () => {
                  await new Promise(resolve => setTimeout(resolve, 500));
              }
              
-             // Delete
+             // Delete listing and its feedback
              await db.ref(`listings/${id}`).remove();
+             await db.ref(`feedback/${id}`).remove();
              console.log(`[Cron] Deleted expired listing ${id}`);
              expiredDeletedCount++;
           }
@@ -1530,6 +1580,7 @@ cron.schedule("0 0 * * *", async () => {
            const daysSinceCreation = (now - listing.createdAt) / dayMs;
            if (daysSinceCreation >= 7) {
                await db.ref(`listings/${id}`).remove();
+               await db.ref(`feedback/${id}`).remove();
                console.log(`[Cron] Deleted pending/unpaid listing ${id} (over 1 week in status)`);
                pendingDeletedCount++;
            }
