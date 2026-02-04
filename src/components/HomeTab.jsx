@@ -155,14 +155,23 @@ export default function HomeTab() {
                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                       return `${monthNames[parseInt(m, 10) - 1] || m} ${y}`;
                     };
-                    const greenShades = ["#059669", "#10b981", "#34d399", "#6ee7b7", "#a7f3d0"];
-                    const redShades = ["#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fca5a5"];
+                    const chartColors = [
+                      { base: "#3b82f6", light: "#60a5fa" }, // Blue
+                      { base: "#8b5cf6", light: "#a78bfa" }, // Purple
+                      { base: "#f59e0b", light: "#fbbf24" }, // Amber/Orange
+                      { base: "#10b981", light: "#34d399" }, // Green
+                      { base: "#ef4444", light: "#f87171" }, // Red
+                      { base: "#06b6d4", light: "#22d3ee" }, // Cyan
+                      { base: "#ec4899", light: "#f472b6" }, // Pink
+                      { base: "#6366f1", light: "#818cf8" }, // Indigo
+                    ];
                     const series = items.map((item, idx) => {
                       const lastTotal = (item.lastMonthViews ?? 0) + (item.lastMonthContacts ?? 0);
                       const thisTotal = (item.views ?? 0) + (item.contacts ?? 0);
                       const increased = thisTotal >= lastTotal;
-                      const shade = increased ? greenShades[idx % greenShades.length] : redShades[idx % redShades.length];
-                      const shadeLight = increased ? greenShades[Math.min(idx + 1, greenShades.length - 1)] : redShades[Math.min(idx + 1, redShades.length - 1)];
+                      const colorSet = chartColors[idx % chartColors.length];
+                      const shade = colorSet.base;
+                      const shadeLight = colorSet.light;
                       return {
                         id: item.id,
                         name: item.name,
