@@ -60,6 +60,14 @@ export default function HomeTab() {
           </p>
           
           <div className="hero-actions hero-actions--home" role="group" aria-label={t("mainActions")}>
+            <Link
+              href="/listings"
+              className="btn btn-secondary hero-btn-secondary"
+              aria-label={t("findLocalService")}
+            >
+              <span className="btn-icon" aria-hidden="true">🔍</span>
+              <span className="btn-text">{t("findLocalService")}</span>
+            </Link>
             <button
               className="btn btn-primary hero-btn-primary"
               onClick={handlePostClick}
@@ -68,14 +76,7 @@ export default function HomeTab() {
               <span className="btn-icon" aria-hidden="true">📝</span>
               <span className="btn-text">{t("getMoreCallsForBusiness")}</span>
             </button>
-            <Link
-              href="/listings"
-              className="btn btn-secondary hero-btn-secondary"
-              aria-label={t("getVisibleToLocalCustomers")}
-            >
-              <span className="btn-icon" aria-hidden="true">🔍</span>
-              <span className="btn-text">{t("getVisibleToLocalCustomers")}</span>
-            </Link>
+            
           </div>
           
           <p className="hero-trust-line" role="note">
