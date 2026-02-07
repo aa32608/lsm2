@@ -63,21 +63,45 @@ const ExtendListingModal = () => {
               )}
               
               <div className="plan-selection-grid">
-                {PLANS.map(plan => (
-                  <div 
-                    key={plan.id}
-                    className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''} ${plan.id === "12" ? "plan-option--featured" : ""}`}
-                    onClick={() => setSelectedExtendPlan(plan.id)}
-                  >
-                    <div className="plan-content">
-                      <div className="plan-duration">{t(`month${plan.id}`)}</div>
-                      <div className="plan-price">{plan.price}</div>
-                      <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
-                      {plan.id === "12" && <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t("featuredDurationNote")}</div>}
+                {PLANS.map(plan => {
+                  const isFeaturedPlan = plan.id === "12";
+                  return (
+                    <div
+                      key={plan.id}
+                      className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''} ${isFeaturedPlan ? 'plan-option--featured' : ''}`}
+                      onClick={() => setSelectedExtendPlan(plan.id)}
+                    >
+                      {isFeaturedPlan && <span className="plan-option-featured-glow" aria-hidden="true" />}
+                      <div className="plan-content">
+                        <div className="plan-name-row">
+                          <span className="plan-duration">{t(`month${plan.id}`)}</span>
+                          {isFeaturedPlan && <span className="plan-badge-featured">{t("featured")}</span>}
+                        </div>
+                        <div className="plan-price">{plan.price}</div>
+                        <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
+                        {isFeaturedPlan && <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t("featuredDurationNote")}</div>}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+
+              {selectedExtendPlan === "12" && (
+                <div className="featured-cta-block" role="region" aria-labelledby="extend-featured-cta-title">
+                  <h4 id="extend-featured-cta-title" className="featured-cta-title">
+                    <span className="featured-cta-icon" aria-hidden="true">✨</span>
+                    {t("featuredCtaTitle")}
+                  </h4>
+                  <p className="featured-cta-desc">{t("featuredCtaDesc")}</p>
+                  <ul className="featured-cta-benefits" aria-label={t("featuredBenefitsTooltip")}>
+                    <li><span className="featured-cta-check" aria-hidden="true">✓</span> {t("featuredListingsGetMoreViews")}</li>
+                    <li><span className="featured-cta-check" aria-hidden="true">✓</span> {t("featuredBenefitsTooltip")}</li>
+                  </ul>
+                  <p className="featured-cta-cta">
+                    <strong>{t("featuredCtaCta")}</strong> — {t("featuredPlanLabel")}
+                  </p>
+                </div>
+              )}
             </div>
             
             <div className="modal-footer">
