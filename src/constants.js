@@ -186,6 +186,9 @@ export const mkSpotlightCities = [
   "Kichevo",
 ];
 
+/** For 12-month plan: listing is "featured" (top of search, badge) only for the first N days; then stays live for remainder. */
+export const FEATURED_DURATION_DAYS = 90; // 3 months
+
 export const PLANS = [
   { id: "1", label: "1 Month", price: "2 EUR", duration: "30 days", priceVal: 2 },
   { id: "3", label: "3 Months", price: "5 EUR", duration: "90 days", priceVal: 5 },

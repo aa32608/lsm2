@@ -66,13 +66,14 @@ const ExtendListingModal = () => {
                 {PLANS.map(plan => (
                   <div 
                     key={plan.id}
-                    className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''}`}
+                    className={`plan-option ${selectedExtendPlan === plan.id ? 'selected' : ''} ${plan.id === "12" ? "plan-option--featured" : ""}`}
                     onClick={() => setSelectedExtendPlan(plan.id)}
                   >
                     <div className="plan-content">
                       <div className="plan-duration">{t(`month${plan.id}`)}</div>
                       <div className="plan-price">{plan.price}</div>
                       <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t(`days${plan.duration.split(' ')[0]}`)}</div>
+                      {plan.id === "12" && <div className="text-sm text-muted" style={{ marginTop: '4px' }}>{t("featuredDurationNote")}</div>}
                     </div>
                   </div>
                 ))}

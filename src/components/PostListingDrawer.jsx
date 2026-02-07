@@ -721,6 +721,7 @@ const PostListingDrawer = () => {
                                     )}
                                   </div>
                                   <span className="plan-duration">{t(`days${plan.duration.split(' ')[0]}`)}</span>
+                                  {isFeaturedPlan && <span className="plan-featured-duration-note">{t("featuredDurationNote")}</span>}
                                 </div>
                                 <div className="plan-price-column">
                                    {isFreeTrialEligible ? (

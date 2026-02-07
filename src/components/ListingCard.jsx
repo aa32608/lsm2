@@ -83,8 +83,8 @@ const ListingCard = React.memo(({
     }
   };
 
-  // Featured = 12-month paid plan only (no stored attribute)
-  const isFeatured = String(l.plan) === "12";
+  // Featured = 12-month plan and within featured period (first 3 months)
+  const isFeatured = String(l.plan) === "12" && (!l.featuredUntil || l.featuredUntil > Date.now());
 
   return (
     <Link

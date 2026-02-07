@@ -381,8 +381,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
     if (locFilter) arr = arr.filter((l) => l.locationCity === locFilter || l.location === locFilter);
 
-    // Featured = 12-month paid plan only; featured first, sorted by performance (views, contacts, rating)
-    const isFeatured12 = (l) => String(l.plan) === "12";
+    // Featured = 12-month plan and within featured period (first 3 months); then listing stays live but not featured
+    const isFeatured12 = (l) => String(l.plan) === "12" && (!l.featuredUntil || l.featuredUntil > Date.now());
     const featuredPerf = (a, b) => {
       const aF = isFeatured12(a) ? 1 : 0;
       const bF = isFeatured12(b) ? 1 : 0;

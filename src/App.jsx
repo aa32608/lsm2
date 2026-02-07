@@ -43,7 +43,7 @@ import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./legacy_pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
-import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS } from "./constants";
+import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS } from "./constants";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
 
@@ -920,21 +920,30 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             }
             const durationMs = durationDays * 24 * 60 * 60 * 1000;
 
+            const now = Date.now();
             if (type === 'create') {
                 updates[`listings/${listingId}/status`] = "verified";
                 updates[`listings/${listingId}/pricePaid`] = parseInt(plan) === 1 ? 2 : (parseInt(plan) === 3 ? 5 : (parseInt(plan) === 6 ? 8 : 12));
                 updates[`listings/${listingId}/plan`] = plan;
-                updates[`listings/${listingId}/expiresAt`] = Date.now() + durationMs;
-                updates[`listings/${listingId}/createdAt`] = Date.now();
+                updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+                updates[`listings/${listingId}/createdAt`] = now;
+                if (String(plan) === "12") {
+                    const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+                    updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+                }
             } else if (type === 'extend') {
                 const snapshot = await get(dbRef(db, `listings/${listingId}`));
                 const listing = snapshot.val();
                 if (listing) {
-                    const currentExpiry = listing.expiresAt || Date.now();
-                    const newExpiry = Math.max(currentExpiry, Date.now()) + durationMs;
+                    const currentExpiry = listing.expiresAt || now;
+                    const newExpiry = Math.max(currentExpiry, now) + durationMs;
                     updates[`listings/${listingId}/expiresAt`] = newExpiry;
                     updates[`listings/${listingId}/status`] = "verified";
                     updates[`listings/${listingId}/plan`] = plan;
+                    if (String(plan) === "12") {
+                        const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+                        updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+                    }
                 }
             }
             

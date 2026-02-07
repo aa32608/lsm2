@@ -77,6 +77,9 @@ function myListingsUrl() {
   return buildSiteUrl("/mylistings");
 }
 
+// 12-month plan: featured (top of search, badge) only for this many days; listing stays live for full 12 months
+const FEATURED_DURATION_DAYS = 90; // 3 months
+
 // Milestone emails: send when a listing reaches impressive view/contact counts (once per milestone)
 const VIEW_MILESTONES = [100, 250, 500, 1000, 5000, 10000, 25000];
 const CONTACT_MILESTONES = [25, 50, 100, 250, 500, 1000];
@@ -723,6 +726,7 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
     const thisMonthKey = getThisMonthKey();
     let totalViews = 0, totalContacts = 0, totalByPhone = 0, totalByEmail = 0, totalByWhatsapp = 0;
     const featured = [];
+    const now = Date.now();
     Object.entries(listings).forEach(([listingId, l]) => {
       const views = Number(l.views) || 0;
       const contacts = Number(l.contacts) || 0;
@@ -731,7 +735,8 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
       totalByPhone += Number(l.contactByPhone) || 0;
       totalByEmail += Number(l.contactByEmail) || 0;
       totalByWhatsapp += Number(l.contactByWhatsapp) || 0;
-      if (String(l.plan) === "12" && l.status === "verified") {
+      const isFeatured = String(l.plan) === "12" && l.status === "verified" && (!l.featuredUntil || l.featuredUntil > now);
+      if (isFeatured) {
         const monthly = l.monthlyStats && l.monthlyStats[lastMonthKey] ? l.monthlyStats[lastMonthKey] : null;
         const lastMonthViews = monthly ? Number(monthly.views) || 0 : 0;
         const lastMonthContacts = monthly ? Number(monthly.contacts) || 0 : 0;
@@ -929,6 +934,10 @@ app.post("/api/webhook", async (req, res) => {
             updates[`listings/${listingId}/createdAt`] = now;
             updates[`listings/${listingId}/expiresAt`] = now + durationMs;
             updates[`listings/${listingId}/plan`] = plan;
+            if (String(plan) === "12") {
+                const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+                updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+            }
         } else if (type === 'extend') {
             let currentExpiry = now;
             if (listing.expiresAt && listing.expiresAt > now) {
@@ -937,6 +946,10 @@ app.post("/api/webhook", async (req, res) => {
             updates[`listings/${listingId}/expiresAt`] = currentExpiry + durationMs;
             updates[`listings/${listingId}/status`] = "verified";
             updates[`listings/${listingId}/plan`] = plan;
+            if (String(plan) === "12") {
+                const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+                updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+            }
         }
 
         await db.ref().update(updates);
