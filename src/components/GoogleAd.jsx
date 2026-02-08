@@ -12,6 +12,7 @@ const GoogleAd = ({ className, style, slot }) => {
     // Reset state when slot changes
     adPushed.current = false;
     setAdLoaded(false);
+    let mounted = true;
 
     if (!adRef.current) return;
 
@@ -23,6 +24,7 @@ const GoogleAd = ({ className, style, slot }) => {
     const initAd = () => {
       try {
         if (typeof window === "undefined") return false;
+        if (!mounted || !adRef.current) return false;
         
         const adElement = adRef.current?.querySelector('.adsbygoogle');
         if (!adElement) return false;
@@ -49,13 +51,18 @@ const GoogleAd = ({ className, style, slot }) => {
         // Each ad unit needs its own push call
         // Make sure the element is in the DOM and has all attributes before pushing
         try {
-          // Verify element is ready
-          if (!adElement.parentElement) {
+          // Verify element is ready and in the document (avoids "no_div" when script runs before mount)
+          if (!adElement.parentElement || !document.body.contains(adElement)) {
             return false;
           }
           
-          // Push to AdSense queue
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
+          // Push to AdSense queue (wrap to catch no_div / slot errors)
+          try {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+          } catch (adErr) {
+            if (adErr?.message !== 'no_div') console.warn('[GoogleAd] push error:', adErr);
+            return false;
+          }
           adPushed.current = true;
           
           // Monitor when ad loads
@@ -123,6 +130,7 @@ const GoogleAd = ({ className, style, slot }) => {
     }, 300); // Initial delay to ensure DOM is ready
 
     return () => {
+      mounted = false;
       if (timeoutId) clearTimeout(timeoutId);
       if (checkInterval) clearInterval(checkInterval);
       if (observer) {

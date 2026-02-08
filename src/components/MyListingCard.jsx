@@ -109,7 +109,7 @@ const MyListingCard = React.memo(({
             {l.expiresAt ? (
               <>
                 <span className="my-listing-expiry-label">{t("expires")}:</span>
-                <span className="my-listing-expiry-date">{typeof window !== 'undefined' ? new Date(l.expiresAt).toLocaleDateString() : '—'}</span>
+                <span className="my-listing-expiry-date" suppressHydrationWarning>{typeof window !== 'undefined' ? new Date(l.expiresAt).toLocaleDateString() : '—'}</span>
                 {days !== null && (
                   <span className={`my-listing-expiry-days ${isExpiringSoon ? "my-listing-expiry-warning-text" : ""} ${isExpired ? "my-listing-expiry-expired-text" : ""}`}>
                     {isExpired 

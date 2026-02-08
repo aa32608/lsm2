@@ -56,7 +56,7 @@ export const TermsModal = ({ onClose, t }) => (
     <ModalContent title={t("termsOfService")} onClose={onClose} t={t}>
       <div>
         <p className="text-sm text-muted mb-lg">
-          {t("termsLastUpdated")} {typeof window !== 'undefined' ? new Date().toLocaleDateString() : '2025'}
+          {t("termsLastUpdated")} <span suppressHydrationWarning>{typeof window !== 'undefined' ? new Date().toLocaleDateString() : '2025'}</span>
         </p>
         
         <Section title={t("terms1Title")}>
@@ -129,7 +129,7 @@ export const PrivacyModal = ({ onClose, t }) => (
     <ModalContent title={t("privacyPolicy")} onClose={onClose} t={t}>
       <div>
         <p className="text-sm text-muted mb-lg">
-          {t("privacyLastUpdated")} {typeof window !== 'undefined' ? new Date().toLocaleDateString() : '2025'}
+          {t("privacyLastUpdated")} <span suppressHydrationWarning>{typeof window !== 'undefined' ? new Date().toLocaleDateString() : '2025'}</span>
         </p>
 
         <Section title={t("privacy1Title")}>
