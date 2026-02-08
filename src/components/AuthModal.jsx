@@ -54,6 +54,11 @@ const AuthModal = () => {
   // Local Helpers
   const validateEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const validatePhone = (s) => !!s && s.replace(/\D/g, "").length >= 8 && s.replace(/\D/g, "").length <= 16;
+  const validatePassword = (p) => {
+    if (!p || p.length < 8) return false;
+    const numCount = (p.match(/\d/g) || []).length;
+    return numCount >= 2;
+  };
   
   const normalizePhoneForStorage = (raw) => {
     if (!raw) return raw;
@@ -74,30 +79,30 @@ const AuthModal = () => {
       } catch (e) {}
       window.signupRecaptchaVerifier = null;
     }
-
     const signupContainer = document.getElementById("recaptcha-signup");
     if (signupContainer) signupContainer.innerHTML = "";
-
     window.signupRecaptchaVerifier = new RecaptchaVerifier(
       auth,
       "recaptcha-signup",
       { size: "invisible" }
     );
-
     return window.signupRecaptchaVerifier;
   };
 
   const createRecaptcha = (containerId) => {
-    if (!window.recaptchaVerifier) {
-      const container = document.getElementById(containerId);
-      if (container) container.innerHTML = "";
-
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        auth,
-        containerId,
-        { size: "invisible" }
-      );
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {}
+      window.recaptchaVerifier = null;
     }
+    const container = document.getElementById(containerId);
+    if (container) container.innerHTML = "";
+    window.recaptchaVerifier = new RecaptchaVerifier(
+      auth,
+      containerId,
+      { size: "invisible" }
+    );
     return window.recaptchaVerifier;
   };
 
@@ -122,7 +127,12 @@ const AuthModal = () => {
     } catch (err) {
       console.error(err);
       showMessage(`${t("otpError")}: ${err.message}`, "error");
-      if (window.recaptchaVerifier) window.recaptchaVerifier.clear();
+      if (window.recaptchaVerifier) {
+        try { window.recaptchaVerifier.clear(); } catch (e) {}
+        window.recaptchaVerifier = null;
+      }
+      const container = document.getElementById("recaptcha-container");
+      if (container) container.innerHTML = "";
     } finally {
       setPhoneLoading(false);
     }
@@ -489,8 +499,11 @@ const AuthModal = () => {
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        minLength={8}
+                        autoComplete="new-password"
                       />
                     </div>
+                    <p className="auth-password-requirement" aria-live="polite">{t("passwordRequirement")}</p>
                   </div>
         
                   <div className="auth-input-group">
@@ -573,7 +586,7 @@ const AuthModal = () => {
                         if (!displayName.trim())
                           return showMessage(t("enterName"), "error");
             
-                        if (password.length < 6)
+                        if (!validatePassword(password))
                           return showMessage(t("passwordTooShort"), "error");
             
                         if (passwordForm?.repeatNewPassword !== password)
@@ -599,9 +612,13 @@ const AuthModal = () => {
                           showMessage(t("codeSent"), "success");
                         } catch (err) {
                           console.error(err);
-                          window.signupRecaptchaVerifier?.clear?.();
-                          window.signupRecaptchaVerifier = null;
-                          showMessage(err, "error");
+                          if (window.signupRecaptchaVerifier) {
+                            try { window.signupRecaptchaVerifier.clear(); } catch (e) {}
+                            window.signupRecaptchaVerifier = null;
+                          }
+                          const signupContainer = document.getElementById("recaptcha-signup");
+                          if (signupContainer) signupContainer.innerHTML = "";
+                          showMessage(err?.message || err, "error");
                         } finally {
                           setPhoneLoading(false);
                         }
