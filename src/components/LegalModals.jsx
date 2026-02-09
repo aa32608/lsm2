@@ -158,7 +158,7 @@ export const PrivacyModal = ({ onClose, t }) => (
         <Section title={t("privacy3Title")}>
           <p className="mb-sm">{t("privacy3TextNew")}</p>
           <ul className="list-disc pl-5">
-            <li><strong>Dodo Payments:</strong> {t("privacy3List1")}</li>
+            <li><strong>Payment processor:</strong> {t("privacy3List1")}</li>
             <li><strong>Google Ads:</strong> {t("privacy3List2")}</li>
             <li><strong>Google Search Console:</strong> {t("privacy3List3")}</li>
             <li><strong>Firebase:</strong> {t("privacy3List4")}</li>
