@@ -143,6 +143,37 @@ export default function PricingPage() {
             );
           })}
         </section>
+
+        <section
+          style={{
+            maxWidth: "720px",
+            margin: "32px auto 0",
+          }}
+        >
+          <h2 className="text-h3" style={{ marginBottom: "8px" }}>
+            {t("pricingPaymentMethodsTitle") || "Payments & billing"}
+          </h2>
+          <p className="text-body" style={{ marginBottom: "16px" }}>
+            {t("pricingPaymentMethodsText") ||
+              "Listing fees are one-time charges in EUR for the selected duration. Payments are processed securely by our third-party payment processors. There are currently no automatic renewals or recurring subscriptions."}
+          </p>
+
+          <h2 className="text-h3" style={{ marginBottom: "8px" }}>
+            {t("pricingRefundsTitle") || "Refunds & cancellations"}
+          </h2>
+          <p className="text-body" style={{ marginBottom: "16px" }}>
+            {t("pricingRefundsText") ||
+              "Because BizCall MK provides access to a digital listing service, payments are generally non-refundable once your listing is activated. If you believe you were charged in error, contact us and we will review your case."}
+          </p>
+
+          <h2 className="text-h3" style={{ marginBottom: "8px" }}>
+            {t("pricingPlatformNoteTitle") || "About this platform"}
+          </h2>
+          <p className="text-body">
+            {t("pricingPlatformNoteText") ||
+              "BizCall MK is a local services marketplace. We connect people looking for services with local providers; we do not sell the services ourselves and are not a party to the contract between customers and providers."}
+          </p>
+        </section>
       </div>
     </main>
   );
