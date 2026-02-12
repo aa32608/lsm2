@@ -2,6 +2,7 @@
 /* global process, Buffer */
 import express from "express";
 import bodyParser from "body-parser";
+import crypto from "crypto";
 import dotenv from "dotenv";
 import admin from "firebase-admin";
 import cors from "cors";
@@ -275,7 +276,8 @@ app.use(
   })
 );
 
-app.use(bodyParser.json());
+// Keep raw body for Gumroad webhook signature verification
+app.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 /* ----------------------- HEALTH CHECK ENDPOINT ----------------------- */
 // Health check endpoint to wake up backend and preload services
@@ -766,7 +768,80 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
   }
 });
 
-/* ----------------------- DODO PAYMENTS ----------------------- */
+/* ----------------------- SHARED: APPLY PAYMENT SUCCESS TO LISTING ----------------------- */
+/** Applies payment success: updates listing in Firebase and sends confirmation email. Used by Dodo and Gumroad webhooks. */
+async function applyPaymentSuccessToListing(listingId, type, plan) {
+  const updates = {};
+  const now = Date.now();
+  let durationDays = 30;
+  switch (String(plan)) {
+    case "1": durationDays = 30; break;
+    case "3": durationDays = 90; break;
+    case "6": durationDays = 180; break;
+    case "12": durationDays = 365; break;
+    default: durationDays = 30;
+  }
+  const durationMs = durationDays * 24 * 60 * 60 * 1000;
+
+  const snapshot = await db.ref(`listings/${listingId}`).once("value");
+  const listing = snapshot.val();
+  if (!listing) {
+    console.log(`[Payment] Listing ${listingId} not found.`);
+    return;
+  }
+
+  if (type === "create") {
+    updates[`listings/${listingId}/status`] = "verified";
+    updates[`listings/${listingId}/createdAt`] = now;
+    updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+    updates[`listings/${listingId}/plan`] = plan;
+    if (String(plan) === "12") {
+      const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+      updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+    }
+  } else if (type === "extend") {
+    let currentExpiry = now;
+    if (listing.expiresAt && listing.expiresAt > now) currentExpiry = listing.expiresAt;
+    updates[`listings/${listingId}/expiresAt`] = currentExpiry + durationMs;
+    updates[`listings/${listingId}/status`] = "verified";
+    updates[`listings/${listingId}/plan`] = plan;
+    if (String(plan) === "12") {
+      const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
+      updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
+    }
+  }
+
+  await db.ref().update(updates);
+  console.log(`[Payment] Listing ${listingId} updated (Type: ${type}, Plan: ${plan})`);
+
+  const userEmail = listing.userEmail || listing.email;
+  if (userEmail) {
+    const link = listingPublicUrl(listingId);
+    const expiryDate = new Date(type === "create" ? now + durationMs : updates[`listings/${listingId}/expiresAt`]).toLocaleDateString();
+    const userId = listing.userId;
+    const userLang = userId ? await getUserLanguage(userId) : "sq";
+    const listingName = listing.name || (userLang === "sq" ? "Shërbimi" : userLang === "mk" ? "Услуга" : "Service");
+    let subject = "";
+    let text = "";
+    if (type === "create") {
+      subject = EMAIL_TRANSLATIONS.listing.listing_activated.subject[userLang] || EMAIL_TRANSLATIONS.listing.listing_activated.subject.en;
+      text = EMAIL_TRANSLATIONS.listing.listing_activated.text[userLang](listingName, link) || EMAIL_TRANSLATIONS.listing.listing_activated.text.en(listingName, link);
+    } else if (type === "extend") {
+      subject = EMAIL_TRANSLATIONS.listing.listing_extended.subject[userLang] || EMAIL_TRANSLATIONS.listing.listing_extended.subject.en;
+      text = EMAIL_TRANSLATIONS.listing.listing_extended.text[userLang](listingName, expiryDate, link) || EMAIL_TRANSLATIONS.listing.listing_extended.text.en(listingName, expiryDate, link);
+    }
+    if (subject && text) {
+      const emailReason = type === "extend" ? "listing_extended" : "listing_activated";
+      const emailResult = await sendEmail(userEmail, subject, text, false, null, emailReason);
+      if (emailResult.ok) console.log(`[Payment] ✅ Email sent to ${userEmail}`);
+      else if (!emailResult.skipped) console.error(`[Payment] ❌ Email failed for ${userEmail}:`, emailResult.error);
+    }
+  }
+}
+
+/* ----------------------- PAYMENTS (DODO / GUMROAD) ----------------------- */
+
+const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "dodo").toLowerCase();
 
 app.post("/api/create-payment", async (req, res) => {
   const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
@@ -826,60 +901,62 @@ app.post("/api/create-payment", async (req, res) => {
   }
   // ------------------------
 
+  // --- GUMROAD: build checkout URL with custom params ---
+  if (PAYMENT_PROVIDER === "gumroad") {
+    let permalink;
+    switch (String(plan)) {
+      case "1": permalink = process.env.GUMROAD_PRODUCT_1_MONTH; break;
+      case "3": permalink = process.env.GUMROAD_PRODUCT_3_MONTHS; break;
+      case "6": permalink = process.env.GUMROAD_PRODUCT_6_MONTHS; break;
+      case "12": permalink = process.env.GUMROAD_PRODUCT_12_MONTHS; break;
+      default: permalink = process.env.GUMROAD_PRODUCT_1_MONTH;
+    }
+    if (!permalink) {
+      console.error(`[Gumroad] Product permalink missing for plan ${plan}`);
+      return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
+    }
+    const base = "https://gumroad.com/l/" + encodeURIComponent(permalink.replace(/^https?:\/\/[^/]+\/l\//i, "").replace(/\/$/, ""));
+    const params = new URLSearchParams({
+      wanted: "true",
+      listing_id: String(listingId),
+      type: String(type || "create"),
+      plan: String(plan),
+    });
+    if (customerEmail) params.set("email", customerEmail);
+    const checkoutUrl = `${base}?${params.toString()}`;
+    return res.json({ checkoutUrl });
+  }
+
+  // --- DODO PAYMENTS ---
   if (!process.env.DODO_PAYMENTS_API_KEY) {
     console.error("DODO_PAYMENTS_API_KEY is missing");
     return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_service_not_configured.en });
   }
 
-  // Map plan to product ID
   let PRODUCT_ID;
   switch (String(plan)) {
-    case "1":
-      PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH;
-      break;
-    case "3":
-      PRODUCT_ID = process.env.DODO_PRODUCT_3_MONTHS;
-      break;
-    case "6":
-      PRODUCT_ID = process.env.DODO_PRODUCT_6_MONTHS;
-      break;
-    case "12":
-      PRODUCT_ID = process.env.DODO_PRODUCT_12_MONTHS;
-      break;
-    default:
-      PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH; // Default fallback
+    case "1": PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH; break;
+    case "3": PRODUCT_ID = process.env.DODO_PRODUCT_3_MONTHS; break;
+    case "6": PRODUCT_ID = process.env.DODO_PRODUCT_6_MONTHS; break;
+    case "12": PRODUCT_ID = process.env.DODO_PRODUCT_12_MONTHS; break;
+    default: PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH;
   }
-
+  if (!PRODUCT_ID) PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
   if (!PRODUCT_ID) {
-     console.error(`Product ID missing for plan ${plan}`);
-     // Fallback to the generic one if specific ones aren't set yet (for transition)
-     PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
-  }
-
-  if (!PRODUCT_ID) {
-     console.error("No Product ID configured");
-     return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
+    return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
   }
 
   try {
-    // Use pre-initialized client or create new one if needed
     const client = dodoClient || new DodoPayments({
       bearerToken: process.env.DODO_PAYMENTS_API_KEY,
       environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
     });
-
-    // Create Checkout Session
     const session = await client.checkoutSessions.create({
       product_cart: [{ product_id: PRODUCT_ID, quantity: 1 }],
-      customer: { 
-        email: customerEmail || 'guest@example.com', 
-        name: customerName || EMAIL_TRANSLATIONS.errors.guest_user.en
-      },
+      customer: { email: customerEmail || 'guest@example.com', name: customerName || EMAIL_TRANSLATIONS.errors.guest_user.en },
       metadata: { listingId, type, plan },
-      // Always return to the real site (never the backend origin)
       return_url: buildSiteUrl("/", { payment: "success", listingId, type, plan }),
     });
-
     res.json({ checkoutUrl: session.checkout_url });
   } catch (err) {
     console.error("Dodo Payment Error Full:", JSON.stringify(err, null, 2));
@@ -890,115 +967,58 @@ app.post("/api/create-payment", async (req, res) => {
 app.post("/api/webhook", async (req, res) => {
   try {
     const event = req.body;
-    
-    // Log the event for debugging
-    console.log("Webhook received:", JSON.stringify(event, null, 2));
-
-    // Dodo Payments typically sends an event object
-    // We care about payment success
-    if (event.type === 'payment.succeeded') {
-        const { metadata } = event.data;
-        
-        if (!metadata || !metadata.listingId) {
-             console.log("Webhook: No metadata or listingId found, ignoring.");
-             return res.json({ received: true });
-        }
-
-        const { listingId, type, plan } = metadata;
-
-        const updates = {};
-        const now = Date.now();
-        
-        // Calculate duration based on plan
-        let durationDays = 30;
-        switch(String(plan)) {
-            case "1": durationDays = 30; break;
-            case "3": durationDays = 90; break;
-            case "6": durationDays = 180; break;
-            case "12": durationDays = 365; break;
-            default: durationDays = 30;
-        }
-        const durationMs = durationDays * 24 * 60 * 60 * 1000;
-
-        // Fetch listing for details
-        const snapshot = await db.ref(`listings/${listingId}`).once('value');
-        const listing = snapshot.val();
-        
-        if (!listing) {
-             console.log(`[Webhook] Listing ${listingId} not found.`);
-             return res.json({ received: true });
-        }
-
-        if (type === 'create') {
-            updates[`listings/${listingId}/status`] = "verified"; 
-            updates[`listings/${listingId}/createdAt`] = now;
-            updates[`listings/${listingId}/expiresAt`] = now + durationMs;
-            updates[`listings/${listingId}/plan`] = plan;
-            if (String(plan) === "12") {
-                const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
-                updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
-            }
-        } else if (type === 'extend') {
-            let currentExpiry = now;
-            if (listing.expiresAt && listing.expiresAt > now) {
-                currentExpiry = listing.expiresAt;
-            }
-            updates[`listings/${listingId}/expiresAt`] = currentExpiry + durationMs;
-            updates[`listings/${listingId}/status`] = "verified";
-            updates[`listings/${listingId}/plan`] = plan;
-            if (String(plan) === "12") {
-                const featuredMs = FEATURED_DURATION_DAYS * 24 * 60 * 60 * 1000;
-                updates[`listings/${listingId}/featuredUntil`] = now + featuredMs;
-            }
-        }
-
-        await db.ref().update(updates);
-        console.log(`[Webhook] Listing ${listingId} updated successfully (Type: ${type}, Plan: ${plan})`);
-
-        // Send Notification Email
-        const userEmail = listing.userEmail || listing.email; 
-        if (userEmail) {
-            const link = listingPublicUrl(listingId);
-            const expiryDate = new Date(type === 'create' ? (now + durationMs) : (updates[`listings/${listingId}/expiresAt`])).toLocaleDateString();
-            
-            // Get user language preference
-            const userId = listing.userId;
-            const userLang = userId ? await getUserLanguage(userId) : 'sq';
-            const listingName = listing.name || (userLang === 'sq' ? "Shërbimi" : userLang === 'mk' ? "Услуга" : "Service");
-            
-            let subject = "";
-            let text = "";
-            
-            if (type === 'create') {
-                subject = EMAIL_TRANSLATIONS.listing.listing_activated.subject[userLang] || 
-                         EMAIL_TRANSLATIONS.listing.listing_activated.subject.en;
-                text = EMAIL_TRANSLATIONS.listing.listing_activated.text[userLang](listingName, link) || 
-                      EMAIL_TRANSLATIONS.listing.listing_activated.text.en(listingName, link);
-            } else if (type === 'extend') {
-                subject = EMAIL_TRANSLATIONS.listing.listing_extended.subject[userLang] || 
-                         EMAIL_TRANSLATIONS.listing.listing_extended.subject.en;
-                text = EMAIL_TRANSLATIONS.listing.listing_extended.text[userLang](listingName, expiryDate, link) || 
-                      EMAIL_TRANSLATIONS.listing.listing_extended.text.en(listingName, expiryDate, link);
-            }
-            
-            if (subject && text) {
-                const emailReason = type === "extend" ? "listing_extended" : "listing_activated";
-                const emailResult = await sendEmail(userEmail, subject, text, false, null, emailReason);
-                if (emailResult.ok) {
-                    console.log(`[Webhook] ✅ Notification email sent to ${userEmail}. Email ID: ${emailResult.id}`);
-                } else if (!emailResult.skipped) {
-                    console.error(`[Webhook] ❌ Failed to send notification email to ${userEmail}:`, emailResult.error);
-                } else {
-                    console.log(`[Webhook] ⏭️ Notification email skipped for ${userEmail} due to cooldown`);
-                }
-            }
-        }
+    console.log("Webhook received (Dodo):", JSON.stringify(event, null, 2));
+    if (event.type === "payment.succeeded" && event.data?.metadata?.listingId) {
+      const { listingId, type, plan } = event.data.metadata;
+      await applyPaymentSuccessToListing(listingId, type, plan);
     }
-
     res.json({ received: true });
   } catch (err) {
     console.error("Webhook Error:", err);
     res.status(500).send(EMAIL_TRANSLATIONS.errors.webhook_error.en);
+  }
+});
+
+/* ----------------------- GUMROAD WEBHOOK ----------------------- */
+app.post("/api/webhook/gumroad", async (req, res) => {
+  try {
+    const secret = process.env.GUMROAD_WEBHOOK_SECRET;
+    if (secret && req.rawBody) {
+      const sig = req.headers["x-gumroad-signature"];
+      const expected = crypto.createHmac("sha256", secret).update(req.rawBody).digest("hex");
+      if (sig !== expected) {
+        console.warn("[Gumroad] Webhook signature mismatch");
+        return res.status(401).send("Invalid signature");
+      }
+    }
+    const body = req.body;
+    console.log("Webhook received (Gumroad):", JSON.stringify(body, null, 2));
+    if (body.event !== "sale" || !body.sale) {
+      return res.json({ received: true });
+    }
+    const sale = body.sale;
+    const custom = sale.custom_fields || sale.custom_properties || {};
+    let listingId = custom.listing_id || sale.listing_id;
+    let type = custom.type || sale.type || "create";
+    let plan = custom.plan || sale.plan;
+    if (!plan && sale.product_id != null) {
+      const pid = String(sale.product_id);
+      const idMap = {};
+      if (process.env.GUMROAD_PRODUCT_ID_1_MONTH) idMap[String(process.env.GUMROAD_PRODUCT_ID_1_MONTH)] = "1";
+      if (process.env.GUMROAD_PRODUCT_ID_3_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_3_MONTHS)] = "3";
+      if (process.env.GUMROAD_PRODUCT_ID_6_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_6_MONTHS)] = "6";
+      if (process.env.GUMROAD_PRODUCT_ID_12_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_12_MONTHS)] = "12";
+      plan = idMap[pid] || null;
+    }
+    if (!listingId || !plan) {
+      console.log("[Gumroad] Missing listing_id or plan in sale:", { listingId, plan, custom });
+      return res.json({ received: true });
+    }
+    await applyPaymentSuccessToListing(String(listingId), String(type), String(plan));
+    res.json({ received: true });
+  } catch (err) {
+    console.error("[Gumroad] Webhook error:", err);
+    res.status(500).send("Webhook error");
   }
 });
 
