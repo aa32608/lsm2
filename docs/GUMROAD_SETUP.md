@@ -54,9 +54,15 @@ curl -X PUT "https://api.gumroad.com/v2/resource_subscriptions" \
 
 ---
 
-## 4. Return URL (optional)
+## 4. Redirect URL (post-purchase)
 
-In Gumroad you can set a redirect URL after purchase, e.g. `https://www.bizcall.mk/mylistings?payment=success`, so users land back on My Listings. Activation is done by the webhook; redirect is for UX only.
+So users land back on My Listings after paying:
+
+1. In Gumroad go to **Products** → open each product (1m, 3m, 6m, 12m).
+2. On the product page, find **Redirect** (or **Redirect URL** / **Post-purchase redirect** / **Thank you page** — wording varies by Gumroad UI).
+3. Set it to: `https://www.bizcall.mk/mylistings?payment=success`
+
+Activation is done by the webhook; the redirect is for UX only.
 
 ---
 

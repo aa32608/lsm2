@@ -284,8 +284,9 @@ app.use(
   })
 );
 
-// Keep raw body for Gumroad webhook signature verification
+// Parse JSON (and keep raw for Gumroad signature). Gumroad Ping sends x-www-form-urlencoded, so we need both.
 app.use(bodyParser.json({ verify: (req, res, buf) => { req.rawBody = buf; } }));
+app.use(bodyParser.urlencoded({ extended: true, verify: (req, res, buf) => { if (!req.rawBody) req.rawBody = buf; } }));
 
 /* ----------------------- HEALTH CHECK ENDPOINT ----------------------- */
 // Health check endpoint to wake up backend and preload services
@@ -1017,6 +1018,28 @@ app.post("/api/webhook", async (req, res) => {
 });
 
 /* ----------------------- GUMROAD WEBHOOK ----------------------- */
+// Gumroad Ping sends x-www-form-urlencoded flat params (sale_id, product_id, email, custom_fields, ...), not JSON with body.sale
+function normalizeGumroadBody(reqBody) {
+  if (reqBody.sale && reqBody.event === "sale") return reqBody;
+  if (reqBody.product_id != null) {
+    let custom_fields = reqBody.custom_fields;
+    if (typeof custom_fields === "string") {
+      try { custom_fields = JSON.parse(custom_fields); } catch { custom_fields = {}; }
+    }
+    if (custom_fields && typeof custom_fields !== "object") custom_fields = {};
+    return {
+      event: "sale",
+      sale: {
+        product_id: reqBody.product_id,
+        email: reqBody.email || reqBody.purchaser_email,
+        purchaser_email: reqBody.email || reqBody.purchaser_email,
+        custom_fields: custom_fields || {},
+      },
+    };
+  }
+  return reqBody;
+}
+
 app.post("/api/webhook/gumroad", async (req, res) => {
   try {
     const secret = process.env.GUMROAD_WEBHOOK_SECRET;
@@ -1028,7 +1051,7 @@ app.post("/api/webhook/gumroad", async (req, res) => {
         return res.status(401).send("Invalid signature");
       }
     }
-    const body = req.body;
+    const body = normalizeGumroadBody(req.body || {});
     console.log("Webhook received (Gumroad):", JSON.stringify(body, null, 2));
     if (body.event !== "sale" || !body.sale) {
       return res.json({ received: true });
