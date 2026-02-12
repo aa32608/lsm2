@@ -81,6 +81,14 @@ function myListingsUrl() {
 // 12-month plan: featured (top of search, badge) only for this many days; listing stays live for full 12 months
 const FEATURED_DURATION_DAYS = 90; // 3 months
 
+// Gumroad product_id -> plan (never trust custom "plan" field; buyer pays for this product)
+const GUMROAD_PRODUCT_ID_TO_PLAN = {
+  "U7pqYI9x8p4bUHPgsGffcA==": "1",   // 1 Month
+  "W-l-I-dthzS_dDdnye6XQA==": "3",   // 3 Months
+  "q8zaQOWcUoqAlqr77RIG5w==": "6",   // 6 Months
+  "x4PxykMy3NSUT98XIp0-IA==": "12",  // 12 Months
+};
+
 // Milestone emails: send when a listing reaches impressive view/contact counts (once per milestone)
 const VIEW_MILESTONES = [100, 250, 500, 1000, 5000, 10000, 25000];
 const CONTACT_MILESTONES = [25, 50, 100, 250, 500, 1000];
@@ -769,8 +777,14 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
 });
 
 /* ----------------------- SHARED: APPLY PAYMENT SUCCESS TO LISTING ----------------------- */
-/** Applies payment success: updates listing in Firebase and sends confirmation email. Used by Dodo and Gumroad webhooks. */
-async function applyPaymentSuccessToListing(listingId, type, plan) {
+/**
+ * @param {string} listingId
+ * @param {string} type - "create" | "extend"
+ * @param {string} plan - "1" | "3" | "6" | "12"
+ * @param {{ purchaserEmail?: string, inferType?: boolean }} [options] - If purchaserEmail set, only apply when it matches listing owner. If inferType true, derive type from listing state (don't trust custom field).
+ */
+async function applyPaymentSuccessToListing(listingId, type, plan, options = {}) {
+  const { purchaserEmail, inferType } = options;
   const updates = {};
   const now = Date.now();
   let durationDays = 30;
@@ -787,6 +801,29 @@ async function applyPaymentSuccessToListing(listingId, type, plan) {
   const listing = snapshot.val();
   if (!listing) {
     console.log(`[Payment] Listing ${listingId} not found.`);
+    return;
+  }
+
+  // Don't trust custom "type": infer from listing state so payer can't get extend logic by editing the form
+  if (inferType) {
+    const isActive = listing.status === "verified" && listing.expiresAt && listing.expiresAt > now;
+    type = isActive ? "extend" : "create";
+  }
+
+  // Purchaser must own the listing (so changing listing_id at checkout doesn't activate someone else's listing)
+  if (purchaserEmail != null && purchaserEmail !== "") {
+    const ownerEmail = (listing.userEmail || listing.email || "").trim().toLowerCase();
+    const buyerEmail = String(purchaserEmail).trim().toLowerCase();
+    if (ownerEmail && buyerEmail && ownerEmail !== buyerEmail) {
+      console.log(`[Payment] Purchaser email does not match listing owner for ${listingId}, skipping.`);
+      return;
+    }
+  }
+
+  // Only activate unpaid listings for "create" (prevents re-activating already paid listings)
+  const status = listing.status || "";
+  if (type === "create" && status !== "unpaid" && status !== "pending") {
+    console.log(`[Payment] Listing ${listingId} not unpaid (status: ${status}), skipping.`);
     return;
   }
 
@@ -998,23 +1035,16 @@ app.post("/api/webhook/gumroad", async (req, res) => {
     }
     const sale = body.sale;
     const custom = sale.custom_fields || sale.custom_properties || {};
-    let listingId = custom.listing_id || sale.listing_id;
-    let type = custom.type || sale.type || "create";
-    let plan = custom.plan || sale.plan;
-    if (!plan && sale.product_id != null) {
-      const pid = String(sale.product_id);
-      const idMap = {};
-      if (process.env.GUMROAD_PRODUCT_ID_1_MONTH) idMap[String(process.env.GUMROAD_PRODUCT_ID_1_MONTH)] = "1";
-      if (process.env.GUMROAD_PRODUCT_ID_3_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_3_MONTHS)] = "3";
-      if (process.env.GUMROAD_PRODUCT_ID_6_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_6_MONTHS)] = "6";
-      if (process.env.GUMROAD_PRODUCT_ID_12_MONTHS) idMap[String(process.env.GUMROAD_PRODUCT_ID_12_MONTHS)] = "12";
-      plan = idMap[pid] || null;
-    }
+    const listingId = custom.listing_id || sale.listing_id;
+    // Never trust custom "plan" or "type": derive plan from product bought, infer type from listing state
+    const plan = sale.product_id != null ? (GUMROAD_PRODUCT_ID_TO_PLAN[String(sale.product_id)] || null) : null;
+    const purchaserEmail = sale.email || sale.purchaser_email || sale.buyer_email || null;
+
     if (!listingId || !plan) {
-      console.log("[Gumroad] Missing listing_id or plan in sale:", { listingId, plan, custom });
+      console.log("[Gumroad] Missing listing_id or unknown product_id in sale:", { listingId, plan, product_id: sale.product_id });
       return res.json({ received: true });
     }
-    await applyPaymentSuccessToListing(String(listingId), String(type), String(plan));
+    await applyPaymentSuccessToListing(String(listingId), "create", String(plan), { purchaserEmail, inferType: true });
     res.json({ received: true });
   } catch (err) {
     console.error("[Gumroad] Webhook error:", err);
