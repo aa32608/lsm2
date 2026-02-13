@@ -957,6 +957,8 @@ app.post("/api/create-payment", async (req, res) => {
     const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
     const params = new URLSearchParams({ readonly_user: "true" });
     if (customerEmail) params.set("user_email", customerEmail);
+    const sandbox = /^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""));
+    if (sandbox) params.set("sandbox", "true");
     const checkoutUrl = `${base}?${params.toString()}`;
 
     if (isFirebaseInitialized) {
