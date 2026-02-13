@@ -22,6 +22,7 @@ export default function ListingDetailClient({ id, initialListing }) {
     handleShareListing,
     categoryIcons,
     submitFeedback,
+    deleteFeedback,
     feedbackSaving,
     setReportingListingId,
     setShowReportModal,
@@ -167,16 +168,14 @@ export default function ListingDetailClient({ id, initialListing }) {
     const unsubscribe = onValue(feedbackRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const values = Object.values(data);
-        const sum = values.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0);
-        const count = values.length;
+        const entries = Object.entries(data);
+        const sum = entries.reduce((acc, [, curr]) => acc + (Number(curr.rating) || 0), 0);
+        const count = entries.length;
         const avg = count > 0 ? parseFloat((sum / count).toFixed(1)) : null;
-        
-        // Sort comments by date desc
-        const comments = values
+        const comments = entries
+          .map(([fid, v]) => ({ ...v, id: fid }))
           .filter(v => v.comment)
           .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
         setLocalFeedbackStats({ avg, count, comments });
       } else {
         setLocalFeedbackStats({ avg: null, count: 0, comments: [] });
@@ -779,26 +778,45 @@ export default function ListingDetailClient({ id, initialListing }) {
                      {t("reviews")} ({localFeedbackStats.comments.length})
                    </h3>
                    <div className="feedback-items" role="list">
-                     {localFeedbackStats.comments.map((fb, i) => (
-                       <article key={i} className="detail-feedback-item" role="listitem">
-                         <div className="detail-feedback-header">
-                           <span className="detail-feedback-author">{fb.userName || fb.userDisplayName || t("anonymous")}</span>
-                           <span className="detail-feedback-rating" aria-label={`${fb.rating} out of 5 stars`}>
-                             {'⭐'.repeat(Number(fb.rating))}
-                           </span>
-                     </div>
-                         {fb.comment && (
-                           <p className="detail-feedback-text">{fb.comment}</p>
-                         )}
-                         <time className="detail-feedback-date" dateTime={new Date(fb.createdAt).toISOString()}>
-                           {new Date(fb.createdAt).toLocaleDateString(undefined, { 
-                             year: 'numeric', 
-                             month: 'long', 
-                             day: 'numeric' 
-                           })}
-                         </time>
-                       </article>
-                     ))}
+                     {localFeedbackStats.comments.map((fb) => {
+                       const canDelete = user && (isOwner || (fb.userId && fb.userId === user.uid));
+                       return (
+                         <article key={fb.id} className="detail-feedback-item" role="listitem">
+                           <div className="detail-feedback-header">
+                             <span className="detail-feedback-author">{fb.userName || fb.userDisplayName || t("anonymous")}</span>
+                             <div className="detail-feedback-header-right">
+                               <span className="detail-feedback-rating" aria-label={`${fb.rating} out of 5 stars`}>
+                                 {'⭐'.repeat(Number(fb.rating))}
+                               </span>
+                               {canDelete && (
+                               <button
+                                 type="button"
+                                 className="detail-feedback-delete btn-icon"
+                                 aria-label={t("deleteReview")}
+                                 title={t("deleteReview")}
+                                 onClick={async () => {
+                                   if (!window.confirm(t("deleteReviewConfirm") || "Delete this review?")) return;
+                                   await deleteFeedback(id, fb.id, { isListingOwner: isOwner, feedbackUserId: fb.userId });
+                                 }}
+                               >
+                                 🗑️
+                               </button>
+                               )}
+                             </div>
+                           </div>
+                           {fb.comment && (
+                             <p className="detail-feedback-text">{fb.comment}</p>
+                           )}
+                           <time className="detail-feedback-date" dateTime={new Date(fb.createdAt).toISOString()}>
+                             {new Date(fb.createdAt).toLocaleDateString(undefined, { 
+                               year: 'numeric', 
+                               month: 'long', 
+                               day: 'numeric' 
+                             })}
+                           </time>
+                         </article>
+                       );
+                     })}
                    </div>
                  </>
                ) : (

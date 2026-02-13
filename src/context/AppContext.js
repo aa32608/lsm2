@@ -939,6 +939,27 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   };
 
+  const deleteFeedback = useCallback(async (listingId, feedbackId, { isListingOwner, feedbackUserId }) => {
+    if (!user || !db) {
+      showMessage(t("unauthorized") || "Unauthorized", "error");
+      return false;
+    }
+    const canDelete = isListingOwner === true || (feedbackUserId && feedbackUserId === user.uid);
+    if (!canDelete) {
+      showMessage(t("cannotDeleteReview") || "You cannot delete this review.", "error");
+      return false;
+    }
+    try {
+      await remove(dbRef(db, `feedback/${listingId}/${feedbackId}`));
+      showMessage(t("reviewDeleted") || "Review deleted.", "success");
+      return true;
+    } catch (err) {
+      console.error("[Feedback] Delete error:", err);
+      showMessage(t("feedbackDeleteError") || "Failed to delete review.", "error");
+      return false;
+    }
+  }, [user, db, showMessage, t]);
+
   // Load Reviews Logic - REMOVED (We load per listing now)
   /*
   useEffect(() => {
@@ -1358,6 +1379,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     favorites,
     feedbackAverages,
     submitFeedback,
+    deleteFeedback,
     feedbackSaving,
     // Auth State
     email, setEmail,
