@@ -955,7 +955,8 @@ app.post("/api/create-payment", async (req, res) => {
       return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
     }
     const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
-    const params = new URLSearchParams({ readonly_user: "true" });
+    // Force EUR pricing in Freemius checkout
+    const params = new URLSearchParams({ readonly_user: "true", currency: "eur" });
     if (customerEmail) params.set("user_email", customerEmail);
     // Sandbox only from server env; client cannot force sandbox
     if (/^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""))) {
