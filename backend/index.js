@@ -954,7 +954,7 @@ app.post("/api/create-payment", async (req, res) => {
       console.error(`[Freemius] Product or plan missing: product_id=${!!productId}, plan=${plan}`);
       return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
     }
-    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
+    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/?sanbox=true`;
     const params = new URLSearchParams({ readonly_user: "true" });
     if (customerEmail) params.set("user_email", customerEmail);
     const sandbox = /^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""));
