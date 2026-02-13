@@ -190,8 +190,8 @@ export const mkSpotlightCities = [
 export const FEATURED_DURATION_DAYS = 90; // 3 months
 
 export const PLANS = [
-  { id: "1", label: "1 Month", price: "2 EUR", duration: "30 days", priceVal: 2 },
-  { id: "3", label: "3 Months", price: "5 EUR", duration: "90 days", priceVal: 5 },
-  { id: "6", label: "6 Months", price: "8 EUR", duration: "180 days", priceVal: 8 },
-  { id: "12", label: "12 Months", price: "12 EUR", duration: "365 days", priceVal: 12 },
+  { id: "1", label: "1 Month", price: "3 EUR", duration: "30 days", priceVal: 3 },
+  { id: "3", label: "3 Months", price: "6 EUR", duration: "90 days", priceVal: 6 },
+  { id: "6", label: "6 Months", price: "10 EUR", duration: "180 days", priceVal: 10 },
+  { id: "12", label: "12 Months", price: "14 EUR", duration: "365 days", priceVal: 14 },
 ];

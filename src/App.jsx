@@ -923,7 +923,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
             const now = Date.now();
             if (type === 'create') {
                 updates[`listings/${listingId}/status`] = "verified";
-                updates[`listings/${listingId}/pricePaid`] = parseInt(plan) === 1 ? 2 : (parseInt(plan) === 3 ? 5 : (parseInt(plan) === 6 ? 8 : 12));
+                // Store the EUR amount paid for the listing based on plan
+                updates[`listings/${listingId}/pricePaid`] =
+                  parseInt(plan) === 1 ? 3 :
+                  parseInt(plan) === 3 ? 6 :
+                  parseInt(plan) === 6 ? 10 : 14;
                 updates[`listings/${listingId}/plan`] = plan;
                 updates[`listings/${listingId}/expiresAt`] = now + durationMs;
                 updates[`listings/${listingId}/createdAt`] = now;
