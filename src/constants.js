@@ -189,6 +189,22 @@ export const mkSpotlightCities = [
 /** For 12-month plan: listing is "featured" (top of search, badge) only for the first N days; then stays live for remainder. */
 export const FEATURED_DURATION_DAYS = 90; // 3 months
 
+/** True if listing is in featured period (12-month plan, featuredUntil > now). */
+export function isFeatured(listing) {
+  return listing && String(listing.plan) === "12" && (!listing.featuredUntil || listing.featuredUntil > Date.now());
+}
+
+/** Sort listings so featured are first, then by createdAt descending. Use when storing or displaying the 250 verified pool. */
+export function sortFeaturedFirst(listings) {
+  const now = Date.now();
+  return [...listings].sort((a, b) => {
+    const aF = isFeatured(a) ? 1 : 0;
+    const bF = isFeatured(b) ? 1 : 0;
+    if (bF !== aF) return bF - aF;
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+}
+
 export const PLANS = [
   { id: "1", label: "1 Month", price: "3 EUR", duration: "30 days", priceVal: 3 },
   { id: "3", label: "3 Months", price: "6 EUR", duration: "90 days", priceVal: 6 },

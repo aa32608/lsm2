@@ -43,7 +43,7 @@ import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./legacy_pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
-import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS } from "./constants";
+import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS, sortFeaturedFirst, isFeatured } from "./constants";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
 
@@ -1034,7 +1034,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       dbRef(db, "listings"),
       orderByChild("status"),
       equalTo("verified"),
-      limitToLast(500) // Optimized limit for 20k+ listings
+      limitToLast(250)
     );
 
     let isFirstLoad = true;
@@ -1059,15 +1059,11 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       }
       const val = snapshot.val() || {};
       const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
-      
-      // Filter expired listings immediately
       const now = Date.now();
       const activeArr = arr.filter(l => !l.expiresAt || l.expiresAt > now);
-      
-      // Always update data (this is the source of truth)
-      setPublicListings(activeArr);
-      // Also update React Query cache for cross-component sharing
-      queryClient.setQueryData(['listings', 'public'], activeArr);
+      const sorted = sortFeaturedFirst(activeArr);
+      setPublicListings(sorted);
+      queryClient.setQueryData(['listings', 'public'], sorted);
       setListingsLoading(false);
       setIsRefreshing(false);
     }).catch(err => {
@@ -1084,15 +1080,12 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         return; // Skip first trigger, get() already handled it
       }
       
-      // Silent background update - data updates without any loading indicators
       const val = snapshot.val() || {};
       const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
       const now = Date.now();
       const activeArr = arr.filter(l => !l.expiresAt || l.expiresAt > now);
-      
-      setPublicListings(activeArr);
-      // Also update React Query cache silently
-      queryClient.setQueryData(['listings', 'public'], activeArr);
+      setPublicListings(sortFeaturedFirst(activeArr));
+      queryClient.setQueryData(['listings', 'public'], sortFeaturedFirst(activeArr));
       setIsRefreshing(false);
     }, (err) => {
       console.error("Public listener error:", err);
@@ -1794,29 +1787,31 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       });
     }
     
-    // Sorting - use efficient comparison functions
+    // Featured always first, then apply sort option (filters already applied above)
+    const featuredCmp = (a, b) => (isFeatured(b) ? 1 : 0) - (isFeatured(a) ? 1 : 0);
     if (sortBy === "newest") {
-      arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      arr.sort((a, b) => { const c = featuredCmp(a, b); return c !== 0 ? c : (b.createdAt || 0) - (a.createdAt || 0); });
     } else if (sortBy === "expiring") {
-      arr.sort((a, b) => (a.expiresAt || 0) - (b.expiresAt || 0));
+      arr.sort((a, b) => { const c = featuredCmp(a, b); return c !== 0 ? c : (a.expiresAt || 0) - (b.expiresAt || 0); });
     } else if (sortBy === "az") {
       arr.sort((a, b) => {
-        const aName = (a.name || "").toLowerCase();
-        const bName = (b.name || "").toLowerCase();
-        return aName.localeCompare(bName);
+        const c = featuredCmp(a, b);
+        if (c !== 0) return c;
+        return (a.name || "").toLowerCase().localeCompare((b.name || "").toLowerCase());
       });
     } else if (sortBy === "topRated") {
-      // Use pre-computed ranking scores for faster sorting
-      // This ensures ranking happens on par with loading, not after listings are loaded
       arr.sort((a, b) => {
+        const c = featuredCmp(a, b);
+        if (c !== 0) return c;
         const aStats = rankingScores?.get(a.id) || feedbackAverages[a.id] || { avg: -1, count: 0 };
         const bStats = rankingScores?.get(b.id) || feedbackAverages[b.id] || { avg: -1, count: 0 };
         if (bStats.avg !== aStats.avg) return bStats.avg - aStats.avg;
         if (bStats.count !== aStats.count) return bStats.count - aStats.count;
         return (b.createdAt || 0) - (a.createdAt || 0);
       });
+    } else {
+      arr.sort((a, b) => { const c = featuredCmp(a, b); return c !== 0 ? c : (b.createdAt || 0) - (a.createdAt || 0); });
     }
-    
     return arr;
   }, [verifiedListings, deferredQ, catFilter, locFilter, sortBy, feedbackAverages, rankingScores, t]);
   const totalPages = useMemo(

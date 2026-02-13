@@ -725,10 +725,18 @@ function getThisMonthKey() {
   return `${y}-${m}`;
 }
 
-// Aggregate stats for homepage social proof + top 5 featured listings (real-time from DB)
+// In-memory cache for listing-stats-aggregate to avoid repeated full-DB reads (saves Firebase bandwidth)
+const LISTING_STATS_CACHE_MS = 10 * 60 * 1000; // 10 minutes
+let listingStatsCache = null;
+let listingStatsCacheAt = 0;
+
+// Aggregate stats for homepage social proof + top 5 featured listings
 app.get("/api/listing-stats-aggregate", async (req, res) => {
-  if (!isFirebaseInitialized) {
-    return res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [], lastMonthKey: null, thisMonthKey: null });
+  const empty = { totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [], lastMonthKey: null, thisMonthKey: null };
+  if (!isFirebaseInitialized) return res.json(empty);
+  const now = Date.now();
+  if (listingStatsCache && now - listingStatsCacheAt < LISTING_STATS_CACHE_MS) {
+    return res.json(listingStatsCache);
   }
   try {
     const snapshot = await db.ref("listings").once("value");
@@ -737,7 +745,6 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
     const thisMonthKey = getThisMonthKey();
     let totalViews = 0, totalContacts = 0, totalByPhone = 0, totalByEmail = 0, totalByWhatsapp = 0;
     const featured = [];
-    const now = Date.now();
     Object.entries(listings).forEach(([listingId, l]) => {
       const views = Number(l.views) || 0;
       const contacts = Number(l.contacts) || 0;
@@ -764,16 +771,17 @@ app.get("/api/listing-stats-aggregate", async (req, res) => {
         });
       }
     });
-    // Only show listings with positive gain (this month >= last month)
     const withPositiveGain = featured.filter(
       (item) => (item.views + item.contacts) >= (item.lastMonthViews + item.lastMonthContacts)
     );
     withPositiveGain.sort((a, b) => (b.views + b.contacts) - (a.views + a.contacts));
     const top5Featured = withPositiveGain.slice(0, 5);
-    res.json({ totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured, lastMonthKey, thisMonthKey });
+    listingStatsCache = { totalViews, totalContacts, totalByPhone, totalByEmail, totalByWhatsapp, top5Featured, lastMonthKey, thisMonthKey };
+    listingStatsCacheAt = now;
+    res.json(listingStatsCache);
   } catch (err) {
     console.error("[API] listing-stats-aggregate error:", err);
-    res.json({ totalViews: 0, totalContacts: 0, totalByPhone: 0, totalByEmail: 0, totalByWhatsapp: 0, top5Featured: [], lastMonthKey: null, thisMonthKey: null });
+    res.json(empty);
   }
 });
 

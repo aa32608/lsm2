@@ -2,6 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ref as dbRef, get, query, orderByChild, equalTo, limitToLast } from 'firebase/database';
 import { db } from '../firebase';
+import { sortFeaturedFirst } from '../constants';
 
 // Fetch verified listings with React Query caching
 // Optimized for large datasets (20k+ listings)
@@ -15,7 +16,7 @@ export function usePublicListings(initialData = []) {
         dbRef(db, 'listings'),
         orderByChild('status'),
         equalTo('verified'),
-        limitToLast(1000) // Increased limit for 20k listings
+        limitToLast(250)
       );
       
       const snapshot = await get(verifiedQuery);
@@ -25,11 +26,7 @@ export function usePublicListings(initialData = []) {
       // Filter expired listings
       const now = Date.now();
       const filtered = arr.filter(l => !l.expiresAt || l.expiresAt > now);
-      
-      // Sort by creation date (newest first)
-      filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      
-      return filtered;
+      return sortFeaturedFirst(filtered);
     },
     // Use initial data for instant loading (from server fetch)
     // Only use initialData if it has items, otherwise let React Query fetch
@@ -97,13 +94,14 @@ export function usePrefetchListings() {
             dbRef(db, 'listings'),
             orderByChild('status'),
             equalTo('verified'),
-            limitToLast(500)
+            limitToLast(250)
           );
           const snapshot = await get(verifiedQuery);
           const val = snapshot.val() || {};
           const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
           const now = Date.now();
-          return arr.filter(l => !l.expiresAt || l.expiresAt > now);
+          const filtered = arr.filter(l => !l.expiresAt || l.expiresAt > now);
+          return sortFeaturedFirst(filtered);
         },
       });
     },

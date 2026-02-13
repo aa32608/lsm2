@@ -26,7 +26,7 @@ import {
 } from "firebase/auth";
 import { TRANSLATIONS } from "../translations";
 import { MK_CITIES } from "../mkCities";
-import { categories, categoryGroups, categoryIcons, mkSpotlightCities } from "../constants";
+import { categories, categoryGroups, categoryIcons, mkSpotlightCities, sortFeaturedFirst } from "../constants";
 
 const API_BASE =
   (typeof window !== "undefined" && window.location.hostname === "localhost")
@@ -291,28 +291,30 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     isLoading: userListingsLoading 
   } = useUserListings(user?.uid, []);
   
-  // Derived state from React Query
+  // Merge public + user listings (user overrides by id) — avoids loading ALL listings from Firebase
+  const mergedListings = useMemo(() => {
+    const map = new Map();
+    (publicListings || []).forEach((l) => map.set(l.id, l));
+    (userListingsData || []).forEach((l) => map.set(l.id, l));
+    return Array.from(map.values()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }, [publicListings, userListingsData]);
+
   const [listings, setListings] = useState(initialListings);
   const [userListings, setUserListings] = useState([]);
   const [loading, setLoading] = useState(false);
-  
-  // Data is loaded only when React Query has finished loading
-  // This ensures skeleton shows until we know for sure data is loaded
-  const listingsLoaded = useMemo(() => {
-    // Check if we have initial data from server (instant load)
-    const hasInitialData = initialPublicListings.length > 0 || initialListings.length > 0;
-    
-    // If we have initial data, mark as loaded immediately
-    if (hasInitialData) {
-      return true;
+
+  // Keep listings in sync with merged data (from queries); no full-DB listener
+  useEffect(() => {
+    if (mergedListings.length > 0 || !publicListingsLoading) {
+      setListings(mergedListings);
     }
-    
-    // Otherwise, wait for React Query to finish loading
-    // Mark as loaded only when React Query has finished (not loading anymore)
-    // This ensures skeleton shows until data is confirmed loaded
-    const hasFinishedLoading = !publicListingsLoading && !userListingsLoading;
-    
-    return hasFinishedLoading;
+  }, [mergedListings, publicListingsLoading]);
+
+  // Data is loaded only when React Query has finished loading
+  const listingsLoaded = useMemo(() => {
+    const hasInitialData = initialPublicListings.length > 0 || initialListings.length > 0;
+    if (hasInitialData) return true;
+    return !publicListingsLoading && !userListingsLoading;
   }, [publicListings.length, listings.length, publicListingsLoading, userListingsLoading, initialPublicListings.length, initialListings.length]);
   
   const [message, setMessage] = useState({ text: "", type: "info" });
@@ -959,8 +961,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     }
   }, []);
 
-  // Real-time Firebase listener for public listings - ONLY syncs updates
-  // Server already fetched initial data, this only updates changes (not full refetch)
+  // Real-time listener for public listings only (limit 250 — saves Firebase bandwidth)
   useEffect(() => {
     if (!db || !firebaseReady) return;
 
@@ -968,66 +969,32 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       dbRef(db, "listings"),
       orderByChild("status"),
       equalTo("verified"),
-      limitToLast(1000)
+      limitToLast(250)
     );
 
-    // Real-time listener ONLY syncs updates - no initial fetch needed
-    // Server already provided initial data, this just keeps it in sync
     let isFirstSync = true;
     const unsubscribe = onValue(verifiedQuery, (snapshot) => {
       if (snapshot.exists()) {
         const val = snapshot.val() || {};
         const arr = Object.entries(val).map(([id, data]) => ({ id, ...data }));
-        
-        // Filter expired listings
         const now = Date.now();
         const filtered = arr.filter(l => !l.expiresAt || l.expiresAt > now);
-        
-        // Sort by creation date (newest first)
-        filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        
-        // Skip first sync if we have initial data (server already provided it)
+        const sorted = sortFeaturedFirst(filtered);
         if (isFirstSync && publicListings.length > 0) {
           isFirstSync = false;
-          // Only update if there are actual changes (compare lengths/IDs)
           const currentIds = new Set(publicListings.map(l => l.id));
-          const newIds = new Set(filtered.map(l => l.id));
-          if (currentIds.size === newIds.size && 
-              [...currentIds].every(id => newIds.has(id))) {
-            return; // No changes, skip update
-          }
+          const newIds = new Set(sorted.map(l => l.id));
+          if (currentIds.size === newIds.size && [...currentIds].every(id => newIds.has(id))) return;
         }
-        
-        // Update React Query cache silently (no refetch trigger)
-        queryClient.setQueryData(['listings', 'public'], filtered);
+        queryClient.setQueryData(['listings', 'public'], sorted);
         isFirstSync = false;
       }
     }, (error) => {
       console.error("Public listings listener error:", error);
     });
-    
+
     return () => unsubscribe();
   }, [db, firebaseReady, queryClient, publicListings.length]);
-
-  // Real-time Firebase listener for all listings (for merged view)
-  useEffect(() => {
-    if (!db || !firebaseReady) return;
-
-    const listingsRef = dbRef(db, "listings");
-    
-    const unsubscribe = onValue(listingsRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const arr = Object.keys(data).map(key => ({ ...data[key], id: key }));
-        arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setListings(arr);
-      }
-    }, (error) => {
-      console.error("All listings listener error:", error);
-    });
-    
-    return () => unsubscribe();
-  }, [db, firebaseReady]);
 
   // Load Feedback Averages (Effect) - OPTIMIZED: Lazy load only when needed
   useEffect(() => {
@@ -1078,38 +1045,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
       console.error("Feedback fetch error:", error);
     });
 
-    // OPTIMIZATION: Use onValue only for incremental updates (new feedback)
-    // This way we only get new feedback, not re-process everything
-    const unsub = onValue(feedbackRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        const averages = {};
-        const publicListingIds = new Set(publicListings.map(l => l.id));
-        
-        Object.keys(data).forEach(listingId => {
-          if (!publicListingIds.has(listingId)) return;
-          
-          const feedbacks = data[listingId];
-          if (feedbacks && typeof feedbacks === 'object') {
-            const values = Object.values(feedbacks);
-            const ratings = values.map(f => Number(f.rating) || 0).filter(r => r > 0);
-            if (ratings.length > 0) {
-              const sum = ratings.reduce((acc, r) => acc + r, 0);
-              averages[listingId] = {
-                avg: parseFloat((sum / ratings.length).toFixed(1)),
-                count: ratings.length
-              };
-            } else {
-              averages[listingId] = { avg: null, count: 0 };
-            }
-          }
-        });
-        
-        setFeedbackAverages(averages);
-      }
-    });
-    
-    return () => unsub();
+    // Single get() only — no real-time feedback listener to save Firebase bandwidth
+    return undefined;
   }, [db, listingsLoaded, publicListings]);
 
   // Payment return handler – show toast when user lands with ?payment=success or ?payment=failed
@@ -1291,7 +1228,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
         .catch(() => {});
     };
     fetchStats();
-    const interval = setInterval(fetchStats, 60000);
+    const interval = setInterval(fetchStats, 5 * 60 * 1000);
     return () => {
       cancelled = true;
       clearInterval(interval);

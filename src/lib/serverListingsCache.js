@@ -2,6 +2,7 @@
 // Fetches once, caches in memory, syncs updates immediately when Firebase changes
 
 import { db as adminDb } from './firebaseAdmin';
+import { sortFeaturedFirst } from '../constants';
 
 const FIREBASE_DB_URL = 'https://tetovo-lms-default-rtdb.europe-west1.firebasedatabase.app';
 
@@ -53,18 +54,18 @@ async function fetchAndUpdateCache() {
         const verifiedRef = adminDb.ref('listings')
           .orderByChild('status')
           .equalTo('verified')
-          .limitToLast(1000);
+          .limitToLast(250);
         
         const snapshot = await verifiedRef.once('value');
         const verifiedData = snapshot.val() || {};
         
         // Convert to array and filter expired
         const now = Date.now();
-        const publicListings = Object.entries(verifiedData)
-          .map(([id, data]) => ({ id, ...data }))
-          .filter(l => !l.expiresAt || l.expiresAt > now)
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
+        const publicListings = sortFeaturedFirst(
+          Object.entries(verifiedData)
+            .map(([id, data]) => ({ id, ...data }))
+            .filter(l => !l.expiresAt || l.expiresAt > now)
+        );
         listingsCache.publicListings = publicListings;
         listingsCache.lastFetch = Date.now();
         
@@ -76,7 +77,7 @@ async function fetchAndUpdateCache() {
     }
 
     // Fallback: Use REST API
-    const verifiedUrl = `${FIREBASE_DB_URL}/listings.json?orderBy="status"&equalTo="verified"&limitToLast=1000`;
+    const verifiedUrl = `${FIREBASE_DB_URL}/listings.json?orderBy="status"&equalTo="verified"&limitToLast=250`;
     const verifiedResponse = await fetch(verifiedUrl, {
       headers: { 'Accept': 'application/json' },
     });
@@ -89,11 +90,11 @@ async function fetchAndUpdateCache() {
     
     // Convert to array and filter expired
     const now = Date.now();
-    const publicListings = Object.entries(verifiedData)
-      .map(([id, data]) => ({ id, ...data }))
-      .filter(l => !l.expiresAt || l.expiresAt > now)
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
+    const publicListings = sortFeaturedFirst(
+      Object.entries(verifiedData)
+        .map(([id, data]) => ({ id, ...data }))
+        .filter(l => !l.expiresAt || l.expiresAt > now)
+    );
     // Update cache
     listingsCache.publicListings = publicListings;
     listingsCache.lastFetch = Date.now();
@@ -115,7 +116,7 @@ function startRealtimeSync() {
       const verifiedRef = adminDb.ref('listings')
         .orderByChild('status')
         .equalTo('verified')
-        .limitToLast(1000);
+        .limitToLast(250);
       
       // Real-time listener - updates cache immediately when Firebase changes
       listingsCache.listener = verifiedRef.on('value', (snapshot) => {
@@ -124,11 +125,11 @@ function startRealtimeSync() {
           
           // Convert to array and filter expired
           const now = Date.now();
-          const publicListings = Object.entries(verifiedData)
-            .map(([id, data]) => ({ id, ...data }))
-            .filter(l => !l.expiresAt || l.expiresAt > now)
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
+          const publicListings = sortFeaturedFirst(
+            Object.entries(verifiedData)
+              .map(([id, data]) => ({ id, ...data }))
+              .filter(l => !l.expiresAt || l.expiresAt > now)
+          );
           // Update cache immediately
           listingsCache.publicListings = publicListings;
           listingsCache.lastFetch = Date.now();
