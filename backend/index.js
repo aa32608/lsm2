@@ -954,11 +954,13 @@ app.post("/api/create-payment", async (req, res) => {
       console.error(`[Freemius] Product or plan missing: product_id=${!!productId}, plan=${plan}`);
       return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
     }
-    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/?sanbox=true`;
+    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
     const params = new URLSearchParams({ readonly_user: "true" });
     if (customerEmail) params.set("user_email", customerEmail);
-    const sandbox = /^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""));
-    if (sandbox) params.set("sandbox", "true");
+    // Sandbox only from server env; client cannot force sandbox
+    if (/^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""))) {
+      params.set("sandbox", "true");
+    }
     const checkoutUrl = `${base}?${params.toString()}`;
 
     if (isFirebaseInitialized) {

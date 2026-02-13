@@ -1112,7 +1112,8 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     return () => unsub();
   }, [db, listingsLoaded, publicListings]);
 
-  // Payment Success Handler - Check URL params on mount
+  // Payment return handler – show toast when user lands with ?payment=success or ?payment=failed
+  // When listingId is present, App.jsx handles success toast; here we handle Freemius-style return (no listingId) and failed
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
@@ -1121,20 +1122,16 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     const listingId = params.get("listingId");
     const type = params.get("type"); // 'create' or 'extend'
 
-    if (paymentStatus === "success" && listingId) {
-      // Clear params from URL
-      window.history.replaceState({}, "", window.location.pathname);
-      
-      // Show success notification
-      if (type === 'extend') {
-        showMessage(t("listingExtendedSuccess"), "success");
-      } else {
+    if (paymentStatus === "success") {
+      if (!listingId) {
+        // Freemius (or similar) return: no listingId in URL, webhook already activated listing
+        window.history.replaceState({}, "", window.location.pathname);
         showMessage(t("paymentSuccess"), "success");
       }
+      // else: App.jsx handles success + clear when listingId present
     } else if (paymentStatus === "failed" || paymentStatus === "cancel") {
-      // Show failure notification
-      showMessage(t("paymentFailed"), "error");
       window.history.replaceState({}, "", window.location.pathname);
+      showMessage(t("paymentFailed"), "error");
     }
   }, []); // Run once on mount
 
