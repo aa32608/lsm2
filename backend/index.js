@@ -877,7 +877,7 @@ async function applyPaymentSuccessToListing(listingId, type, plan, options = {})
   }
 }
 
-/* ----------------------- PAYMENTS (DODO / GUMROAD) ----------------------- */
+/* ----------------------- PAYMENTS (DODO / GUMROAD / FREEMIUS) ----------------------- */
 
 const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "dodo").toLowerCase();
 
@@ -938,6 +938,41 @@ app.post("/api/create-payment", async (req, res) => {
       }
   }
   // ------------------------
+
+  // --- FREEMIUS: build hosted checkout URL and store pending payment for webhook matching ---
+  if (PAYMENT_PROVIDER === "freemius") {
+    const productId = process.env.FREEMIUS_PRODUCT_ID;
+    let planId = null;
+    switch (String(plan)) {
+      case "1": planId = process.env.FREEMIUS_PLAN_1_MONTH; break;
+      case "3": planId = process.env.FREEMIUS_PLAN_3_MONTHS; break;
+      case "6": planId = process.env.FREEMIUS_PLAN_6_MONTHS; break;
+      case "12": planId = process.env.FREEMIUS_PLAN_12_MONTHS; break;
+      default: planId = process.env.FREEMIUS_PLAN_1_MONTH;
+    }
+    if (!productId || !planId) {
+      console.error(`[Freemius] Product or plan missing: product_id=${!!productId}, plan=${plan}`);
+      return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
+    }
+    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
+    const params = new URLSearchParams({ readonly_user: "true" });
+    if (customerEmail) params.set("user_email", customerEmail);
+    const checkoutUrl = `${base}?${params.toString()}`;
+
+    if (isFirebaseInitialized) {
+      try {
+        await db.ref(`pendingPayments/${listingId}`).set({
+          email: (customerEmail || "").trim().toLowerCase(),
+          plan: String(plan),
+          type: String(type || "create"),
+          createdAt: Date.now(),
+        });
+      } catch (e) {
+        console.error("[Freemius] Failed to store pending payment:", e);
+      }
+    }
+    return res.json({ checkoutUrl });
+  }
 
   // --- GUMROAD: build checkout URL with custom params ---
   if (PAYMENT_PROVIDER === "gumroad") {
@@ -1071,6 +1106,76 @@ app.post("/api/webhook/gumroad", async (req, res) => {
     res.json({ received: true });
   } catch (err) {
     console.error("[Gumroad] Webhook error:", err);
+    res.status(500).send("Webhook error");
+  }
+});
+
+/* ----------------------- FREEMIUS WEBHOOK ----------------------- */
+// Freemius sends JSON; verify x-signature = HMAC SHA256(rawBody, product secret key).
+// payment.created: match pending payment by buyer email + plan_id, then activate listing.
+function freemiusPlanIdToPlan(planId) {
+  if (planId == null) return null;
+  const s = String(planId);
+  if (s === String(process.env.FREEMIUS_PLAN_1_MONTH)) return "1";
+  if (s === String(process.env.FREEMIUS_PLAN_3_MONTHS)) return "3";
+  if (s === String(process.env.FREEMIUS_PLAN_6_MONTHS)) return "6";
+  if (s === String(process.env.FREEMIUS_PLAN_12_MONTHS)) return "12";
+  return null;
+}
+
+app.post("/api/webhook/freemius", async (req, res) => {
+  try {
+    const secret = process.env.FREEMIUS_SECRET_KEY;
+    if (secret && req.rawBody) {
+      const sig = req.headers["x-signature"];
+      const hash = crypto.createHmac("sha256", secret).update(req.rawBody).digest("hex");
+      if (!sig || !crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(sig, "hex"))) {
+        console.warn("[Freemius] Webhook signature mismatch");
+        return res.status(401).send("Invalid signature");
+      }
+    }
+    const event = req.body || {};
+    console.log("Webhook received (Freemius):", event.type, event.id);
+    if (event.type !== "payment.created") {
+      return res.json({ received: true });
+    }
+    const objects = event.objects || {};
+    const user = objects.user || {};
+    const payment = objects.payment || {};
+    const email = (user.email || "").trim().toLowerCase();
+    const planId = payment.plan_id != null ? String(payment.plan_id) : null;
+    const plan = freemiusPlanIdToPlan(planId);
+    if (!email || !plan) {
+      console.log("[Freemius] Missing email or unknown plan_id in payment.created:", { email: !!email, plan_id: planId });
+      return res.json({ received: true });
+    }
+    if (!isFirebaseInitialized) {
+      console.warn("[Freemius] Firebase not initialized, cannot match pending payment");
+      return res.json({ received: true });
+    }
+    const pendingSnap = await db.ref("pendingPayments").once("value");
+    const pending = pendingSnap.val() || {};
+    let listingId = null;
+    let pendingType = "create";
+    let oldest = Infinity;
+    for (const [lid, data] of Object.entries(pending)) {
+      if (!data || (data.email || "").trim().toLowerCase() !== email || String(data.plan) !== plan) continue;
+      const created = Number(data.createdAt) || 0;
+      if (created < oldest) {
+        oldest = created;
+        listingId = lid;
+        pendingType = data.type || "create";
+      }
+    }
+    if (!listingId) {
+      console.log("[Freemius] No pending payment found for email + plan:", email, plan);
+      return res.json({ received: true });
+    }
+    await applyPaymentSuccessToListing(listingId, pendingType, plan, { purchaserEmail: email, inferType: true });
+    await db.ref(`pendingPayments/${listingId}`).remove();
+    res.json({ received: true });
+  } catch (err) {
+    console.error("[Freemius] Webhook error:", err);
     res.status(500).send("Webhook error");
   }
 });

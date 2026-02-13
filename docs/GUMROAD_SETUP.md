@@ -56,13 +56,22 @@ curl -X PUT "https://api.gumroad.com/v2/resource_subscriptions" \
 
 ## 4. Redirect URL (post-purchase)
 
-So users land back on My Listings after paying:
+So users land back on My Listings after paying, set a redirect URL in Gumroad. **Gumroad does not document this in their help; the exact location can vary.**
 
-1. In Gumroad go to **Products** → open each product (1m, 3m, 6m, 12m).
-2. On the product page, find **Redirect** (or **Redirect URL** / **Post-purchase redirect** / **Thank you page** — wording varies by Gumroad UI).
-3. Set it to: `https://www.bizcall.mk/mylistings?payment=success`
+**Where to look (exact locations to try):**
 
-Activation is done by the webhook; the redirect is for UX only.
+1. **Dashboard → Products** → click the product name (e.g. 1‑month plan).
+2. On the **product edit** page, check:
+   - **Right column or bottom:** look for **"Redirect"**, **"Redirect URL"**, **"Thank you page"**, **"Success URL"** or **"Post-purchase redirect"**.
+   - **"..." or "More" menu** on the product page (top right).
+   - **Configure** / **Advanced** / **Checkout** section if the product page has tabs or sections.
+3. **Settings (gear)** → **Checkout** or **Default thank you page** (account-level).
+4. If you use **Overlay** on your site: there is no product-level redirect; redirect is done with JavaScript (see [Gumroad overlay redirect](https://stackoverflow.com/questions/57433503/how-to-use-gumroads-listener-to-redirect-to-url-from-their-overlay)).
+
+**URL to set (when you find the field):**  
+`https://www.bizcall.mk/mylistings?payment=success`
+
+Activation is done by the webhook; the redirect is for UX only. If you still can’t find the option, ask Gumroad support: “Where do I set a custom redirect URL after a customer completes purchase?”
 
 ---
 
