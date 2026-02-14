@@ -83,17 +83,6 @@ export default function HomeTab() {
             <span className="trust-icon" aria-hidden="true">💡</span>
             {t("homeSimpleTrustLine")}
           </p>
-          <div className="hero-explore-cta" aria-label={t("browseServicesCta")}>
-            <p className="hero-explore-hint">{t("browseServicesHint")}</p>
-            <Link
-              href="/listings"
-              className="btn btn-secondary hero-explore-btn"
-              aria-label={t("exploreListingsCta")}
-            >
-              <span className="btn-icon" aria-hidden="true">🔍</span>
-              <span className="btn-text">{t("exploreListingsCta")}</span>
-            </Link>
-          </div>
         </div>
       </section>
 

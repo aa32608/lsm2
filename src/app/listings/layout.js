@@ -51,13 +51,6 @@ export default function ListingsLayout({ children }) {
           }),
         }}
       />
-      {/* Server-rendered content so crawlers get real content (fixes redirect/low-value and AdSense policy) */}
-      <section className="listings-page-intro" aria-label="Explore listings">
-        <h1 className="listings-page-intro-title">Explore Listings</h1>
-        <p className="listings-page-intro-text">
-          Discover thousands of services and listings across North Macedonia. Find trusted local businesses, services, and products in Skopje, Tetovo, Ohrid, and more.
-        </p>
-      </section>
       {children}
     </>
   );

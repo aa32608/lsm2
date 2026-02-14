@@ -5517,27 +5517,6 @@ img {
   background: var(--background);
 }
 
-/* Server-rendered intro for crawlers and AdSense (fixes redirect / low-value content) */
-.listings-page-intro {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: var(--spacing-lg) var(--spacing-md) var(--spacing-sm);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.listings-page-intro-title {
-  font-size: clamp(1.5rem, 4vw, 2.25rem);
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0 0 0.5rem 0;
-}
-.listings-page-intro-text {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin: 0;
-}
-
 .listings-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);

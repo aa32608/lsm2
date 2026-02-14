@@ -30,7 +30,6 @@ const Header = ({ sidebarOpen, onMenuToggle }) => {
   const navItems = [
     { path: "/", label: t("homepage"), icon: "🏠" },
     { path: "/listings", label: t("explore"), icon: "🧭", badge: verifiedListings?.length || 0 },
-    { path: "/pricing", label: t("pricing"), icon: "💰" },
     { path: "/contact", label: t("contactUs"), icon: "✉️" },
     ...(user
       ? [

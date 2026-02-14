@@ -95,10 +95,10 @@ export default function ListingsTab(props = {}) {
     <div className="listings-page">
       <div className="listings-header">
         <div className="listings-header-content">
-          <h2 className="listings-page-title">
+          <h1 className="listings-page-title">
             <span className="listings-page-icon" aria-hidden="true">🧭</span>
             {t("explore")}
-          </h2>
+          </h1>
           <p className="listings-page-subtitle">
             {t("exploreSubtitle")}
           </p>
