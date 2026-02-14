@@ -32,9 +32,13 @@ export default async function RootLayout({ children }) {
   const { publicListings, allListings } = await getServerListings();
 
   return (
-    <html lang="sq">
+    <html lang="en">
       <head>
+        <meta httpEquiv="content-language" content="en" />
         <link rel="icon" href="/logo.png" />
+        <link rel="alternate" hrefLang="en" href="https://bizcall.mk/?lang=en" />
+        <link rel="alternate" hrefLang="sq" href="https://bizcall.mk/?lang=sq" />
+        <link rel="alternate" hrefLang="mk" href="https://bizcall.mk/?lang=mk" />
         {/* DNS Prefetch and Preconnect for faster connections */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

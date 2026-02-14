@@ -1,5 +1,6 @@
 "use client";
 import React, { lazy, Suspense, useEffect } from "react";
+import Link from "next/link";
 import { AppProvider, useApp } from "../context/AppContext";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -87,9 +88,11 @@ const LayoutContent = ({ children }) => {
 
       <footer className="footer">
         <div className="footer-links">
-          <button className="btn-link" onClick={() => setShowTerms(true)}>{t("terms")}</button>
+          <Link href="/terms" className="btn-link">{t("terms")}</Link>
           <span className="separator">•</span>
-          <button className="btn-link" onClick={() => setShowPrivacy(true)}>{t("privacy")}</button>
+          <Link href="/privacy" className="btn-link">{t("privacy")}</Link>
+          <span className="separator">•</span>
+          <Link href="/pricing" className="btn-link">{t("pricing")}</Link>
         </div>
         <p>© 2026 {t("appName")} • {t("bizCall")}</p>
       </footer>

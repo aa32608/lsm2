@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { 
@@ -47,8 +48,6 @@ const AuthModal = () => {
     setPasswordForm,
     showMessage,
     countryCodes,
-    setShowTerms,
-    setShowPrivacy,
   } = useApp();
 
   // Local Helpers
@@ -568,7 +567,7 @@ const AuthModal = () => {
                       className="auth-checkbox-new"
                     />
                     <label htmlFor="agreeTermsNew" className="auth-checkbox-label">
-                      {t("agreeTo")} <button type="button" className="auth-link-new" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and")} <button type="button" className="auth-link-new" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
+                      {t("agreeTo")} <Link href="/terms" target="_blank" rel="noopener noreferrer" className="auth-link-new">{t("termsOfService")}</Link> {t("and")} <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="auth-link-new">{t("privacyPolicy")}</Link>.
                     </label>
                   </div>
 

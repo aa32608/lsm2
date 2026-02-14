@@ -95,10 +95,10 @@ export default function ListingsTab(props = {}) {
     <div className="listings-page">
       <div className="listings-header">
         <div className="listings-header-content">
-          <h1 className="listings-page-title">
+          <h2 className="listings-page-title">
             <span className="listings-page-icon" aria-hidden="true">🧭</span>
             {t("explore")}
-          </h1>
+          </h2>
           <p className="listings-page-subtitle">
             {t("exploreSubtitle")}
           </p>
@@ -132,13 +132,14 @@ export default function ListingsTab(props = {}) {
               </button>
 
               <button 
-                className="toolbar-btn"
+                className="toolbar-btn toolbar-btn-filters"
                 onClick={() => setFiltersOpen(true)}
                 aria-label={t("filters")}
                 title={t("filters")}
                 aria-pressed={filtersOpen}
               >
-                <span aria-hidden="true">🔍</span>
+                <span className="filter-btn-icon" aria-hidden="true">🔍</span>
+                <span className="filter-btn-label">{t("filters")}</span>
                 {hasActiveFilters && <span className="filter-badge" aria-label={t("activeFilters")}></span>}
               </button>
             </div>
@@ -284,20 +285,48 @@ export default function ListingsTab(props = {}) {
            )}
         </main>
 
-        {/* SIDEBAR */}
+        {/* SIDEBAR: publisher content first, then ads (AdSense: no ads on screens without content) */}
         <aside className="listings-sidebar" aria-label={t("sidebar")}>
-          <div className="sidebar-ad">
-            <GoogleAd slot="1802538697" style={{ minHeight: '250px' }} />
+          <div className="listings-sidebar-content">
+            <h2 className="listings-sidebar-title">{t("browseByCategory")}</h2>
+            <p className="listings-sidebar-hint">{t("browseByCategoryHint")}</p>
+            <nav className="listings-sidebar-categories" aria-label={t("categories")}>
+              {(Array.isArray(categoryGroups) ? categoryGroups : []).slice(0, 4).map((group, idx) => (
+                <div key={group?.id ?? group?.labelKey ?? `sg-${idx}`} className="listings-sidebar-group">
+                  <span className="listings-sidebar-group-label">{t(group?.labelKey)}</span>
+                  <div className="listings-sidebar-chips">
+                    {(Array.isArray(group?.categories) ? group.categories : []).slice(0, 4).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        className="listings-sidebar-chip"
+                        onClick={() => { setCatFilter(cat); setPage(1); }}
+                      >
+                        {t(cat) || cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
           </div>
-          <div className="sidebar-ad">
-            <GoogleAd slot="9192821398" style={{ minHeight: '250px' }} />
-          </div>
-          <div className="sidebar-ad sticky-ad">
-            <GoogleAd slot="7424444157" style={{ minHeight: '600px' }} />
-          </div>
-          <div className="sidebar-ad">
-            <GoogleAd slot="8095761529" style={{ minHeight: '250px' }} />
-          </div>
+          {/* Ads only when page has main content (listings) - policy: no ads without publisher content */}
+          {listingsLoaded && pagedFiltered.length > 0 && (
+            <>
+              <div className="sidebar-ad">
+                <GoogleAd slot="1802538697" style={{ minHeight: '250px' }} />
+              </div>
+              <div className="sidebar-ad">
+                <GoogleAd slot="9192821398" style={{ minHeight: '250px' }} />
+              </div>
+              <div className="sidebar-ad sticky-ad">
+                <GoogleAd slot="7424444157" style={{ minHeight: '600px' }} />
+              </div>
+              <div className="sidebar-ad">
+                <GoogleAd slot="8095761529" style={{ minHeight: '250px' }} />
+              </div>
+            </>
+          )}
         </aside>
       </div>
 

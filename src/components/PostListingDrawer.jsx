@@ -343,6 +343,7 @@ const PostListingDrawer = () => {
                             maxLength="100"
                             required
                             />
+                            <p className="field-hint">{t("nameFieldHint")}</p>
                         </div>
 
                         <div className="field-group">
@@ -362,6 +363,7 @@ const PostListingDrawer = () => {
                                 </optgroup>
                             ))}
                             </select>
+                            <p className="field-hint">{t("categoryFieldHint")}</p>
                         </div>
 
                         {/* Location picker with map modal */}
@@ -411,6 +413,7 @@ const PostListingDrawer = () => {
                             >
                             {t("chooseOnMap")}
                             </button>
+                            <p className="field-hint">{t("locationFieldHint")}</p>
                         </div>
 
                         <div className="submit-form-actions">
@@ -455,6 +458,7 @@ const PostListingDrawer = () => {
                             maxLength="1000"
                             required
                             />
+                            <p className="field-hint">{t("descriptionFieldHint")}</p>
                         </div>
 
                         <div className="contact-summary field-group">
@@ -540,6 +544,7 @@ const PostListingDrawer = () => {
                                     </div>
                                 )}
                             </div>
+                            <p className="field-hint">{t("priceRangeFieldHint")}</p>
                         </div>
 
                         <div className="field-group">
@@ -556,6 +561,7 @@ const PostListingDrawer = () => {
                             }
                             maxLength="64"
                             />
+                            <p className="field-hint">{t("tagsFieldHint")}</p>
                         </div>
 
                         <div className="field-group">
@@ -572,6 +578,7 @@ const PostListingDrawer = () => {
                             }
                             maxLength="200"
                             />
+                            <p className="field-hint">{t("socialLinkFieldHint")}</p>
                         </div>
 
                         <div className="field-group">
@@ -594,6 +601,7 @@ const PostListingDrawer = () => {
                             <span aria-hidden="true">📷</span>
                             {t("clickToUpload")}
                             </label>
+                            <p className="field-hint">{t("imagesFieldHint")}</p>
                             <input
                             id="post-images"
                             type="file"

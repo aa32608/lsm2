@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import { 
@@ -30,8 +31,6 @@ const AccountTab = () => {
     showMessage, 
     myListingsRaw,
     setShowPostForm,
-    setShowTerms, 
-    setShowPrivacy,
     setShowAuthModal,
     setAuthMode,
     countryCodes,
@@ -545,10 +544,10 @@ const AccountTab = () => {
                   </div>
                   <span className="quick-link-arrow">→</span>
                 </button>
-                <button 
+                <Link 
+                  href="/terms"
                   className="action-tile"
-                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                  onClick={() => setShowTerms(true)}
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem', textDecoration: 'none', color: 'inherit' }}
                 >
                   <span className="action-icon">📜</span>
                   <div style={{ textAlign: 'left' }}>
@@ -556,11 +555,11 @@ const AccountTab = () => {
                     <p className="action-desc">{t("readTerms")}</p>
                   </div>
                   <span className="quick-link-arrow">→</span>
-                </button>
-                <button 
+                </Link>
+                <Link 
+                  href="/privacy"
                   className="action-tile"
-                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                  onClick={() => setShowPrivacy(true)}
+                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem', textDecoration: 'none', color: 'inherit' }}
                 >
                   <span className="action-icon">🔒</span>
                   <div style={{ textAlign: 'left' }}>
@@ -568,7 +567,7 @@ const AccountTab = () => {
                     <p className="action-desc">{t("readPrivacy")}</p>
                   </div>
                   <span className="quick-link-arrow">→</span>
-                </button>
+                </Link>
               </div>
             </div>
           </div>

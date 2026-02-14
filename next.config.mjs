@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  // Avoid redirect loops: one canonical URL (no trailing slash)
+  trailingSlash: false,
   // Disable static optimization for listings routes to prevent build errors
   experimental: {
     missingSuspenseWithCSRBailout: false,

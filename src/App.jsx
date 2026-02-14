@@ -44,6 +44,7 @@ import HomeTab from "./legacy_pages/HomeTab";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS, sortFeaturedFirst, isFeatured } from "./constants";
+import Link from "next/link";
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
 
@@ -2405,11 +2406,12 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                           <div className="my-listings-actions">
                             <button
                               type="button"
-                              className="btn btn-ghost filter-toggle-btn"
+                              className="btn btn-ghost filter-toggle-btn filter-toggle-btn-primary"
                               onClick={() => setFiltersOpen((v) => !v)}
                               aria-expanded={filtersOpen}
+                              aria-label={t("filters")}
                             >
-                              {filtersOpen ? "✕ " : "🔍 "}
+                              <span aria-hidden="true">{filtersOpen ? "✕ " : "🔍 "}</span>
                               {t("filters")}
                             </button>
                             <button
@@ -2819,9 +2821,9 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                   </div>
                                   <span className="quick-link-arrow">→</span>
                                 </button>
-                                <button 
+                                <Link 
+                                  href="/terms"
                                   className="account-quick-link-item"
-                                  onClick={() => setShowTerms(true)}
                                 >
                                   <span className="quick-link-icon">📜</span>
                                   <div className="quick-link-content">
@@ -2829,10 +2831,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                     <p className="quick-link-subtitle">{t("readTerms") || "Read our terms"}</p>
                                   </div>
                                   <span className="quick-link-arrow">→</span>
-                                </button>
-                                <button 
+                                </Link>
+                                <Link 
+                                  href="/privacy"
                                   className="account-quick-link-item"
-                                  onClick={() => setShowPrivacy(true)}
                                 >
                                   <span className="quick-link-icon">🔒</span>
                                   <div className="quick-link-content">
@@ -2840,7 +2842,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                                     <p className="quick-link-subtitle">{t("readPrivacy") || "Read our privacy policy"}</p>
                                   </div>
                                   <span className="quick-link-arrow">→</span>
-                                </button>
+                                </Link>
                               </div>
                             </div>
                           </div>
@@ -4184,7 +4186,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
                         className="auth-checkbox"
                       />
                       <label htmlFor="agreeTerms" className="auth-terms-label">
-                        {t("agreeTo") || "I agree to the"} <button type="button" className="link-btn" onClick={() => setShowTerms(true)}>{t("termsOfService")}</button> {t("and") || "and"} <button type="button" className="link-btn" onClick={() => setShowPrivacy(true)}>{t("privacyPolicy")}</button>.
+                        {t("agreeTo") || "I agree to the"} <Link href="/terms" target="_blank" rel="noopener noreferrer" className="link-btn">{t("termsOfService")}</Link> {t("and") || "and"} <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="link-btn">{t("privacyPolicy")}</Link>.
                       </label>
                     </div>
 

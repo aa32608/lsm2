@@ -71,10 +71,10 @@ export default function HomeTab() {
             <button
               className="btn btn-primary hero-btn-primary"
               onClick={handlePostClick}
-              aria-label={t("getMoreCallsForBusiness")}
+              aria-label={t("heroPostCtaShort")}
             >
               <span className="btn-icon" aria-hidden="true">📝</span>
-              <span className="btn-text">{t("getMoreCallsForBusiness")}</span>
+              <span className="btn-text">{t("heroPostCtaShort")}</span>
             </button>
             
           </div>
@@ -83,6 +83,17 @@ export default function HomeTab() {
             <span className="trust-icon" aria-hidden="true">💡</span>
             {t("homeSimpleTrustLine")}
           </p>
+          <div className="hero-explore-cta" aria-label={t("browseServicesCta")}>
+            <p className="hero-explore-hint">{t("browseServicesHint")}</p>
+            <Link
+              href="/listings"
+              className="btn btn-secondary hero-explore-btn"
+              aria-label={t("exploreListingsCta")}
+            >
+              <span className="btn-icon" aria-hidden="true">🔍</span>
+              <span className="btn-text">{t("exploreListingsCta")}</span>
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -389,6 +400,12 @@ export default function HomeTab() {
                 <div className="stat-label">{t("publicListings")}</div>
               </div>
             </div>
+          </div>
+          <div className="stats-section-cta">
+            <Link href="/listings" className="btn btn-primary stats-browse-btn">
+              <span className="btn-icon" aria-hidden="true">🔍</span>
+              {t("browseServicesCta")}
+            </Link>
           </div>
         </div>
       </section>

@@ -5749,6 +5749,15 @@ textarea:hover {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.3);
 }
 
+.filter-toggle-btn-primary {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+.filter-toggle-btn-primary:hover {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
 .explore-results {
   display: flex;
   flex-direction: column;
@@ -10577,6 +10586,14 @@ input:checked + .toggle-slider:before {
   animation: drawerSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.post-form-drawer .field-hint {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
 @keyframes drawerSlideIn {
   from {
     transform: translateX(100%);
@@ -10601,6 +10618,14 @@ input:checked + .toggle-slider:before {
 
   .post-form-drawer .field-group {
     margin-bottom: 20px;
+  }
+
+  .post-form-drawer .field-hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted, #64748b);
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    line-height: 1.4;
   }
 
   .post-form-drawer .step-indicators-grid {

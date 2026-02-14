@@ -146,13 +146,13 @@ const validatePhone = (p) => {
 };
 
 export const AppProvider = ({ children, initialListings = [], initialPublicListings = [] }) => {
-  /* i18n */
-  const [lang, setLang] = useState("sq");
+  /* i18n: default "en" for Google AdSense (supported language); user can switch to sq/mk */
+  const [lang, setLang] = useState("en");
   
   useEffect(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("lang");
-      if (stored) setLang(stored);
+      if (stored && (stored === "en" || stored === "sq" || stored === "mk")) setLang(stored);
     }
   }, []);
 
@@ -189,7 +189,7 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   });
 
   const t = useCallback(
-    (k) => TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? k,
+    (k) => (TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? TRANSLATIONS.en?.[k] ?? k) || String(k),
     [lang]
   );
 
