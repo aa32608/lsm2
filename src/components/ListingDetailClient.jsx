@@ -683,10 +683,6 @@ export default function ListingDetailClient({ id, initialListing }) {
               )}
             </div>
 
-            {/* Ad in Sidebar */}
-            <div className="detail-sidebar-ad">
-              <GoogleAd slot="2843434842" style={{ minHeight: '250px' }} />
-            </div>
           </div>
         </aside>
 

@@ -206,7 +206,28 @@ export default function ListingsTab(props = {}) {
            ) : pagedFiltered.length > 0 ? (
              <>
                <div className={`listings-container listings-${viewMode}`} role="list" aria-label={t("listingsLabel") || t("listings")}>
-                 {pagedFiltered.map((l) => (
+                 {pagedFiltered.slice(0, 8).map((l) => (
+                   <ListingCard
+                    key={l.id}
+                    listing={l}
+                    t={t}
+                    categoryIcons={categoryIcons}
+                    getDescriptionPreview={getDescriptionPreview}
+                    getListingStats={getListingStats}
+                    onShare={() => handleShareListing(l)}
+                    showMessage={showMessage}
+                    toggleFav={toggleFav}
+                    isFavorite={favorites.includes(l.id)}
+                    className={viewMode === "list" ? "horizontal" : ""}
+                  />
+                 ))}
+                 {/* Single in-feed ad: surrounded by content (AdSense policy: no ads without publisher content) */}
+                 {pagedFiltered.length >= 6 && (
+                   <div className="listings-infeed-ad" aria-label={t("advertisement")}>
+                     <GoogleAd slot="1802538697" style={{ minHeight: '250px', width: '100%' }} />
+                   </div>
+                 )}
+                 {pagedFiltered.slice(8).map((l) => (
                    <ListingCard
                     key={l.id}
                     listing={l}
@@ -310,23 +331,7 @@ export default function ListingsTab(props = {}) {
               ))}
             </nav>
           </div>
-          {/* Ads only when page has main content (listings) - policy: no ads without publisher content */}
-          {listingsLoaded && pagedFiltered.length > 0 && (
-            <>
-              <div className="sidebar-ad">
-                <GoogleAd slot="1802538697" style={{ minHeight: '250px' }} />
-              </div>
-              <div className="sidebar-ad">
-                <GoogleAd slot="9192821398" style={{ minHeight: '250px' }} />
-              </div>
-              <div className="sidebar-ad sticky-ad">
-                <GoogleAd slot="7424444157" style={{ minHeight: '600px' }} />
-              </div>
-              <div className="sidebar-ad">
-                <GoogleAd slot="8095761529" style={{ minHeight: '250px' }} />
-              </div>
-            </>
-          )}
+          {/* No ads in sidebar: policy requires ads only with substantial content; sidebar is content-only */}
         </aside>
       </div>
 

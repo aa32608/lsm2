@@ -5783,6 +5783,13 @@ img {
   margin-bottom: var(--spacing-xl);
 }
 
+.listings-infeed-ad {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin: var(--spacing-md) 0;
+}
+
 .listings-grid {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
