@@ -111,7 +111,7 @@ async function sendMilestoneEmailIfNeeded(listingId, type, data) {
   const subject = typeof subjectFn === "function" ? subjectFn(milestone) : subjectFn;
   const text = typeof textFn === "function" ? textFn(listingName, milestone, url) : textFn;
   const reason = type === "views" ? `milestone_views_${milestone}` : `milestone_contacts_${milestone}`;
-  const emailResult = await sendEmail(ownerEmail, subject, text, false, null, reason);
+  const emailResult = await sendEmail(ownerEmail, subject, text, false, null, reason, listingId);
   if (emailResult.ok) {
     await db.ref(`listings/${listingId}`).update(type === "views" ? { lastViewMilestoneSent: milestone } : { lastContactMilestoneSent: milestone });
     console.log(`[API] Milestone email sent: ${type} ${milestone} for listing ${listingId}`);
@@ -371,18 +371,19 @@ async function waitForEmailRateLimit() {
   lastEmailSentTime = Date.now();
 }
 
-// Dedupe: prevent sending the same email twice for the SAME REASON within a short window.
-// Different reasons bypass cooldown so important emails (e.g. payment success) are not blocked.
-const EMAIL_DEDUPE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-const recentEmailKeys = new Map(); // key = "to|reason" -> timestamp
+// Dedupe: prevent sending the same email twice for the SAME REASON (and same entity) within a short window.
+// entityId = e.g. listingId so "expiring_soon" for listing A doesn't block "expiring_soon" for listing B.
+const EMAIL_DEDUPE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const recentEmailKeys = new Map(); // key = "to|reason" or "to|reason|entityId" -> timestamp
 
-function getEmailDedupeKey(to, reason) {
+function getEmailDedupeKey(to, reason, entityId) {
   const r = reason == null ? "generic" : String(reason);
-  return `${to}|${r}`;
+  const e = entityId == null || entityId === "" ? "" : String(entityId);
+  return e ? `${to}|${r}|${e}` : `${to}|${r}`;
 }
 
-function wasRecentlySentForReason(to, reason) {
-  const key = getEmailDedupeKey(to, reason);
+function wasRecentlySentForReason(to, reason, entityId) {
+  const key = getEmailDedupeKey(to, reason, entityId);
   const sentAt = recentEmailKeys.get(key);
   if (!sentAt) return false;
   if (Date.now() - sentAt > EMAIL_DEDUPE_WINDOW_MS) {
@@ -392,10 +393,10 @@ function wasRecentlySentForReason(to, reason) {
   return true;
 }
 
-function markEmailSentForReason(to, reason) {
-  const key = getEmailDedupeKey(to, reason);
+function markEmailSentForReason(to, reason, entityId) {
+  const key = getEmailDedupeKey(to, reason, entityId);
   recentEmailKeys.set(key, Date.now());
-  if (recentEmailKeys.size > 500) {
+  if (recentEmailKeys.size > 1000) {
     const cutoff = Date.now() - EMAIL_DEDUPE_WINDOW_MS;
     for (const [k, ts] of recentEmailKeys.entries()) {
       if (ts < cutoff) recentEmailKeys.delete(k);
@@ -403,20 +404,28 @@ function markEmailSentForReason(to, reason) {
   }
 }
 
-async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = null, reason = null) {
+function clearEmailDedupeKey(to, reason, entityId) {
+  recentEmailKeys.delete(getEmailDedupeKey(to, reason, entityId));
+}
+
+async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = null, reason = null, entityId = null) {
   if (!to || !subject || !text) {
     console.error("[Email] Missing required fields:", { to: !!to, subject: !!subject, text: !!text });
     return { error: EMAIL_TRANSLATIONS.errors.missing_required_fields.en };
   }
 
   const emailReason = reason == null ? "generic" : String(reason);
-  if (wasRecentlySentForReason(to, emailReason)) {
-    console.log(`[Email] Skipped duplicate (same reason "${emailReason}" to ${to} within ${EMAIL_DEDUPE_WINDOW_MS / 60000} min)`);
+  if (wasRecentlySentForReason(to, emailReason, entityId)) {
+    console.log(`[Email] Skipped duplicate (same reason "${emailReason}"${entityId ? ` entity ${entityId}` : ""} to ${to} within ${EMAIL_DEDUPE_WINDOW_MS / 60000} min)`);
     return { skipped: true, reason: "duplicate" };
   }
 
+  // Mark immediately so concurrent requests for same (to, reason, entityId) don't both send
+  markEmailSentForReason(to, emailReason, entityId);
+
   // Only check cooldown for marketing emails
   if (isMarketingEmail && !(await checkMarketingEmailCooldown(to))) {
+    clearEmailDedupeKey(to, emailReason, entityId);
     return { error: "Marketing email cooldown active", skipped: true };
   }
 
@@ -483,6 +492,7 @@ async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = 
       console.error("[Email] Error object:", JSON.stringify(error, null, 2));
       console.error("[Email] Error type:", typeof error);
       console.error("[Email] ========================================");
+      clearEmailDedupeKey(to, emailReason, entityId);
       return { error: error.message || JSON.stringify(error) };
     }
 
@@ -491,6 +501,7 @@ async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = 
       console.error("[Email] RESEND RETURNED NO DATA/ID:");
       console.error("[Email] Data received:", JSON.stringify(data, null, 2));
       console.error("[Email] ========================================");
+      clearEmailDedupeKey(to, emailReason, entityId);
       return { error: "No email ID returned from Resend" };
     }
 
@@ -498,8 +509,7 @@ async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = 
     if (isMarketingEmail) {
       updateMarketingEmailCooldown(to);
     }
-
-    markEmailSentForReason(to, emailReason);
+    // Already marked before send for dedupe; no need to mark again
     
     console.log(`[Email] ========================================`);
     console.log(`[Email] ✅ SUCCESS! Email sent successfully`);
@@ -515,6 +525,7 @@ async function sendEmail(to, subject, text, isMarketingEmail = false, replyTo = 
     console.error("[Email] Error name:", err.name);
     console.error("[Email] Full error:", err);
     console.error("[Email] ========================================");
+    clearEmailDedupeKey(to, reason == null ? "generic" : String(reason), entityId);
     return { error: err.message || String(err) };
   }
 }
@@ -557,7 +568,7 @@ app.post("/api/send-feedback-notification", async (req, res) => {
     );
 
     console.log(`[API] Calling sendEmail with subject: ${subject.substring(0, 50)}...`);
-    const emailResult = await sendEmail(ownerEmail, subject, text, false, null, "feedback_notification");
+    const emailResult = await sendEmail(ownerEmail, subject, text, false, null, "feedback_notification", listingId);
     
     if (emailResult.ok) {
       console.log(`[API] ✅ Feedback notification sent to ${ownerEmail} for listing ${listingId}. Email ID: ${emailResult.id}`);
@@ -878,7 +889,7 @@ async function applyPaymentSuccessToListing(listingId, type, plan, options = {})
     }
     if (subject && text) {
       const emailReason = type === "extend" ? "listing_extended" : "listing_activated";
-      const emailResult = await sendEmail(userEmail, subject, text, false, null, emailReason);
+      const emailResult = await sendEmail(userEmail, subject, text, false, null, emailReason, listingId);
       if (emailResult.ok) console.log(`[Payment] ✅ Email sent to ${userEmail}`);
       else if (!emailResult.skipped) console.error(`[Payment] ❌ Email failed for ${userEmail}:`, emailResult.error);
     }
@@ -930,7 +941,7 @@ app.post("/api/create-payment", async (req, res) => {
                         EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
             
             if (customerEmail) {
-                const emailResult = await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated");
+                const emailResult = await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated", listingId);
                 if (emailResult.ok) {
                     console.log(`[Payment] Free trial email sent to ${customerEmail}`);
                 } else if (!emailResult.skipped) {
@@ -1235,7 +1246,7 @@ cron.schedule("0 0 * * *", async () => {
                             const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link, viewsContacts) || 
                                         EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link, viewsContacts);
 
-                            const emailResult = await sendEmail(email, subject, text, false, null, "expiring_soon");
+                            const emailResult = await sendEmail(email, subject, text, false, null, "expiring_soon", id);
                             if (emailResult.ok) {
                                 updates[`listings/${id}/expiryWarningSent`] = true;
                                 console.log(`[Cron] Sent expiry warning for listing ${id} to ${email}`);
@@ -1260,7 +1271,7 @@ cron.schedule("0 0 * * *", async () => {
                              const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                                          EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
  
-                             const emailResult = await sendEmail(email, subject, text, false, null, "pre_deletion_warning");
+                             const emailResult = await sendEmail(email, subject, text, false, null, "pre_deletion_warning", id);
                              if (emailResult.ok) {
                                  updates[`listings/${id}/preDeletionWarningSent`] = true;
                                  console.log(`[Cron] Sent pre-deletion warning for listing ${id} to ${email}`);
@@ -1299,7 +1310,7 @@ cron.schedule("0 0 * * *", async () => {
                             const text = EMAIL_TRANSLATIONS.listing.pending_deletion_warning.text[userLang](listingName, link) || 
                                         EMAIL_TRANSLATIONS.listing.pending_deletion_warning.text.en(listingName, link);
                             
-                            const emailResult = await sendEmail(email, subject, text, false, null, "pending_deletion_warning");
+                            const emailResult = await sendEmail(email, subject, text, false, null, "pending_deletion_warning", id);
                             if (emailResult.ok) {
                                 updates[`listings/${id}/pendingDeletionWarningSent`] = true;
                                 console.log(`[Cron] Sent pending deletion warning for listing ${id} to ${email}`);
@@ -1334,7 +1345,7 @@ cron.schedule("0 0 * * *", async () => {
                     const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                                 EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                     
-                    const emailResult = await sendEmail(item.email, subject, text, false, null, "expired_deleted");
+                    const emailResult = await sendEmail(item.email, subject, text, false, null, "expired_deleted", item.id);
                     if (emailResult.ok) {
                         console.log(`[Cron] Sent deletion notification for listing ${item.id} to ${item.email}`);
                     } else if (!emailResult.skipped) {
@@ -1665,7 +1676,7 @@ cron.schedule("0 9 * * *", async () => {
         const text = EMAIL_TRANSLATIONS.listing.expiring_soon.text[userLang](listingName, expiryDate, link, viewsContacts) || 
                     EMAIL_TRANSLATIONS.listing.expiring_soon.text.en(listingName, expiryDate, link, viewsContacts);
         
-        const emailResult = await sendEmail(userEmail, subject, text, false, null, "expiring_soon");
+        const emailResult = await sendEmail(userEmail, subject, text, false, null, "expiring_soon", id);
         if (emailResult.ok) {
             console.log(`[Cron] Sent expiry warning for listing ${id} to ${userEmail}`);
             count++;
@@ -1727,7 +1738,7 @@ cron.schedule("0 0 * * *", async () => {
                 const text = EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text[userLang](listingName, link) || 
                             EMAIL_TRANSLATIONS.listing.pre_deletion_warning.text.en(listingName, link);
 
-                const emailResult = await sendEmail(userEmail, subject, text, false, null, "pre_deletion_warning");
+                const emailResult = await sendEmail(userEmail, subject, text, false, null, "pre_deletion_warning", id);
                 if (emailResult.ok) {
                     await db.ref(`listings/${id}`).update({ preDeletionWarningSent: true });
                     console.log(`[Cron] ✅ Sent pre-deletion warning for ${id} to ${userEmail}. Email ID: ${emailResult.id}`);
@@ -1762,7 +1773,7 @@ cron.schedule("0 0 * * *", async () => {
                  const text = EMAIL_TRANSLATIONS.listing.expired_deleted.text[userLang](listingName, link) || 
                              EMAIL_TRANSLATIONS.listing.expired_deleted.text.en(listingName, link);
                  
-                 const emailResult = await sendEmail(userEmail, subject, text, false, null, "expired_deleted");
+                 const emailResult = await sendEmail(userEmail, subject, text, false, null, "expired_deleted", id);
                  if (emailResult.ok) {
                      console.log(`[Cron] Sent deletion notification for ${id} to ${userEmail}`);
                  } else if (!emailResult.skipped) {
