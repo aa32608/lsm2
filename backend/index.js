@@ -896,9 +896,17 @@ async function applyPaymentSuccessToListing(listingId, type, plan, options = {})
   }
 }
 
-/* ----------------------- PAYMENTS (DODO / GUMROAD / FREEMIUS) ----------------------- */
+/* ----------------------- PAYMENTS (WHOP / DODO / GUMROAD / FREEMIUS) ----------------------- */
 
-const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "dodo").toLowerCase();
+const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "whop").toLowerCase();
+
+// Whop checkout URLs per plan. Override via env: WHOP_CHECKOUT_1_MONTH, WHOP_CHECKOUT_3_MONTHS, etc.
+const WHOP_CHECKOUT_URLS = {
+  "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/?session=ch_yLC3rzo8aSzyxz0",
+  "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/?session=ch_hWgLuZTPx8EeQyc",
+  "6": process.env.WHOP_CHECKOUT_6_MONTHS || "https://whop.com/checkout/plan_4vlhNJN9pif7y/?session=ch_QW7gm5H6J9NN6cl",
+  "12": process.env.WHOP_CHECKOUT_12_MONTHS || "https://whop.com/checkout/plan_kahgJwEw0AlxD/?session=ch_M6YoSqPh4ZGvoAh",
+};
 
 app.post("/api/create-payment", async (req, res) => {
   const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
@@ -957,6 +965,34 @@ app.post("/api/create-payment", async (req, res) => {
       }
   }
   // ------------------------
+
+  // --- WHOP: redirect to plan checkout URL and store pending payment for webhook matching ---
+  if (PAYMENT_PROVIDER === "whop") {
+    const planKey = String(plan);
+    const baseUrl = WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
+    const params = new URLSearchParams({
+      listing_id: String(listingId),
+      user_id: String(userId || ""),
+      type: String(type || "create"),
+      plan: planKey,
+    });
+    const checkoutUrl = baseUrl.includes("?") ? `${baseUrl}&${params.toString()}` : `${baseUrl}?${params.toString()}`;
+
+    if (isFirebaseInitialized) {
+      try {
+        await db.ref(`pendingPayments/${listingId}`).set({
+          email: (customerEmail || "").trim().toLowerCase(),
+          plan: planKey,
+          type: String(type || "create"),
+          userId: String(userId || ""),
+          createdAt: Date.now(),
+        });
+      } catch (e) {
+        console.error("[Whop] Failed to store pending payment:", e);
+      }
+    }
+    return res.json({ checkoutUrl });
+  }
 
   // --- FREEMIUS: build hosted checkout URL and store pending payment for webhook matching ---
   if (PAYMENT_PROVIDER === "freemius") {
@@ -1204,6 +1240,59 @@ app.post("/api/webhook/freemius", async (req, res) => {
   }
 });
 
+/* ----------------------- WHOP WEBHOOK ----------------------- */
+// Configure this URL in Whop Dashboard: Developers → Webhooks → Add endpoint: https://your-api.com/api/webhook/whop
+// Subscribe to: payment.succeeded and/or membership.welcome (or events that include purchaser + metadata).
+// If your Whop plan passes metadata (listing_id, plan, type) in the checkout URL, it may appear in the webhook payload.
+app.post("/api/webhook/whop", async (req, res) => {
+  try {
+    const body = req.body || {};
+    console.log("[Whop] Webhook received:", body.type || body.event, JSON.stringify(body).slice(0, 500));
+
+    // Whop may send: body.type (e.g. "payment.succeeded"), body.data with metadata or custom fields
+    let listingId = body.data?.metadata?.listing_id || body.metadata?.listing_id || body.data?.custom_attributes?.listing_id || body.listing_id;
+    let plan = body.data?.metadata?.plan || body.metadata?.plan || body.data?.custom_attributes?.plan || body.plan;
+    const paymentType = body.data?.metadata?.type || body.metadata?.type || body.data?.custom_attributes?.type || body.payment_type;
+    const email = (body.data?.user?.email || body.user?.email || body.data?.email || body.email || "").trim().toLowerCase();
+
+    if (listingId && plan) {
+      await applyPaymentSuccessToListing(String(listingId), paymentType === "extend" ? "extend" : "create", String(plan), { purchaserEmail: email || undefined, inferType: true });
+      if (isFirebaseInitialized) await db.ref(`pendingPayments/${listingId}`).remove();
+      return res.json({ received: true });
+    }
+
+    // Fallback: match by email + plan from pendingPayments (same as Freemius)
+    if (!email || !isFirebaseInitialized) {
+      return res.json({ received: true });
+    }
+    const pendingSnap = await db.ref("pendingPayments").once("value");
+    const pending = pendingSnap.val() || {};
+    let matchedListingId = null;
+    let pendingType = "create";
+    let oldest = Infinity;
+    const planStr = plan ? String(plan) : null;
+    for (const [lid, data] of Object.entries(pending)) {
+      if (!data || (data.email || "").trim().toLowerCase() !== email) continue;
+      const pPlan = String(data.plan || "");
+      if (planStr && pPlan !== planStr) continue;
+      const created = Number(data.createdAt) || 0;
+      if (created < oldest) {
+        oldest = created;
+        matchedListingId = lid;
+        pendingType = data.type || "create";
+        plan = data.plan;
+      }
+    }
+    if (matchedListingId && plan) {
+      await applyPaymentSuccessToListing(matchedListingId, pendingType, String(plan), { purchaserEmail: email, inferType: true });
+      await db.ref(`pendingPayments/${matchedListingId}`).remove();
+    }
+    res.json({ received: true });
+  } catch (err) {
+    console.error("[Whop] Webhook error:", err);
+    res.status(500).send("Webhook error");
+  }
+});
 
 /* ----------------------- DAILY MAINTENANCE CRON ----------------------- */
 // Runs every day at midnight (00:00)

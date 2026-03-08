@@ -155,7 +155,7 @@ export default function PricingPage() {
           </h2>
           <p className="text-body" style={{ marginBottom: "16px" }}>
             {t("pricingPaymentMethodsText") ||
-              "Listing fees are one-time charges in EUR for the selected duration. Payments are processed securely by our third-party payment processors. There are currently no automatic renewals or recurring subscriptions."}
+              "Listing fees are one-time charges in EUR for the selected duration. Payments are processed securely through Whop. There are no automatic renewals or recurring subscriptions."}
           </p>
 
           <h2 className="text-h3" style={{ marginBottom: "8px" }}>
