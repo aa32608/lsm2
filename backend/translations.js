@@ -152,6 +152,18 @@ export const EMAIL_TRANSLATIONS = {
         mk: (name, url) => `Здраво,\n\nВашиот оглас "${name}" е во статус на исчекување/неплатен речиси 7 дена. Ќе биде автоматски избришан утре доколку не се активира.\n\nЗа да го задржите вашиот оглас, ве молиме завршете го процесот на плаќање или активирање:\n👉 ${url}\n\nНе го изгубете вашиот оглас!\n\nТимот на BizCall`
       }
     },
+    payment_failed: {
+      subject: {
+        en: "Payment didn’t go through – BizCall MK",
+        sq: "Pagesa nuk u krye – BizCall MK",
+        mk: "Плаќањето не помина – BizCall MK"
+      },
+      text: {
+        en: (url) => `Hello,\n\nYour payment for the listing could not be completed.\n\nYour listing is saved in My Listings. You can try again when you’re ready.\n\n👉 Complete payment from My Listings: ${url}\n\nIf you need help, contact our support.\n\nThe BizCall Team`,
+        sq: (url) => `Përshëndetje,\n\nPagesa për listimin nuk u përfundua.\n\nListimi juaj është i ruajtur te Listimet e Mia. Mund të provoni përsëri kur jeni gati.\n\n👉 Përfundoni pagesën nga Listimet e Mia: ${url}\n\nNëse keni nevojë për ndihmë, na kontaktoni.\n\nEkipi i BizCall`,
+        mk: (url) => `Здраво,\n\nПлаќањето за огласот не можеше да се заврши.\n\nВашиот оглас е зачуван во Мои огласи. Можете да пробате повторно кога сте подготвени.\n\n👉 Завршете го плаќањето од Мои огласи: ${url}\n\nАко ви треба помош, контактирајте не.\n\nТимот на BizCall`
+      }
+    },
     feedback_received: {
       subject: {
         en: "⭐ New Review on Your Listing",

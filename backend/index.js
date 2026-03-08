@@ -1250,9 +1250,42 @@ app.post("/api/webhook/whop", async (req, res) => {
     const eventType = body.type || body.event || "";
     console.log("[Whop] Webhook received:", eventType, JSON.stringify(body).slice(0, 500));
 
-    // Payment failed: log and acknowledge (no listing activation)
+    // Payment failed: log, notify user by email if we have their address, then acknowledge
     if (eventType === "payment.failed" || eventType === "payment_failed" || eventType === "checkout.failed") {
       console.log("[Whop] Payment failed event:", JSON.stringify(body, null, 2));
+      let toEmail = (body.data?.user?.email || body.user?.email || body.data?.email || body.email || "").trim().toLowerCase();
+      const failedListingId = body.data?.metadata?.listing_id || body.metadata?.listing_id || body.data?.custom_attributes?.listing_id || body.listing_id;
+      if (!toEmail && failedListingId && isFirebaseInitialized) {
+        try {
+          const pendingSnap = await db.ref(`pendingPayments/${failedListingId}`).once("value");
+          const pending = pendingSnap.val();
+          if (pending?.email) toEmail = (pending.email || "").trim().toLowerCase();
+        } catch (e) {
+          console.warn("[Whop] Could not read pendingPayments for payment_failed:", e.message);
+        }
+      }
+      if (toEmail) {
+        try {
+          let userLang = "en";
+          if (failedListingId && isFirebaseInitialized) {
+            try {
+              const listingSnap = await db.ref(`listings/${failedListingId}`).once("value");
+              const listing = listingSnap.val();
+              if (listing?.userId) userLang = await getUserLanguage(listing.userId).catch(() => "en");
+            } catch (_) {}
+          }
+          const t = EMAIL_TRANSLATIONS.listing.payment_failed;
+          const subject = t.subject[userLang] || t.subject.en;
+          const textFn = t.text[userLang] || t.text.en;
+          const url = myListingsUrl();
+          const text = typeof textFn === "function" ? textFn(url) : textFn;
+          const emailResult = await sendEmail(toEmail, subject, text, false, null, "payment_failed", failedListingId || undefined);
+          if (emailResult.ok) console.log("[Whop] Payment failed notification email sent to", toEmail);
+          else if (!emailResult.skipped) console.warn("[Whop] Failed to send payment_failed email:", emailResult.error);
+        } catch (e) {
+          console.warn("[Whop] Error sending payment_failed email:", e.message);
+        }
+      }
       return res.json({ received: true });
     }
 
