@@ -777,6 +777,11 @@ export const TRANSLATIONS = {
     listingSavedUnpaid: "Listing saved but payment failed. Please try again from My Listings.",
     redirectingToPayment: "Redirecting to payment...",
     paymentTimeout: "Payment request timed out. Please try again.",
+    paymentSuccessPageTitle: "Payment complete",
+    paymentSuccessPageBody: "Your listing is being activated and will appear in search shortly.",
+    paymentFailedPageTitle: "Payment didn't go through",
+    paymentFailedPageBody: "No charges were made. Your listing is saved — try again from My Listings when you're ready.",
+    viewMyListings: "View My Listings",
     // Login/Signup notifications
     loginSuccess: "Login successful! Welcome back.",
     signupSuccess: "Account created successfully! Please verify your email.",
@@ -1912,6 +1917,10 @@ export const TRANSLATIONS = {
     listingSavedUnpaid: "Listimi u ruajt por pagesa dështoi. Ju lutemi provoni përsëri nga Listimet e Mia.",
     redirectingToPayment: "Po ridrejtohet te pagesa...",
     paymentTimeout: "Kërkesa për pagesë ka kaluar kohën. Ju lutemi provoni përsëri.",
+    paymentSuccessPageTitle: "Pagesa u përfundua",
+    paymentSuccessPageBody: "Listimi juaj po aktivizohet dhe do të shfaqet në kërkim së shpejti.",
+    paymentFailedPageTitle: "Pagesa nuk u krye",
+    paymentFailedPageBody: "Nuk u bënë asnjë tarifë. Listimi juaj është i ruajtur — provoni përsëri nga Listimet e Mia kur jeni gati.",
     // Login/Signup notifications
     loginSuccess: "Hyrja u krye me sukses! Mirë se erdhët.",
     signupSuccess: "Llogaria u krijua me sukses! Ju lutemi verifikoni email-in tuaj.",
@@ -3100,6 +3109,10 @@ export const TRANSLATIONS = {
     listingSavedUnpaid: "Огласот е зачуван, но плаќањето не успеа. Ве молиме пробајте повторно од Мои огласи.",
     redirectingToPayment: "Пренасочување кон плаќање...",
     paymentTimeout: "Барањето за плаќање истече. Ве молиме пробајте повторно.",
+    paymentSuccessPageTitle: "Плаќањето е завршено",
+    paymentSuccessPageBody: "Вашиот оглас се активира и наскоро ќе се појави во пребарувањето.",
+    paymentFailedPageTitle: "Плаќањето не помина",
+    paymentFailedPageBody: "Не беа направени наплати. Вашиот оглас е зачуван — пробајте повторно од Мои огласи кога сте подготвени.",
     // Login/Signup notifications
     loginSuccess: "Најавата е успешна! Добредојдовте назад.",
     signupSuccess: "Сметката е успешно креирана! Ве молиме потврдете ја вашата е-пошта.",

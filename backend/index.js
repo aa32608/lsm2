@@ -970,7 +970,7 @@ app.post("/api/create-payment", async (req, res) => {
   if (PAYMENT_PROVIDER === "whop") {
     const planKey = String(plan);
     const baseUrl = WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
-    const returnToSite = myListingsUrl(); // Where to send user after checkout (success or cancel)
+    const returnToSite = buildSiteUrl("/payment-success"); // Dedicated page after checkout (success or cancel)
     const params = new URLSearchParams({
       listing_id: String(listingId),
       user_id: String(userId || ""),
