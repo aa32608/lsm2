@@ -904,7 +904,7 @@ const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "whop").toLowerCase();
 const WHOP_SANDBOX = /^(true|1|yes)$/i.test(String(process.env.WHOP_SANDBOX || ""));
 
 // Whop checkout URLs per plan. Override via env: WHOP_CHECKOUT_1_MONTH, WHOP_CHECKOUT_3_MONTHS, etc.
-// In sandbox, use WHOP_SANDBOX_CHECKOUT_* if set, else same URLs with host sandbox.whop.com
+// In sandbox, use WHOP_SANDBOX_CHECKOUT_* only when set (production plan IDs don't exist on sandbox.whop.com)
 const WHOP_CHECKOUT_URLS = {
   "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/?session=ch_AQlAkmSFa0P0Ose",
   "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/?session=ch_bKSskJVzF6tMxBW",
@@ -919,13 +919,9 @@ function getWhopCheckoutUrl(planKey) {
     "6": process.env.WHOP_SANDBOX_CHECKOUT_6_MONTHS,
     "12": process.env.WHOP_SANDBOX_CHECKOUT_12_MONTHS,
   };
-  let url = WHOP_SANDBOX && sandboxUrls[planKey]
-    ? sandboxUrls[planKey]
-    : (WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"]);
-  if (WHOP_SANDBOX && !sandboxUrls[planKey]) {
-    url = url.replace(/^https:\/\/whop\.com/, "https://sandbox.whop.com");
-  }
-  return url;
+  // Only use sandbox when explicit sandbox URL is set (production IDs don't work on sandbox.whop.com)
+  if (WHOP_SANDBOX && sandboxUrls[planKey]) return sandboxUrls[planKey];
+  return WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
 }
 
 app.post("/api/create-payment", async (req, res) => {
