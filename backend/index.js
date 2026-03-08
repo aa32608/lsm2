@@ -902,10 +902,10 @@ const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "whop").toLowerCase();
 
 // Whop checkout URLs per plan. Override via env: WHOP_CHECKOUT_1_MONTH, WHOP_CHECKOUT_3_MONTHS, etc.
 const WHOP_CHECKOUT_URLS = {
-  "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/?session=ch_yLC3rzo8aSzyxz0",
-  "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/?session=ch_hWgLuZTPx8EeQyc",
-  "6": process.env.WHOP_CHECKOUT_6_MONTHS || "https://whop.com/checkout/plan_4vlhNJN9pif7y/?session=ch_QW7gm5H6J9NN6cl",
-  "12": process.env.WHOP_CHECKOUT_12_MONTHS || "https://whop.com/checkout/plan_kahgJwEw0AlxD/?session=ch_M6YoSqPh4ZGvoAh",
+  "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/?session=ch_AQlAkmSFa0P0Ose",
+  "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/?session=ch_bKSskJVzF6tMxBW",
+  "6": process.env.WHOP_CHECKOUT_6_MONTHS || "https://whop.com/checkout/plan_4vlhNJN9pif7y/?session=ch_XYy2vHoe4Ce9N6q",
+  "12": process.env.WHOP_CHECKOUT_12_MONTHS || "https://whop.com/checkout/plan_kahgJwEw0AlxD/?session=ch_rLEgCJ4cb1r4ySg",
 };
 
 app.post("/api/create-payment", async (req, res) => {
@@ -1247,7 +1247,14 @@ app.post("/api/webhook/freemius", async (req, res) => {
 app.post("/api/webhook/whop", async (req, res) => {
   try {
     const body = req.body || {};
-    console.log("[Whop] Webhook received:", body.type || body.event, JSON.stringify(body).slice(0, 500));
+    const eventType = body.type || body.event || "";
+    console.log("[Whop] Webhook received:", eventType, JSON.stringify(body).slice(0, 500));
+
+    // Payment failed: log and acknowledge (no listing activation)
+    if (eventType === "payment.failed" || eventType === "payment_failed" || eventType === "checkout.failed") {
+      console.log("[Whop] Payment failed event:", JSON.stringify(body, null, 2));
+      return res.json({ received: true });
+    }
 
     // Whop may send: body.type (e.g. "payment.succeeded"), body.data with metadata or custom fields
     let listingId = body.data?.metadata?.listing_id || body.metadata?.listing_id || body.data?.custom_attributes?.listing_id || body.listing_id;
