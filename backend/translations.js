@@ -159,9 +159,9 @@ export const EMAIL_TRANSLATIONS = {
         mk: "Плаќањето не помина – BizCall MK"
       },
       text: {
-        en: (url) => `Hello,\n\nYour payment for the listing could not be completed.\n\nYour listing is saved in My Listings. You can try again when you’re ready.\n\n👉 Complete payment from My Listings: ${url}\n\nIf you need help, contact our support.\n\nThe BizCall Team`,
-        sq: (url) => `Përshëndetje,\n\nPagesa për listimin nuk u përfundua.\n\nListimi juaj është i ruajtur te Listimet e Mia. Mund të provoni përsëri kur jeni gati.\n\n👉 Përfundoni pagesën nga Listimet e Mia: ${url}\n\nNëse keni nevojë për ndihmë, na kontaktoni.\n\nEkipi i BizCall`,
-        mk: (url) => `Здраво,\n\nПлаќањето за огласот не можеше да се заврши.\n\nВашиот оглас е зачуван во Мои огласи. Можете да пробате повторно кога сте подготвени.\n\n👉 Завршете го плаќањето од Мои огласи: ${url}\n\nАко ви треба помош, контактирајте не.\n\nТимот на BizCall`
+        en: (myListingsUrl, siteUrl) => `Hello,\n\nYour payment for the listing could not be completed (payment gateway: Whop). Your listing is still saved and no charges were made.\n\nYou can try again from My Listings when you’re ready:\n👉 Complete payment: ${myListingsUrl}\n\nReturn to website:\n👉 ${siteUrl}\n\nIf you need help, contact our support.\n\nThe BizCall Team`,
+        sq: (myListingsUrl, siteUrl) => `Përshëndetje,\n\nPagesa për listimin nuk u përfundua (portali i pagesës: Whop). Listimi juaj është ende i ruajtur dhe nuk u bënë charge.\n\nMund të provoni përsëri nga Listimet e Mia kur jeni gati:\n👉 Përfundoni pagesën: ${myListingsUrl}\n\nKthehuni në faqen tonë:\n👉 ${siteUrl}\n\nNëse keni nevojë për ndihmë, na kontaktoni.\n\nEkipi i BizCall`,
+        mk: (myListingsUrl, siteUrl) => `Здраво,\n\nПлаќањето за огласот не можеше да се заврши (платформа: Whop). Вашиот оглас е сè уште зачуван и нема направено наплати.\n\nМожете да пробате повторно од Мои огласи кога сте подготвени:\n👉 Завршете го плаќањето: ${myListingsUrl}\n\nВратете се на веб-страницата:\n👉 ${siteUrl}\n\nАко ви треба помош, контактирајте не.\n\nТимот на BizCall`
       }
     },
     feedback_received: {

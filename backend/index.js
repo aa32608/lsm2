@@ -970,11 +970,14 @@ app.post("/api/create-payment", async (req, res) => {
   if (PAYMENT_PROVIDER === "whop") {
     const planKey = String(plan);
     const baseUrl = WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
+    const returnToSite = myListingsUrl(); // Where to send user after checkout (success or cancel)
     const params = new URLSearchParams({
       listing_id: String(listingId),
       user_id: String(userId || ""),
       type: String(type || "create"),
       plan: planKey,
+      returnUrl: returnToSite,  // Whop: return to our site after checkout
+      return_url: returnToSite, // some integrations use snake_case
     });
     const checkoutUrl = baseUrl.includes("?") ? `${baseUrl}&${params.toString()}` : `${baseUrl}?${params.toString()}`;
 
@@ -1277,8 +1280,9 @@ app.post("/api/webhook/whop", async (req, res) => {
           const t = EMAIL_TRANSLATIONS.listing.payment_failed;
           const subject = t.subject[userLang] || t.subject.en;
           const textFn = t.text[userLang] || t.text.en;
-          const url = myListingsUrl();
-          const text = typeof textFn === "function" ? textFn(url) : textFn;
+          const myListingsLink = myListingsUrl();
+          const siteLink = buildSiteUrl("/");
+          const text = typeof textFn === "function" ? textFn(myListingsLink, siteLink) : textFn;
           const emailResult = await sendEmail(toEmail, subject, text, false, null, "payment_failed", failedListingId || undefined);
           if (emailResult.ok) console.log("[Whop] Payment failed notification email sent to", toEmail);
           else if (!emailResult.skipped) console.warn("[Whop] Failed to send payment_failed email:", emailResult.error);
