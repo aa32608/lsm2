@@ -900,13 +900,33 @@ async function applyPaymentSuccessToListing(listingId, type, plan, options = {})
 
 const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "whop").toLowerCase();
 
+// Whop sandbox: set WHOP_SANDBOX=true (or 1/yes) to use sandbox.whop.com for testing
+const WHOP_SANDBOX = /^(true|1|yes)$/i.test(String(process.env.WHOP_SANDBOX || ""));
+
 // Whop checkout URLs per plan. Override via env: WHOP_CHECKOUT_1_MONTH, WHOP_CHECKOUT_3_MONTHS, etc.
+// In sandbox, use WHOP_SANDBOX_CHECKOUT_* if set, else same URLs with host sandbox.whop.com
 const WHOP_CHECKOUT_URLS = {
   "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/?session=ch_AQlAkmSFa0P0Ose",
   "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/?session=ch_bKSskJVzF6tMxBW",
   "6": process.env.WHOP_CHECKOUT_6_MONTHS || "https://whop.com/checkout/plan_4vlhNJN9pif7y/?session=ch_XYy2vHoe4Ce9N6q",
   "12": process.env.WHOP_CHECKOUT_12_MONTHS || "https://whop.com/checkout/plan_kahgJwEw0AlxD/?session=ch_rLEgCJ4cb1r4ySg",
 };
+
+function getWhopCheckoutUrl(planKey) {
+  const sandboxUrls = {
+    "1": process.env.WHOP_SANDBOX_CHECKOUT_1_MONTH,
+    "3": process.env.WHOP_SANDBOX_CHECKOUT_3_MONTHS,
+    "6": process.env.WHOP_SANDBOX_CHECKOUT_6_MONTHS,
+    "12": process.env.WHOP_SANDBOX_CHECKOUT_12_MONTHS,
+  };
+  let url = WHOP_SANDBOX && sandboxUrls[planKey]
+    ? sandboxUrls[planKey]
+    : (WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"]);
+  if (WHOP_SANDBOX && !sandboxUrls[planKey]) {
+    url = url.replace(/^https:\/\/whop\.com/, "https://sandbox.whop.com");
+  }
+  return url;
+}
 
 app.post("/api/create-payment", async (req, res) => {
   const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
@@ -969,7 +989,7 @@ app.post("/api/create-payment", async (req, res) => {
   // --- WHOP: redirect to plan checkout URL and store pending payment for webhook matching ---
   if (PAYMENT_PROVIDER === "whop") {
     const planKey = String(plan);
-    const baseUrl = WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
+    const baseUrl = getWhopCheckoutUrl(planKey);
     const returnToSite = buildSiteUrl("/payment-success"); // Dedicated page after checkout (success or cancel)
     const params = new URLSearchParams({
       listing_id: String(listingId),
@@ -2099,6 +2119,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.log(`[Server] Resend initialized: ${!!resend}`);
     console.log(`[Server] Firebase initialized: ${isFirebaseInitialized}`);
     console.log(`[Server] DodoPayments initialized: ${!!dodoClient}`);
+    if (PAYMENT_PROVIDER === "whop") console.log(`[Server] Whop SANDBOX mode: ${WHOP_SANDBOX}`);
     console.log(`\n[Server] Available endpoints:`);
     console.log(`[Server]   - POST /api/admin/test-marketing-now (with adminKey)`);
     console.log(`[Server]   - POST /api/admin/send-weekly-marketing (with adminKey)`);
