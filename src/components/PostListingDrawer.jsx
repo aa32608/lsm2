@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { PLANS, categoryGroups, categoryIcons, currencyOptions } from "../constants";
 import DualRangeSlider from "./DualRangeSlider";
-import WhopEmbed from "./WhopEmbed";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
 
 const NorthMacedoniaMap = lazy(() => import("../NorthMacedoniaMap"));
@@ -36,9 +35,6 @@ const PostListingDrawer = () => {
   } = useApp();
 
   const [showMapPicker, setShowMapPicker] = useState(false);
-  const [showPaymentEmbed, setShowPaymentEmbed] = useState(false);
-  const [paymentEmbedUrl, setPaymentEmbedUrl] = useState("");
-  const [currentListingId, setCurrentListingId] = useState("");
   const accountPhone = userProfile?.phone || "";
 
   // Helpers
@@ -119,41 +115,6 @@ const PostListingDrawer = () => {
     });
   };
 
-  const handlePaymentSuccess = (paymentData) => {
-    console.log('[PostListingDrawer] Payment successful:', paymentData);
-    showMessage(t("listingCreatedSuccess") || "Listing created successfully!", "success");
-    setShowPaymentEmbed(false);
-    setShowPostForm(false);
-    // Reset form and reload to show the new listing
-    setForm({
-      step: 1,
-      name: "",
-      category: "",
-      locationCity: "",
-      locationExtra: "",
-      locationData: null,
-      description: "",
-      contact: "",
-      offerMin: "",
-      offerMax: "",
-      offerCurrency: "EUR",
-      offerprice: "",
-      tags: "",
-      socialLink: "",
-      imagePreview: null,
-      images: [],
-      plan: "1"
-    });
-    window.location.reload();
-  };
-
-  const handlePaymentCancel = () => {
-    console.log('[PostListingDrawer] Payment cancelled');
-    showMessage(t("paymentCancelled") || "Payment cancelled", "info");
-    setShowPaymentEmbed(false);
-    // Keep the form open so user can try again
-  };
-
   async function createListingInFirebase(obj) {
     const listingId = obj.id || "lst_" + Date.now();
     const planId = String(obj.plan || "1");
@@ -207,13 +168,13 @@ const PostListingDrawer = () => {
         price: selectedPlan.priceVal,
       });
 
-      // Initiate Payment - Using Embed Checkout
+      // Initiate Payment - Original Redirect Implementation
       try {
         // Pre-warm connection to payment API
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        const res = await fetch(`${API_BASE}/api/create-embed-payment`, {
+        const res = await fetch(`${API_BASE}/api/create-payment`, {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",
@@ -245,24 +206,16 @@ const PostListingDrawer = () => {
             return;
         }
 
-        if (data.embedUrl) {
-          // Check if it's actually an embed URL using the isEmbed flag
-          if (data.isEmbed) {
-            // Show embed checkout
-            setCurrentListingId(listingId);
-            setPaymentEmbedUrl(data.embedUrl);
-            setShowPaymentEmbed(true);
-            showMessage(t("openingPaymentForm") || "Opening secure payment form...", "info");
-          } else {
-            // Fallback to redirect for regular checkout
+        if (data.checkoutUrl) {
+            // Show notification before redirecting
             showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
+            // Redirect immediately without delay
             setTimeout(() => {
-              window.location.href = data.embedUrl;
+              window.location.href = data.checkoutUrl;
             }, 100);
-          }
-          return; 
+            return; 
         } else {
-          throw new Error("Payment initialization failed: No embed URL");
+            throw new Error("Payment initialization failed: No checkout URL");
         }
       } catch (paymentErr) {
           if (paymentErr.name === 'AbortError') {
@@ -888,16 +841,6 @@ const PostListingDrawer = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Whop Embed Payment Modal */}
-      <WhopEmbed
-        isOpen={showPaymentEmbed}
-        onClose={() => setShowPaymentEmbed(false)}
-        checkoutUrl={paymentEmbedUrl}
-        listingId={currentListingId}
-        onSuccess={handlePaymentSuccess}
-        onCancel={handlePaymentCancel}
-      />
     </>
   );
 };

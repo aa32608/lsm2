@@ -41,7 +41,6 @@ import DualRangeSlider from "./components/DualRangeSlider";
 import ListingsTab from "./legacy_pages/ListingsTab";
 import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./legacy_pages/HomeTab";
-import WhopEmbed from "./components/WhopEmbed";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS, sortFeaturedFirst, isFeatured } from "./constants";
@@ -409,11 +408,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [extendTarget, setExtendTarget] = useState(null);
   const [selectedExtendPlan, setSelectedExtendPlan] = useState("1");
-
-  /* Payment Embed for Extensions */
-  const [showExtendPaymentEmbed, setShowExtendPaymentEmbed] = useState(false);
-  const [extendPaymentEmbedUrl, setExtendPaymentEmbedUrl] = useState("");
-  const [currentExtendListingId, setCurrentExtendListingId] = useState("");
 
   const [showEditMapPicker, setShowEditMapPicker] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -2086,7 +2080,7 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/create-embed-payment`, {
+      const res = await fetch(`${API_BASE}/api/create-payment`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -2098,45 +2092,16 @@ export default function App({ initialListings = [], initialPublicListings = [] }
           })
       });
       const data = await res.json();
-      if (data.embedUrl) {
-        // Check if it's actually an embed URL using the isEmbed flag
-        if (data.isEmbed) {
-          // Show embed checkout instead of redirecting
-          setCurrentExtendListingId(listing.id);
-          setExtendPaymentEmbedUrl(data.embedUrl);
-          setShowExtendPaymentEmbed(true);
-          showMessage(t("openingPaymentForm") || "Opening secure payment form...", "info");
-        } else {
-          // Fallback to redirect for regular checkout
-          showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
-          setTimeout(() => {
-            window.location.href = data.embedUrl;
-          }, 100);
-        }
+      if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
       } else {
-        throw new Error("No embed URL returned");
+        throw new Error("No checkout URL returned");
       }
     } catch (err) {
       console.error(err);
-      showMessage(t("paymentError") || "Payment error", "error");
+      showMessage(t("paymentError"), "error");
       setLoading(false);
     }
-  };
-
-  const handleExtendPaymentSuccess = (paymentData) => {
-    console.log('[App] Extension payment successful:', paymentData);
-    showMessage(t("listingExtendedSuccess") || "Listing extended successfully!", "success");
-    setShowExtendPaymentEmbed(false);
-    setExtendModalOpen(false);
-    // Reload to show updated listing
-    window.location.reload();
-  };
-
-  const handleExtendPaymentCancel = () => {
-    console.log('[App] Extension payment cancelled');
-    showMessage(t("paymentCancelled") || "Payment cancelled", "info");
-    setShowExtendPaymentEmbed(false);
-    // Keep the modal open so user can try again
   };
   
   const onLogout = useCallback(async () => {
@@ -5050,16 +5015,6 @@ export default function App({ initialListings = [], initialPublicListings = [] }
         
         {/* Cookie Consent */}
         <CookieConsent t={t} />
-
-        {/* Whop Embed for Extensions */}
-        <WhopEmbed
-          isOpen={showExtendPaymentEmbed}
-          onClose={() => setShowExtendPaymentEmbed(false)}
-          checkoutUrl={extendPaymentEmbedUrl}
-          listingId={currentExtendListingId}
-          onSuccess={handleExtendPaymentSuccess}
-          onCancel={handleExtendPaymentCancel}
-        />
 
         {/* FOOTER */}
         <footer className="footer">
