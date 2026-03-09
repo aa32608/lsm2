@@ -214,6 +214,7 @@ self.__SERVER_FILES_MANIFEST={
       "turbopackFileSystemCacheForDev": true,
       "turbopackFileSystemCacheForBuild": false,
       "turbopackInferModuleSideEffects": false,
+      "missingSuspenseWithCSRBailout": false,
       "optimizePackageImports": [
         "lucide-react",
         "date-fns",
@@ -302,8 +303,8 @@ self.__SERVER_FILES_MANIFEST={
     },
     "distDirRoot": ".next"
   },
-  "appDir": "C:\\Users\\Administrator\\lsm2",
-  "relativeAppDir": "lsm2",
+  "appDir": "C:\\Users\\Administrator\\lsm2-1",
+  "relativeAppDir": "lsm2-1",
   "files": [
     ".next\\routes-manifest.json",
     ".next\\server\\pages-manifest.json",

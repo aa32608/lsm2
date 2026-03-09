@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import Head from 'next/head';
 
 const SEOHead = ({ 
   title, 
@@ -25,61 +24,95 @@ const SEOHead = ({
   const finalCanonical = canonical || defaultCanonical;
   const finalImage = image || defaultImage;
 
-  return (
-    <Head>
-      {/* Basic Meta Tags */}
-      <title>{finalTitle}</title>
-      <meta name="description" content={finalDescription} />
-      <meta name="keywords" content={finalKeywords} />
-      <meta name="author" content="BizCall.mk" />
-      <meta name="robots" content={noIndex ? 'noindex,nofollow' : 'index,follow'} />
-      <meta name="language" content="en" />
+  useEffect(() => {
+    // Update document title
+    document.title = finalTitle;
+
+    // Update or create meta tags
+    const updateMetaTag = (name, content, property = null) => {
+      const selector = property ? `meta[property="${property}"]` : `meta[name="${name}"]`;
+      let meta = document.querySelector(selector);
       
-      {/* Geographic Meta Tags */}
-      <meta name="geo.region" content="MK" />
-      <meta name="geo.placename" content="North Macedonia" />
-      <meta name="geo.position" content="41.6086;21.7453" />
-      <meta name="ICBM" content="41.6086,21.7453" />
+      if (!meta) {
+        meta = document.createElement('meta');
+        if (property) {
+          meta.setAttribute('property', property);
+        } else {
+          meta.setAttribute('name', name);
+        }
+        document.head.appendChild(meta);
+      }
       
-      {/* Canonical URL */}
-      <link rel="canonical" href={finalCanonical} />
-      
-      {/* Open Graph / Facebook */}
-      <meta property="og:type" content={type} />
-      <meta property="og:url" content={finalCanonical} />
-      <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={finalDescription} />
-      <meta property="og:image" content={finalImage} />
-      <meta property="og:site_name" content={siteName} />
-      <meta property="og:locale" content={locale} />
-      
-      {/* Twitter */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={finalCanonical} />
-      <meta name="twitter:title" content={finalTitle} />
-      <meta name="twitter:description" content={finalDescription} />
-      <meta name="twitter:image" content={finalImage} />
-      
-      {/* Additional Meta Tags */}
-      <meta name="format-detection" content="telephone=no" />
-      <meta name="msapplication-TileColor" content="#2563eb" />
-      <meta name="theme-color" content="#2563eb" />
-      
-      {/* Structured Data */}
-      {structuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-        />
-      )}
-      
-      {/* Preconnect for Performance */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://www.google-analytics.com" />
-      <link rel="preconnect" href="https://www.googletagmanager.com" />
-    </Head>
-  );
+      meta.setAttribute('content', content);
+    };
+
+    // Basic meta tags
+    updateMetaTag('description', finalDescription);
+    updateMetaTag('keywords', finalKeywords);
+    updateMetaTag('author', 'BizCall.mk');
+    updateMetaTag('robots', noIndex ? 'noindex,nofollow' : 'index,follow');
+    updateMetaTag('language', 'en');
+    
+    // Geographic meta tags
+    updateMetaTag('geo.region', 'MK');
+    updateMetaTag('geo.placename', 'North Macedonia');
+    updateMetaTag('geo.position', '41.6086;21.7453');
+    updateMetaTag('ICBM', '41.6086,21.7453');
+    
+    // Canonical URL
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.setAttribute('href', finalCanonical);
+    
+    // Open Graph / Facebook
+    updateMetaTag('og:type', type, 'og:type');
+    updateMetaTag('og:url', finalCanonical, 'og:url');
+    updateMetaTag('og:title', finalTitle, 'og:title');
+    updateMetaTag('og:description', finalDescription, 'og:description');
+    updateMetaTag('og:image', finalImage, 'og:image');
+    updateMetaTag('og:site_name', siteName, 'og:site_name');
+    updateMetaTag('og:locale', locale, 'og:locale');
+    
+    // Twitter
+    updateMetaTag('twitter:card', 'summary_large_image');
+    updateMetaTag('twitter:url', finalCanonical);
+    updateMetaTag('twitter:title', finalTitle);
+    updateMetaTag('twitter:description', finalDescription);
+    updateMetaTag('twitter:image', finalImage);
+    
+    // Additional meta tags
+    updateMetaTag('format-detection', 'telephone=no');
+    updateMetaTag('msapplication-TileColor', '#2563eb');
+    updateMetaTag('theme-color', '#2563eb');
+
+    // Structured Data
+    let structuredDataScript = document.querySelector('script[type="application/ld+json"]');
+    if (structuredData) {
+      if (structuredDataScript) {
+        structuredDataScript.textContent = JSON.stringify(structuredData);
+      } else {
+        structuredDataScript = document.createElement('script');
+        structuredDataScript.type = 'application/ld+json';
+        structuredDataScript.textContent = JSON.stringify(structuredData);
+        document.head.appendChild(structuredDataScript);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      // Remove structured data if it was added by this component
+      if (structuredData && structuredDataScript && structuredDataScript.parentNode) {
+        structuredDataScript.parentNode.removeChild(structuredDataScript);
+      }
+    };
+  }, [finalTitle, finalDescription, finalKeywords, finalCanonical, finalImage, type, locale, siteName, noIndex, structuredData]);
+
+  // This component doesn't render anything visible
+  return null;
 };
 
 export default SEOHead;

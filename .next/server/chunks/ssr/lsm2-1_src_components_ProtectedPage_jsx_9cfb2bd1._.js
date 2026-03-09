@@ -1,0 +1,3 @@
+module.exports=[97059,a=>{"use strict";var b=a.i(89748),c=a.i(58349),d=a.i(62846),e=a.i(57107);let f=()=>{let{t:a}=(0,e.useApp)();return(0,b.jsxs)("div",{className:"loading-container",children:[(0,b.jsx)("div",{className:"spinner"}),(0,b.jsx)("p",{style:{color:"var(--text-secondary)",fontSize:"1rem",margin:0},children:a("loading")})]})};function g({children:a,redirectTo:g="/"}){let{user:h,firebaseReady:i,authLoading:j}=(0,e.useApp)(),k=(0,d.useRouter)();return((0,c.useEffect)(()=>{i&&!j&&(h||k.push(g))},[h,i,j,k,g]),i&&!j&&h)?(0,b.jsx)(b.Fragment,{children:a}):(0,b.jsx)(f,{})}a.s(["default",()=>g])}];
+
+//# sourceMappingURL=lsm2-1_src_components_ProtectedPage_jsx_9cfb2bd1._.js.map

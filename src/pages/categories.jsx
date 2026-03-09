@@ -3,6 +3,9 @@ import SEOHead from '../components/SEOHead';
 import { categoryGroups, categoryIcons } from '../constants';
 
 const CategoriesPage = () => {
+  // Get all categories from all groups
+  const allCategories = categoryGroups.flatMap(group => group.categories);
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -11,8 +14,8 @@ const CategoriesPage = () => {
     "url": "https://www.bizcall.mk/categories",
     "mainEntity": {
       "@type": "ItemList",
-      "numberOfItems": Object.keys(categoryIcons).length,
-      "itemListElement": Object.entries(categoryIcons).map(([category, icon], index) => ({
+      "numberOfItems": allCategories.length,
+      "itemListElement": allCategories.map((category, index) => ({
         "@type": "ListItem",
         "position": index + 1,
         "name": category,
@@ -41,17 +44,17 @@ const CategoriesPage = () => {
         </section>
 
         <section className="categories-grid">
-          {Object.entries(categoryGroups).map(([groupName, categories]) => (
-            <div key={groupName} className="category-group">
-              <h2 className="category-group-title">{groupName}</h2>
+          {categoryGroups.map((group) => (
+            <div key={group.id} className="category-group">
+              <h2 className="category-group-title">{group.labelKey}</h2>
               <div className="category-items">
-                {categories.map(category => (
+                {group.categories.map(category => (
                   <a 
                     key={category}
                     href={`/listings?category=${category}`}
                     className="category-item"
                   >
-                    <span className="category-icon">{categoryIcons[category]}</span>
+                    <span className="category-icon">{categoryIcons[category] || '🏷️'}</span>
                     <span className="category-name">{category}</span>
                     <span className="category-arrow">→</span>
                   </a>

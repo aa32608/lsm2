@@ -97,18 +97,18 @@ export default function HomeTab() {
           </p>
           
           <div className="category-grid">
-            {Object.entries(categoryGroups).slice(0, 8).map(([groupName, cats]) => (
-              <div key={groupName} className="category-group">
-                <h3 className="category-group-title">{t(groupName)}</h3>
+            {categoryGroups.slice(0, 8).map((group) => (
+              <div key={group.id} className="category-group">
+                <h3 className="category-group-title">{t(group.labelKey)}</h3>
                 <div className="category-items">
-                  {cats.slice(0, categoriesPerGroup).map(cat => (
+                  {group.categories.slice(0, categoriesPerGroup).map(cat => (
                     <button
                       key={cat}
                       className="category-item"
                       onClick={() => handleCategoryClick(cat)}
                       aria-label={`${t("browse")} ${t(cat)}`}
                     >
-                      <span className="category-icon" aria-hidden="true">{categoryIcons[cat]}</span>
+                      <span className="category-icon" aria-hidden="true">{categoryIcons[cat] || '🏷️'}</span>
                       <span className="category-name">{t(cat)}</span>
                     </button>
                   ))}

@@ -1,30 +1,6 @@
 {
   "version": 4,
   "routes": {
-    "/_global-error": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/_global-error",
-      "dataRoute": "/_global-error.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/robots.txt": {
       "initialHeaders": {
         "cache-control": "public, max-age=0, must-revalidate",
@@ -53,42 +29,13 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
-    },
-    "/sitemap.xml": {
-      "initialHeaders": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "application/xml",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/sitemap.xml/layout,_N_T_/sitemap.xml/route,_N_T_/sitemap.xml"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/sitemap.xml",
-      "dataRoute": null,
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "173605ffcae5ec18942ac897602c7fe5",
-    "previewModeSigningKey": "68d286ac8a177de8cda9332671690d7f745cbdfc3d60323af3c76d618ea5a089",
-    "previewModeEncryptionKey": "eafe69ce5dc75e5b26a6ff076b694db70a109b1d0d5eb603a32fb4c31d180f38"
+    "previewModeId": "c30600c7831e5e39b909b66f425c7f6c",
+    "previewModeSigningKey": "d45484fc69e7ce20f7488d5482dad903c51f4dd5073b933dd6b9df78782c1242",
+    "previewModeEncryptionKey": "3855b1f147c71a12b7ce9d8fb7e2bc17440706dc8da194dcea288d7f4e2b0792"
   }
 }

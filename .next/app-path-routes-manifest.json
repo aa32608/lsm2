@@ -2,10 +2,15 @@
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
   "/account/page": "/account",
+  "/contact/page": "/contact",
   "/listings/[id]/page": "/listings/[id]",
   "/listings/page": "/listings",
   "/mylistings/page": "/mylistings",
   "/page": "/",
+  "/payment-success/page": "/payment-success",
+  "/pricing/page": "/pricing",
+  "/privacy/page": "/privacy",
   "/robots.txt/route": "/robots.txt",
-  "/sitemap.xml/route": "/sitemap.xml"
+  "/sitemap.xml/route": "/sitemap.xml",
+  "/terms/page": "/terms"
 }

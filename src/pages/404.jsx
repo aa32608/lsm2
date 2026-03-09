@@ -1,6 +1,5 @@
 import React from 'react';
 import SEOHead from '../components/SEOHead';
-import Link from 'next/link';
 
 const NotFoundPage = () => {
   const structuredData = {
@@ -32,38 +31,38 @@ const NotFoundPage = () => {
           </p>
           
           <div className="error-actions">
-            <Link href="/" className="btn btn-primary">
+            <a href="/" className="btn btn-primary">
               🏠 Go Home
-            </Link>
-            <Link href="/listings" className="btn btn-secondary">
+            </a>
+            <a href="/listings" className="btn btn-secondary">
               📋 Browse Listings
-            </Link>
-            <Link href="/categories" className="btn btn-ghost">
+            </a>
+            <a href="/categories" className="btn btn-ghost">
               🗂️ Browse Categories
-            </Link>
+            </a>
           </div>
           
           <div className="helpful-links">
             <h3>Looking for something specific?</h3>
             <div className="links-grid">
-              <Link href="/listings?category=Restaurants" className="help-link">
+              <a href="/listings?category=Restaurants" className="help-link">
                 🍽️ Restaurants
-              </Link>
-              <Link href="/listings?category=Home Services" className="help-link">
+              </a>
+              <a href="/listings?category=Home Services" className="help-link">
                 🔧 Home Services
-              </Link>
-              <Link href="/listings?category=Beauty & Wellness" className="help-link">
+              </a>
+              <a href="/listings?category=Beauty & Wellness" className="help-link">
                 💇 Beauty & Wellness
-              </Link>
-              <Link href="/listings?category=Automotive" className="help-link">
+              </a>
+              <a href="/listings?category=Automotive" className="help-link">
                 🚗 Automotive
-              </Link>
-              <Link href="/listings?category=Healthcare" className="help-link">
+              </a>
+              <a href="/listings?category=Healthcare" className="help-link">
                 🏥 Healthcare
-              </Link>
-              <Link href="/listings?category=Education" className="help-link">
+              </a>
+              <a href="/listings?category=Education" className="help-link">
                 📚 Education
-              </Link>
+              </a>
             </div>
           </div>
           
