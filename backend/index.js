@@ -1019,6 +1019,102 @@ app.post("/api/create-payment", async (req, res) => {
   res.json({ checkoutUrl: finalUrl.toString() });
 });
 
+/* ----------------------- WHOP EMBED CHECKOUT ----------------------- */
+
+app.post("/api/create-embed-payment", async (req, res) => {
+  const { listingId, type, customerEmail, customerName, plan, userId } = req.body;
+
+  if (!listingId || !plan) {
+    return res.status(400).json({ error: "Missing listingId or plan" });
+  }
+
+  // --- FREE TRIAL LOGIC (same as regular checkout) ---
+  if (type === 'create' && userId && String(plan) === "1") {
+    try {
+      const userRef = db.ref(`users/${userId}`);
+      const userSnap = await userRef.once('value');
+      const userData = userSnap.val();
+
+      if (userData && !userData.hasUsedFreeTrial) {
+        const now = Date.now();
+        const durationMs = 30 * 24 * 60 * 60 * 1000;
+
+        const updates = {};
+        updates[`listings/${listingId}/status`] = "verified";
+        updates[`listings/${listingId}/createdAt`] = now;
+        updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+        updates[`listings/${listingId}/plan`] = "free_trial";
+        updates[`listings/${listingId}/pricePaid`] = 0;
+        updates[`users/${userId}/hasUsedFreeTrial`] = true;
+
+        await db.ref().update(updates);
+
+        const userLang = await getUserLanguage(userId);
+        const subject = EMAIL_TRANSLATIONS.listing.free_trial_activated.subject[userLang] || 
+                       EMAIL_TRANSLATIONS.listing.free_trial_activated.subject.en;
+        const text = EMAIL_TRANSLATIONS.listing.free_trial_activated.text[userLang]() || 
+                    EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
+
+        if (customerEmail) {
+          await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated", listingId);
+        }
+
+        return res.json({ success: true, isFreeTrial: true });
+      }
+    } catch (err) {
+      console.error("[Free Trial] Error:", err);
+    }
+  }
+
+  // --- WHOP EMBED CHECKOUT ---
+  const planKey = String(plan);
+  const baseUrl = getWhopCheckoutUrl(planKey);
+
+  // For embed, we need to use the embed URL format
+  const embedUrl = baseUrl.includes("?")
+    ? baseUrl.replace(/\/checkout\//, "/embed/checkout/")
+    : baseUrl.replace(/\/checkout\//, "/embed/checkout/") + "?";
+
+  const finalUrl = new URL(embedUrl);
+  finalUrl.searchParams.append("listing_id", String(listingId));
+  finalUrl.searchParams.append("user_id", String(userId || ""));
+  finalUrl.searchParams.append("type", type || "create");
+  finalUrl.searchParams.append("plan", planKey);
+
+  // Embed-specific parameters
+  finalUrl.searchParams.append("embed", "true");
+  finalUrl.searchParams.append("theme", "light"); // or "dark" based on user preference
+  
+  // Success and cancel URLs for embed postMessage handling
+  const successUrl = buildSiteUrl("/payment-success");
+  const cancelUrl = buildSiteUrl("/pricing?cancelled=true");
+  finalUrl.searchParams.append("success_url", successUrl);
+  finalUrl.searchParams.append("cancel_url", cancelUrl);
+
+  // Store pending payment so webhook can match even if metadata is missing
+  if (isFirebaseInitialized) {
+    try {
+      await db.ref(`pendingPayments/${listingId}`).set({
+        email: (customerEmail || "").trim().toLowerCase(),
+        plan: planKey,
+        type: type || "create",
+        userId: String(userId || ""),
+        createdAt: Date.now(),
+        embed: true,
+      });
+    } catch (e) {
+      console.error("[Whop Embed] Failed to store pending payment:", e);
+    }
+  }
+
+  res.json({ 
+    embedUrl: finalUrl.toString(),
+    listingId,
+    plan: planKey,
+    type: type || "create"
+  });
+});
+
 /* ----------------------- WHOP WEBHOOK (WITH SIGNATURE VERIFICATION) ----------------------- */
 
 app.post("/api/webhook/whop", async (req, res) => {
