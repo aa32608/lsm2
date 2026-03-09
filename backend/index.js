@@ -919,438 +919,205 @@ function getWhopCheckoutUrl(planKey) {
     "6": process.env.WHOP_SANDBOX_CHECKOUT_6_MONTHS,
     "12": process.env.WHOP_SANDBOX_CHECKOUT_12_MONTHS,
   };
-  // Only use sandbox when explicit sandbox URL is set (production IDs don't work on sandbox.whop.com)
-  if (WHOP_SANDBOX && sandboxUrls[planKey]) return sandboxUrls[planKey];
-  return WHOP_CHECKOUT_URLS[planKey] || WHOP_CHECKOUT_URLS["1"];
+
+  if (WHOP_SANDBOX && sandboxUrls[planKey]) {
+    return sandboxUrls[planKey];
+  }
+
+  const prod = {
+    "1": process.env.WHOP_CHECKOUT_1_MONTH || "https://whop.com/checkout/plan_ZLH8DZLad1ksM/",
+    "3": process.env.WHOP_CHECKOUT_3_MONTHS || "https://whop.com/checkout/plan_XmZqVypr4sxuX/",
+    "6": process.env.WHOP_CHECKOUT_6_MONTHS || "https://whop.com/checkout/plan_4vlhNJN9pif7y/",
+    "12": process.env.WHOP_CHECKOUT_12_MONTHS || "https://whop.com/checkout/plan_kahgJwEw0AlxD/",
+  };
+
+  return prod[planKey] || prod["1"];
 }
+
+/* ----------------------- ONLY WHOP PAYMENT PROVIDER ----------------------- */
 
 app.post("/api/create-payment", async (req, res) => {
-  const { listingId, type, customerEmail, customerName, plan, userId } = req.body; // type: 'create' | 'extend'
+  const { listingId, type, customerEmail, customerName, plan, userId } = req.body;
 
-  if (!listingId) {
-    return res.status(400).json({ error: EMAIL_TRANSLATIONS.errors.missing_listing_id.en });
+  if (!listingId || !plan) {
+    return res.status(400).json({ error: "Missing listingId or plan" });
   }
 
-  // --- FREE TRIAL LOGIC (permanent: first 1-month listing free per account) ---
-  // If it's a new listing creation, we have a userId, and selected plan is "1"
+  // --- FREE TRIAL LOGIC (unchanged) ---
   if (type === 'create' && userId && String(plan) === "1") {
-      try {
-        const userRef = db.ref(`users/${userId}`);
-        const userSnap = await userRef.once('value');
-        const userData = userSnap.val();
+    try {
+      const userRef = db.ref(`users/${userId}`);
+      const userSnap = await userRef.once('value');
+      const userData = userSnap.val();
 
-        // Check if user exists and hasn't used free trial
-        if (userData && !userData.hasUsedFreeTrial) {
-            // Activate Free Trial (1 Month)
-            const now = Date.now();
-            const durationMs = 30 * 24 * 60 * 60 * 1000; // 30 days
-            
-            const updates = {};
-            updates[`listings/${listingId}/status`] = "verified";
-            updates[`listings/${listingId}/createdAt`] = now;
-            updates[`listings/${listingId}/expiresAt`] = now + durationMs;
-            updates[`listings/${listingId}/plan`] = "free_trial";
-            updates[`listings/${listingId}/pricePaid`] = 0;
-            updates[`users/${userId}/hasUsedFreeTrial`] = true;
+      if (userData && !userData.hasUsedFreeTrial) {
+        const now = Date.now();
+        const durationMs = 30 * 24 * 60 * 60 * 1000;
 
-            await db.ref().update(updates);
-            
-            console.log(`[Free Trial] Activated for user ${userId}, listing ${listingId}`);
-            
-            // Send Confirmation Email
-            const userLang = await getUserLanguage(userId);
-            const subject = EMAIL_TRANSLATIONS.listing.free_trial_activated.subject[userLang] || 
-                           EMAIL_TRANSLATIONS.listing.free_trial_activated.subject.en;
-            const text = EMAIL_TRANSLATIONS.listing.free_trial_activated.text[userLang]() || 
-                        EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
-            
-            if (customerEmail) {
-                const emailResult = await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated", listingId);
-                if (emailResult.ok) {
-                    console.log(`[Payment] Free trial email sent to ${customerEmail}`);
-                } else if (!emailResult.skipped) {
-                    console.error(`[Payment] Failed to send free trial email to ${customerEmail}:`, emailResult.error);
-                }
-            }
+        const updates = {};
+        updates[`listings/${listingId}/status`] = "verified";
+        updates[`listings/${listingId}/createdAt`] = now;
+        updates[`listings/${listingId}/expiresAt`] = now + durationMs;
+        updates[`listings/${listingId}/plan`] = "free_trial";
+        updates[`listings/${listingId}/pricePaid`] = 0;
+        updates[`users/${userId}/hasUsedFreeTrial`] = true;
 
-            return res.json({ success: true, isFreeTrial: true });
+        await db.ref().update(updates);
+
+        const userLang = await getUserLanguage(userId);
+        const subject = EMAIL_TRANSLATIONS.listing.free_trial_activated.subject[userLang] || 
+                       EMAIL_TRANSLATIONS.listing.free_trial_activated.subject.en;
+        const text = EMAIL_TRANSLATIONS.listing.free_trial_activated.text[userLang]() || 
+                    EMAIL_TRANSLATIONS.listing.free_trial_activated.text.en();
+
+        if (customerEmail) {
+          await sendEmail(customerEmail, subject, text, false, null, "free_trial_activated", listingId);
         }
-      } catch (err) {
-          console.error("[Free Trial] Error checking eligibility:", err);
-          // Fall through to normal payment if error
+
+        return res.json({ success: true, isFreeTrial: true });
       }
-  }
-  // ------------------------
-
-  // --- WHOP: redirect to plan checkout URL and store pending payment for webhook matching ---
-  if (PAYMENT_PROVIDER === "whop") {
-    const planKey = String(plan);
-    const baseUrl = getWhopCheckoutUrl(planKey);
-    const returnToSite = buildSiteUrl("/payment-success"); // Dedicated page after checkout (success or cancel)
-    const params = new URLSearchParams({
-      listing_id: String(listingId),
-      user_id: String(userId || ""),
-      type: String(type || "create"),
-      plan: planKey,
-      returnUrl: returnToSite,  // Whop: return to our site after checkout
-      return_url: returnToSite, // some integrations use snake_case
-    });
-    const checkoutUrl = baseUrl.includes("?") ? `${baseUrl}&${params.toString()}` : `${baseUrl}?${params.toString()}`;
-
-    if (isFirebaseInitialized) {
-      try {
-        await db.ref(`pendingPayments/${listingId}`).set({
-          email: (customerEmail || "").trim().toLowerCase(),
-          plan: planKey,
-          type: String(type || "create"),
-          userId: String(userId || ""),
-          createdAt: Date.now(),
-        });
-      } catch (e) {
-        console.error("[Whop] Failed to store pending payment:", e);
-      }
+    } catch (err) {
+      console.error("[Free Trial] Error:", err);
     }
-    return res.json({ checkoutUrl });
   }
 
-  // --- FREEMIUS: build hosted checkout URL and store pending payment for webhook matching ---
-  if (PAYMENT_PROVIDER === "freemius") {
-    const productId = process.env.FREEMIUS_PRODUCT_ID;
-    let planId = null;
-    switch (String(plan)) {
-      case "1": planId = process.env.FREEMIUS_PLAN_1_MONTH; break;
-      case "3": planId = process.env.FREEMIUS_PLAN_3_MONTHS; break;
-      case "6": planId = process.env.FREEMIUS_PLAN_6_MONTHS; break;
-      case "12": planId = process.env.FREEMIUS_PLAN_12_MONTHS; break;
-      default: planId = process.env.FREEMIUS_PLAN_1_MONTH;
-    }
-    if (!productId || !planId) {
-      console.error(`[Freemius] Product or plan missing: product_id=${!!productId}, plan=${plan}`);
-      return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
-    }
-    const base = `https://checkout.freemius.com/product/${encodeURIComponent(productId)}/plan/${encodeURIComponent(planId)}/`;
-    // Force EUR pricing in Freemius checkout
-    const params = new URLSearchParams({ readonly_user: "true", currency: "eur" });
-    if (customerEmail) params.set("user_email", customerEmail);
-    // Sandbox only from server env; client cannot force sandbox
-    if (/^(true|1|yes)$/i.test(String(process.env.FREEMIUS_SANDBOX || ""))) {
-      params.set("sandbox", "true");
-    }
-    const checkoutUrl = `${base}?${params.toString()}`;
+  // --- WHOP CHECKOUT ---
+  const planKey = String(plan);
+  const baseUrl = getWhopCheckoutUrl(planKey);
 
-    if (isFirebaseInitialized) {
-      try {
-        await db.ref(`pendingPayments/${listingId}`).set({
-          email: (customerEmail || "").trim().toLowerCase(),
-          plan: String(plan),
-          type: String(type || "create"),
-          createdAt: Date.now(),
-        });
-      } catch (e) {
-        console.error("[Freemius] Failed to store pending payment:", e);
-      }
+  // Critical: Add ?redirect=true so user is auto-sent back after payment
+  const checkoutUrl = baseUrl.includes("?")
+    ? `${baseUrl}&redirect=true`
+    : `${baseUrl}?redirect=true`;
+
+  const finalUrl = new URL(checkoutUrl);
+  finalUrl.searchParams.append("listing_id", String(listingId));
+  finalUrl.searchParams.append("user_id", String(userId || ""));
+  finalUrl.searchParams.append("type", type || "create");
+  finalUrl.searchParams.append("plan", planKey);
+
+  // Optional: nicer success page
+  const successUrl = buildSiteUrl("/payment-success");
+  finalUrl.searchParams.append("success_url", successUrl);
+  finalUrl.searchParams.append("cancel_url", buildSiteUrl("/pricing?cancelled=true"));
+
+  // Store pending payment so webhook can match even if metadata is missing
+  if (isFirebaseInitialized) {
+    try {
+      await db.ref(`pendingPayments/${listingId}`).set({
+        email: (customerEmail || "").trim().toLowerCase(),
+        plan: planKey,
+        type: type || "create",
+        userId: String(userId || ""),
+        createdAt: Date.now(),
+      });
+    } catch (e) {
+      console.error("[Whop] Failed to store pending payment:", e);
     }
-    return res.json({ checkoutUrl });
   }
 
-  // --- GUMROAD: build checkout URL with custom params ---
-  if (PAYMENT_PROVIDER === "gumroad") {
-    let permalink;
-    switch (String(plan)) {
-      case "1": permalink = process.env.GUMROAD_PRODUCT_1_MONTH; break;
-      case "3": permalink = process.env.GUMROAD_PRODUCT_3_MONTHS; break;
-      case "6": permalink = process.env.GUMROAD_PRODUCT_6_MONTHS; break;
-      case "12": permalink = process.env.GUMROAD_PRODUCT_12_MONTHS; break;
-      default: permalink = process.env.GUMROAD_PRODUCT_1_MONTH;
-    }
-    if (!permalink) {
-      console.error(`[Gumroad] Product permalink missing for plan ${plan}`);
-      return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
-    }
-    const base = "https://gumroad.com/l/" + encodeURIComponent(permalink.replace(/^https?:\/\/[^/]+\/l\//i, "").replace(/\/$/, ""));
-    const params = new URLSearchParams({
-      wanted: "true",
-      listing_id: String(listingId),
-      type: String(type || "create"),
-      plan: String(plan),
-    });
-    if (customerEmail) params.set("email", customerEmail);
-    const checkoutUrl = `${base}?${params.toString()}`;
-    return res.json({ checkoutUrl });
-  }
-
-  // --- DODO PAYMENTS ---
-  if (!process.env.DODO_PAYMENTS_API_KEY) {
-    console.error("DODO_PAYMENTS_API_KEY is missing");
-    return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_service_not_configured.en });
-  }
-
-  let PRODUCT_ID;
-  switch (String(plan)) {
-    case "1": PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH; break;
-    case "3": PRODUCT_ID = process.env.DODO_PRODUCT_3_MONTHS; break;
-    case "6": PRODUCT_ID = process.env.DODO_PRODUCT_6_MONTHS; break;
-    case "12": PRODUCT_ID = process.env.DODO_PRODUCT_12_MONTHS; break;
-    default: PRODUCT_ID = process.env.DODO_PRODUCT_1_MONTH;
-  }
-  if (!PRODUCT_ID) PRODUCT_ID = process.env.DODO_PAYMENTS_PRODUCT_ID;
-  if (!PRODUCT_ID) {
-    return res.status(503).json({ error: EMAIL_TRANSLATIONS.errors.payment_product_not_configured.en });
-  }
-
-  try {
-    const client = dodoClient || new DodoPayments({
-      bearerToken: process.env.DODO_PAYMENTS_API_KEY,
-      environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode',
-    });
-    const session = await client.checkoutSessions.create({
-      product_cart: [{ product_id: PRODUCT_ID, quantity: 1 }],
-      customer: { email: customerEmail || 'guest@example.com', name: customerName || EMAIL_TRANSLATIONS.errors.guest_user.en },
-      metadata: { listingId, type, plan },
-      return_url: buildSiteUrl("/", { payment: "success", listingId, type, plan }),
-    });
-    res.json({ checkoutUrl: session.checkout_url });
-  } catch (err) {
-    console.error("Dodo Payment Error Full:", JSON.stringify(err, null, 2));
-    res.status(500).json({ error: EMAIL_TRANSLATIONS.errors.failed_to_create_payment_session.en + " " + (err.message || "") });
-  }
+  res.json({ checkoutUrl: finalUrl.toString() });
 });
 
-app.post("/api/webhook", async (req, res) => {
-  try {
-    const event = req.body;
-    console.log("Webhook received (Dodo):", JSON.stringify(event, null, 2));
-    if (event.type === "payment.succeeded" && event.data?.metadata?.listingId) {
-      const { listingId, type, plan } = event.data.metadata;
-      await applyPaymentSuccessToListing(listingId, type, plan);
-    }
-    res.json({ received: true });
-  } catch (err) {
-    console.error("Webhook Error:", err);
-    res.status(500).send(EMAIL_TRANSLATIONS.errors.webhook_error.en);
-  }
-});
+/* ----------------------- WHOP WEBHOOK (WITH SIGNATURE VERIFICATION) ----------------------- */
 
-/* ----------------------- GUMROAD WEBHOOK ----------------------- */
-// Gumroad Ping sends x-www-form-urlencoded flat params (sale_id, product_id, email, custom_fields, ...), not JSON with body.sale
-function normalizeGumroadBody(reqBody) {
-  if (reqBody.sale && reqBody.event === "sale") return reqBody;
-  if (reqBody.product_id != null) {
-    let custom_fields = reqBody.custom_fields;
-    if (typeof custom_fields === "string") {
-      try { custom_fields = JSON.parse(custom_fields); } catch { custom_fields = {}; }
-    }
-    if (custom_fields && typeof custom_fields !== "object") custom_fields = {};
-    return {
-      event: "sale",
-      sale: {
-        product_id: reqBody.product_id,
-        email: reqBody.email || reqBody.purchaser_email,
-        purchaser_email: reqBody.email || reqBody.purchaser_email,
-        custom_fields: custom_fields || {},
-      },
-    };
-  }
-  return reqBody;
-}
-
-app.post("/api/webhook/gumroad", async (req, res) => {
-  try {
-    const secret = process.env.GUMROAD_WEBHOOK_SECRET;
-    if (secret && req.rawBody) {
-      const sig = req.headers["x-gumroad-signature"];
-      const expected = crypto.createHmac("sha256", secret).update(req.rawBody).digest("hex");
-      if (sig !== expected) {
-        console.warn("[Gumroad] Webhook signature mismatch");
-        return res.status(401).send("Invalid signature");
-      }
-    }
-    const body = normalizeGumroadBody(req.body || {});
-    console.log("Webhook received (Gumroad):", JSON.stringify(body, null, 2));
-    if (body.event !== "sale" || !body.sale) {
-      return res.json({ received: true });
-    }
-    const sale = body.sale;
-    const custom = sale.custom_fields || sale.custom_properties || {};
-    const listingId = custom.listing_id || sale.listing_id;
-    // Never trust custom "plan" or "type": derive plan from product bought, infer type from listing state
-    const plan = sale.product_id != null ? (GUMROAD_PRODUCT_ID_TO_PLAN[String(sale.product_id)] || null) : null;
-    const purchaserEmail = sale.email || sale.purchaser_email || sale.buyer_email || null;
-
-    if (!listingId || !plan) {
-      console.log("[Gumroad] Missing listing_id or unknown product_id in sale:", { listingId, plan, product_id: sale.product_id });
-      return res.json({ received: true });
-    }
-    await applyPaymentSuccessToListing(String(listingId), "create", String(plan), { purchaserEmail, inferType: true });
-    res.json({ received: true });
-  } catch (err) {
-    console.error("[Gumroad] Webhook error:", err);
-    res.status(500).send("Webhook error");
-  }
-});
-
-/* ----------------------- FREEMIUS WEBHOOK ----------------------- */
-// Freemius sends JSON; verify x-signature = HMAC SHA256(rawBody, product secret key).
-// payment.created: match pending payment by buyer email + plan_id, then activate listing.
-function freemiusPlanIdToPlan(planId) {
-  if (planId == null) return null;
-  const s = String(planId);
-  if (s === String(process.env.FREEMIUS_PLAN_1_MONTH)) return "1";
-  if (s === String(process.env.FREEMIUS_PLAN_3_MONTHS)) return "3";
-  if (s === String(process.env.FREEMIUS_PLAN_6_MONTHS)) return "6";
-  if (s === String(process.env.FREEMIUS_PLAN_12_MONTHS)) return "12";
-  return null;
-}
-
-app.post("/api/webhook/freemius", async (req, res) => {
-  try {
-    const secret = process.env.FREEMIUS_SECRET_KEY;
-    if (secret && req.rawBody) {
-      const sig = req.headers["x-signature"];
-      const hash = crypto.createHmac("sha256", secret).update(req.rawBody).digest("hex");
-      if (!sig || !crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(sig, "hex"))) {
-        console.warn("[Freemius] Webhook signature mismatch");
-        return res.status(401).send("Invalid signature");
-      }
-    }
-    const event = req.body || {};
-    console.log("Webhook received (Freemius):", event.type, event.id);
-    if (event.type !== "payment.created") {
-      return res.json({ received: true });
-    }
-    const objects = event.objects || {};
-    const user = objects.user || {};
-    const payment = objects.payment || {};
-    const email = (user.email || "").trim().toLowerCase();
-    const planId = payment.plan_id != null ? String(payment.plan_id) : null;
-    const plan = freemiusPlanIdToPlan(planId);
-    if (!email || !plan) {
-      console.log("[Freemius] Missing email or unknown plan_id in payment.created:", { email: !!email, plan_id: planId });
-      return res.json({ received: true });
-    }
-    if (!isFirebaseInitialized) {
-      console.warn("[Freemius] Firebase not initialized, cannot match pending payment");
-      return res.json({ received: true });
-    }
-    const pendingSnap = await db.ref("pendingPayments").once("value");
-    const pending = pendingSnap.val() || {};
-    let listingId = null;
-    let pendingType = "create";
-    let oldest = Infinity;
-    for (const [lid, data] of Object.entries(pending)) {
-      if (!data || (data.email || "").trim().toLowerCase() !== email || String(data.plan) !== plan) continue;
-      const created = Number(data.createdAt) || 0;
-      if (created < oldest) {
-        oldest = created;
-        listingId = lid;
-        pendingType = data.type || "create";
-      }
-    }
-    if (!listingId) {
-      console.log("[Freemius] No pending payment found for email + plan:", email, plan);
-      return res.json({ received: true });
-    }
-    await applyPaymentSuccessToListing(listingId, pendingType, plan, { purchaserEmail: email, inferType: true });
-    await db.ref(`pendingPayments/${listingId}`).remove();
-    res.json({ received: true });
-  } catch (err) {
-    console.error("[Freemius] Webhook error:", err);
-    res.status(500).send("Webhook error");
-  }
-});
-
-/* ----------------------- WHOP WEBHOOK ----------------------- */
-// Configure this URL in Whop Dashboard: Developers → Webhooks → Add endpoint: https://your-api.com/api/webhook/whop
-// Subscribe to: payment.succeeded and/or membership.welcome (or events that include purchaser + metadata).
-// If your Whop plan passes metadata (listing_id, plan, type) in the checkout URL, it may appear in the webhook payload.
 app.post("/api/webhook/whop", async (req, res) => {
   try {
+    // === 1. Verify webhook signature (critical for security) ===
+    const signature = req.headers["whop-signature"];
+    const secret = process.env.WHOP_WEBHOOK_SECRET;
+
+    if (!secret) {
+      console.warn("[Whop] WHOP_WEBHOOK_SECRET not set — skipping signature check (dev only)");
+    } else if (secret && signature && req.rawBody) {
+      const hash = crypto.createHmac("sha256", secret).update(req.rawBody).digest("hex");
+      if (hash !== signature) {
+        console.warn("[Whop] Invalid webhook signature");
+        return res.status(401).json({ error: "Invalid signature" });
+      }
+    }
+
     const body = req.body || {};
-    const eventType = body.type || body.event || "";
-    console.log("[Whop] Webhook received:", eventType, JSON.stringify(body).slice(0, 500));
+    const eventType = body.type || "";
 
-    // Payment failed: log, notify user by email if we have their address, then acknowledge
-    if (eventType === "payment.failed" || eventType === "payment_failed" || eventType === "checkout.failed") {
-      console.log("[Whop] Payment failed event:", JSON.stringify(body, null, 2));
-      let toEmail = (body.data?.user?.email || body.user?.email || body.data?.email || body.email || "").trim().toLowerCase();
-      const failedListingId = body.data?.metadata?.listing_id || body.metadata?.listing_id || body.data?.custom_attributes?.listing_id || body.listing_id;
-      if (!toEmail && failedListingId && isFirebaseInitialized) {
-        try {
-          const pendingSnap = await db.ref(`pendingPayments/${failedListingId}`).once("value");
-          const pending = pendingSnap.val();
-          if (pending?.email) toEmail = (pending.email || "").trim().toLowerCase();
-        } catch (e) {
-          console.warn("[Whop] Could not read pendingPayments for payment_failed:", e.message);
+    console.log("[Whop] Webhook:", eventType);
+
+    // === 2. Payment Failed → Send localized email ===
+    if (["payment.failed", "checkout.failed", "payment_failed"].includes(eventType)) {
+      let email = (body.data?.user?.email || body.user?.email || "").trim().toLowerCase();
+      const listingId = body.data?.metadata?.listing_id || body.metadata?.listing_id;
+
+      if (!email && listingId && isFirebaseInitialized) {
+        const pending = (await db.ref(`pendingPayments/${listingId}`).once("value")).val();
+        if (pending?.email) email = pending.email;
+      }
+
+      if (email) {
+        let userLang = "sq";
+        if (listingId && isFirebaseInitialized) {
+          const listing = (await db.ref(`listings/${listingId}`).once("value")).val();
+          if (listing?.userId) userLang = await getUserLanguage(listing.userId).catch(() => "sq");
+        }
+
+        const t = EMAIL_TRANSLATIONS.listing.payment_failed;
+        const subject = t.subject[userLang] || t.subject.en;
+        const text = (t.text[userLang] || t.text.en)(
+          myListingsUrl(),
+          buildSiteUrl("/")
+        );
+
+        const result = await sendEmail(email, subject, text, false, null, "payment_failed", listingId);
+        if (result.ok) console.log("[Whop] Sent payment failed email to", email);
+      }
+
+      return res.json({ received: true });
+    }
+
+    // === 3. Payment Succeeded ===
+    if (["payment.succeeded", "checkout.succeeded", "membership.fulfilled"].includes(eventType)) {
+      const metadata = body.data?.metadata || body.metadata || {};
+      const listingId = metadata.listing_id;
+      const plan = metadata.plan;
+      const type = metadata.type || "create";
+      const purchaserEmail = (body.data?.user?.email || body.user?.email || "").trim().toLowerCase();
+
+      if (listingId && plan) {
+        await applyPaymentSuccessToListing(String(listingId), type, String(plan), {
+          purchaserEmail,
+          inferType: true
+        });
+        if (isFirebaseInitialized) await db.ref(`pendingPayments/${listingId}`).remove();
+        return res.json({ received: true });
+      }
+    }
+
+    // === 4. Fallback: match by email from pendingPayments ===
+    const email = (body.data?.user?.email || body.user?.email || "").trim().toLowerCase();
+    if (email && isFirebaseInitialized) {
+      const pendingSnap = await db.ref("pendingPayments").once("value");
+      const pending = pendingSnap.val() || {};
+      let matched = null;
+
+      for (const [lid, data] of Object.entries(pending)) {
+        if ((data.email || "").trim().toLowerCase() === email) {
+          matched = { listingId: lid, ...data };
+          break;
         }
       }
-      if (toEmail) {
-        try {
-          let userLang = "en";
-          if (failedListingId && isFirebaseInitialized) {
-            try {
-              const listingSnap = await db.ref(`listings/${failedListingId}`).once("value");
-              const listing = listingSnap.val();
-              if (listing?.userId) userLang = await getUserLanguage(listing.userId).catch(() => "en");
-            } catch (_) {}
-          }
-          const t = EMAIL_TRANSLATIONS.listing.payment_failed;
-          const subject = t.subject[userLang] || t.subject.en;
-          const textFn = t.text[userLang] || t.text.en;
-          const myListingsLink = myListingsUrl();
-          const siteLink = buildSiteUrl("/");
-          const text = typeof textFn === "function" ? textFn(myListingsLink, siteLink) : textFn;
-          const emailResult = await sendEmail(toEmail, subject, text, false, null, "payment_failed", failedListingId || undefined);
-          if (emailResult.ok) console.log("[Whop] Payment failed notification email sent to", toEmail);
-          else if (!emailResult.skipped) console.warn("[Whop] Failed to send payment_failed email:", emailResult.error);
-        } catch (e) {
-          console.warn("[Whop] Error sending payment_failed email:", e.message);
-        }
-      }
-      return res.json({ received: true });
-    }
 
-    // Whop may send: body.type (e.g. "payment.succeeded"), body.data with metadata or custom fields
-    let listingId = body.data?.metadata?.listing_id || body.metadata?.listing_id || body.data?.custom_attributes?.listing_id || body.listing_id;
-    let plan = body.data?.metadata?.plan || body.metadata?.plan || body.data?.custom_attributes?.plan || body.plan;
-    const paymentType = body.data?.metadata?.type || body.metadata?.type || body.data?.custom_attributes?.type || body.payment_type;
-    const email = (body.data?.user?.email || body.user?.email || body.data?.email || body.email || "").trim().toLowerCase();
-
-    if (listingId && plan) {
-      await applyPaymentSuccessToListing(String(listingId), paymentType === "extend" ? "extend" : "create", String(plan), { purchaserEmail: email || undefined, inferType: true });
-      if (isFirebaseInitialized) await db.ref(`pendingPayments/${listingId}`).remove();
-      return res.json({ received: true });
-    }
-
-    // Fallback: match by email + plan from pendingPayments (same as Freemius)
-    if (!email || !isFirebaseInitialized) {
-      return res.json({ received: true });
-    }
-    const pendingSnap = await db.ref("pendingPayments").once("value");
-    const pending = pendingSnap.val() || {};
-    let matchedListingId = null;
-    let pendingType = "create";
-    let oldest = Infinity;
-    const planStr = plan ? String(plan) : null;
-    for (const [lid, data] of Object.entries(pending)) {
-      if (!data || (data.email || "").trim().toLowerCase() !== email) continue;
-      const pPlan = String(data.plan || "");
-      if (planStr && pPlan !== planStr) continue;
-      const created = Number(data.createdAt) || 0;
-      if (created < oldest) {
-        oldest = created;
-        matchedListingId = lid;
-        pendingType = data.type || "create";
-        plan = data.plan;
+      if (matched) {
+        await applyPaymentSuccessToListing(matched.listingId, matched.type || "create", String(matched.plan), {
+          purchaserEmail: email,
+          inferType: true
+        });
+        await db.ref(`pendingPayments/${matched.listingId}`).remove();
       }
     }
-    if (matchedListingId && plan) {
-      await applyPaymentSuccessToListing(matchedListingId, pendingType, String(plan), { purchaserEmail: email, inferType: true });
-      await db.ref(`pendingPayments/${matchedListingId}`).remove();
-    }
+
     res.json({ received: true });
   } catch (err) {
     console.error("[Whop] Webhook error:", err);
-    res.status(500).send("Webhook error");
+    res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
