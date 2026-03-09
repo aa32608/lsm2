@@ -4,6 +4,20 @@ Disallow: /admin
 Disallow: /dashboard
 Disallow: /account
 Disallow: /mylistings
+Disallow: /api/
+Disallow: /*?*
+Disallow: /*.json$
 
-# Dynamic sitemap with all listings
+# Allow search engines to crawl main content
+Allow: /listings
+Allow: /categories
+Allow: /about
+Allow: /guide
+Allow: /blog
+
+# Sitemaps
+Sitemap: https://www.bizcall.mk/sitemap.xml
 Sitemap: https://bizcall.mk/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1
