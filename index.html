@@ -46,6 +46,9 @@
       child-src 'self' https://www.google.com https://*.googlesyndication.com https://pagead2.googlesyndication.com https://*.doubleclick.net https://*.googletagmanager.com https://www.googletagmanager.com https://*.google.com https://*.googleadservices.com https://adservice.google.com https://*.adtrafficquality.google https://*.whop.com https://whop.com https://sandbox.whop.com;
       frame-ancestors 'self' https://*.whop.com https://whop.com https://sandbox.whop.com https://app.contentful.com;
     " /> -->
+    
+    <!-- Explicitly allow framing -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors *;" />
     <link rel="preload" href="./logo.png" as="image" />
   </head>
   <body>
