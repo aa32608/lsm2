@@ -2099,11 +2099,20 @@ export default function App({ initialListings = [], initialPublicListings = [] }
       });
       const data = await res.json();
       if (data.embedUrl) {
-        // Show embed checkout instead of redirecting
-        setCurrentExtendListingId(listing.id);
-        setExtendPaymentEmbedUrl(data.embedUrl);
-        setShowExtendPaymentEmbed(true);
-        showMessage(t("openingPaymentForm") || "Opening secure payment form...", "info");
+        // Check if it's actually an embed URL using the isEmbed flag
+        if (data.isEmbed) {
+          // Show embed checkout instead of redirecting
+          setCurrentExtendListingId(listing.id);
+          setExtendPaymentEmbedUrl(data.embedUrl);
+          setShowExtendPaymentEmbed(true);
+          showMessage(t("openingPaymentForm") || "Opening secure payment form...", "info");
+        } else {
+          // Fallback to redirect for regular checkout
+          showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
+          setTimeout(() => {
+            window.location.href = data.embedUrl;
+          }, 100);
+        }
       } else {
         throw new Error("No embed URL returned");
       }

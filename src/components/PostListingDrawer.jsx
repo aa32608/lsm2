@@ -246,14 +246,23 @@ const PostListingDrawer = () => {
         }
 
         if (data.embedUrl) {
-            // Show embed checkout instead of redirecting
+          // Check if it's actually an embed URL using the isEmbed flag
+          if (data.isEmbed) {
+            // Show embed checkout
             setCurrentListingId(listingId);
             setPaymentEmbedUrl(data.embedUrl);
             setShowPaymentEmbed(true);
             showMessage(t("openingPaymentForm") || "Opening secure payment form...", "info");
-            return; 
+          } else {
+            // Fallback to redirect for regular checkout
+            showMessage(t("redirectingToPayment") || "Redirecting to payment...", "info");
+            setTimeout(() => {
+              window.location.href = data.embedUrl;
+            }, 100);
+          }
+          return; 
         } else {
-            throw new Error("Payment initialization failed: No embed URL");
+          throw new Error("Payment initialization failed: No embed URL");
         }
       } catch (paymentErr) {
           if (paymentErr.name === 'AbortError') {

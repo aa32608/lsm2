@@ -1070,10 +1070,32 @@ app.post("/api/create-embed-payment", async (req, res) => {
   const planKey = String(plan);
   const baseUrl = getWhopCheckoutUrl(planKey);
 
-  // For embed, we need to use the embed URL format
-  const embedUrl = baseUrl.includes("?")
-    ? baseUrl.replace(/\/checkout\//, "/embed/checkout/")
-    : baseUrl.replace(/\/checkout\//, "/embed/checkout/") + "?";
+  console.log('[Whop Embed] Base URL:', baseUrl);
+
+  // For Whop embed, we need to use the embed URL format
+  // Whop embed URLs use: https://whop.com/embed/checkout/PLAN_ID?parameters
+  // But if the current URLs use session IDs, we might need to extract the plan ID
+  let embedUrl;
+  let isEmbed = false;
+  
+  if (baseUrl.includes("/checkout/plan_")) {
+    // Extract plan ID from URL like https://whop.com/checkout/plan_ZLH8DZLad1ksM/
+    const planMatch = baseUrl.match(/\/checkout\/(plan_[^\/]+)/);
+    if (planMatch) {
+      const planId = planMatch[1];
+      embedUrl = `https://whop.com/embed/checkout/${planId}`;
+      isEmbed = true;
+      console.log('[Whop Embed] Generated embed URL:', embedUrl);
+    } else {
+      // Fallback to regular checkout if we can't extract plan ID
+      embedUrl = baseUrl;
+      console.log('[Whop Embed] Could not extract plan ID, using regular checkout');
+    }
+  } else {
+    // Fallback to regular checkout
+    embedUrl = baseUrl;
+    console.log('[Whop Embed] URL format not recognized, using regular checkout');
+  }
 
   const finalUrl = new URL(embedUrl);
   finalUrl.searchParams.append("listing_id", String(listingId));
@@ -1081,15 +1103,25 @@ app.post("/api/create-embed-payment", async (req, res) => {
   finalUrl.searchParams.append("type", type || "create");
   finalUrl.searchParams.append("plan", planKey);
 
-  // Embed-specific parameters
-  finalUrl.searchParams.append("embed", "true");
-  finalUrl.searchParams.append("theme", "light"); // or "dark" based on user preference
-  
-  // Success and cancel URLs for embed postMessage handling
-  const successUrl = buildSiteUrl("/payment-success");
-  const cancelUrl = buildSiteUrl("/pricing?cancelled=true");
-  finalUrl.searchParams.append("success_url", successUrl);
-  finalUrl.searchParams.append("cancel_url", cancelUrl);
+  // Embed-specific parameters (only if using embed URL)
+  if (isEmbed) {
+    finalUrl.searchParams.append("embed", "true");
+    finalUrl.searchParams.append("theme", "light");
+    
+    // Success and cancel URLs for embed postMessage handling
+    const successUrl = buildSiteUrl("/payment-success");
+    const cancelUrl = buildSiteUrl("/pricing?cancelled=true");
+    finalUrl.searchParams.append("success_url", successUrl);
+    finalUrl.searchParams.append("cancel_url", cancelUrl);
+  } else {
+    // For regular checkout, add redirect parameters
+    finalUrl.searchParams.append("redirect", "true");
+    const successUrl = buildSiteUrl("/payment-success");
+    finalUrl.searchParams.append("success_url", successUrl);
+    finalUrl.searchParams.append("cancel_url", buildSiteUrl("/pricing?cancelled=true"));
+  }
+
+  console.log('[Whop Embed] Final URL:', finalUrl.toString());
 
   // Store pending payment so webhook can match even if metadata is missing
   if (isFirebaseInitialized) {
@@ -1109,6 +1141,7 @@ app.post("/api/create-embed-payment", async (req, res) => {
 
   res.json({ 
     embedUrl: finalUrl.toString(),
+    isEmbed: isEmbed,
     listingId,
     plan: planKey,
     type: type || "create"
