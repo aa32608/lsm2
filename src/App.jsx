@@ -41,6 +41,7 @@ import DualRangeSlider from "./components/DualRangeSlider";
 import ListingsTab from "./legacy_pages/ListingsTab";
 import MyListingCard from "./components/MyListingCard";
 import HomeTab from "./legacy_pages/HomeTab";
+import SEOHead from "./components/SEOHead";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS, sortFeaturedFirst, isFeatured } from "./constants";
@@ -2104,13 +2105,140 @@ export default function App({ initialListings = [], initialPublicListings = [] }
     }
   };
   
-  const onLogout = useCallback(async () => {
-    await signOut(auth);
-    showMessage(t("signedOut"), "success");
-    if (selectedTab === "myListings" || selectedTab === "account") {
-      setSelectedTab("main");
+  // SEO metadata generation
+  const getSEOData = useCallback(() => {
+    const baseUrl = "https://www.bizcall.mk";
+    
+    switch (selectedTab) {
+      case "main":
+        return {
+          title: "BizCall.mk - North Macedonia Business Directory",
+          description: "Connect with trusted local businesses and services across North Macedonia. Find everything from restaurants to professional services in Skopje, Bitola, Ohrid and more.",
+          keywords: "North Macedonia business directory, Skopje businesses, Bitola services, Ohrid companies, Macedonia local services, business listings, find businesses Macedonia",
+          canonical: baseUrl,
+          structuredData: {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "BizCall.mk",
+            "url": baseUrl,
+            "description": "North Macedonia's premier business directory connecting local businesses with customers",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": `${baseUrl}/search?q={search_term_string}`,
+              "query-input": "required name=search_term_string"
+            },
+            "publisher": {
+              "@type": "Organization",
+              "name": "BizCall.mk",
+              "url": baseUrl,
+              "logo": `${baseUrl}/logo.png`
+            }
+          }
+        };
+        
+      case "allListings":
+        return {
+          title: "All Business Listings - BizCall.mk",
+          description: `Browse ${verifiedListings.length}+ verified business listings across North Macedonia. Find local services, restaurants, shops, and professionals in your area.`,
+          keywords: "business listings North Macedonia, find businesses Macedonia, local services, professional services, Skopje businesses, Bitola services",
+          canonical: `${baseUrl}/listings`,
+          structuredData: {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Business Listings",
+            "description": `Browse ${verifiedListings.length} verified business listings in North Macedonia`,
+            "url": `${baseUrl}/listings`,
+            "numberOfItems": verifiedListings.length,
+            "mainEntity": {
+              "@type": "ItemList",
+              "numberOfItems": verifiedListings.length,
+              "itemListElement": verifiedListings.slice(0, 10).map((listing, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "name": listing.name,
+                "description": listing.description,
+                "url": `${baseUrl}/listings/${listing.id}`
+              }))
+            }
+          }
+        };
+        
+      case "myListings":
+        return {
+          title: "My Business Listings - BizCall.mk",
+          description: "Manage your business listings on BizCall.mk. Edit, update, and track performance of your business directory listings.",
+          keywords: "manage business listings, edit listing, business dashboard, BizCall.mk account",
+          canonical: `${baseUrl}/mylistings`,
+          noIndex: true
+        };
+        
+      case "account":
+        return {
+          title: "My Account - BizCall.mk",
+          description: "Manage your BizCall.mk account settings, profile information, and business directory preferences.",
+          keywords: "account settings, profile management, BizCall.mk account, business directory account",
+          canonical: `${baseUrl}/account`,
+          noIndex: true
+        };
+        
+      default:
+        return {
+          title: "BizCall.mk - North Macedonia Business Directory",
+          description: "Connect with trusted local businesses and services across North Macedonia.",
+          keywords: "North Macedonia business directory, Skopje businesses, Bitola services",
+          canonical: baseUrl
+        };
     }
-  }, [t, selectedTab, showMessage]);
+  }, [selectedTab, verifiedListings]);
+
+  // SEO metadata for individual listing pages
+  const getListingSEOData = useCallback((listing) => {
+    if (!listing) return null;
+    
+    const baseUrl = "https://www.bizcall.mk";
+    const listingUrl = `${baseUrl}/listings/${listing.id}`;
+    
+    return {
+      title: `${listing.name} - ${t(listing.category) || listing.category} in ${listing.location || 'North Macedonia'} | BizCall.mk`,
+      description: `${listing.description?.slice(0, 160) || `Find ${listing.name}, a ${t(listing.category) || listing.category} in ${listing.location || 'North Macedonia'}. Contact: ${listing.contact || 'Available'}. ${listing.offerprice ? `Services starting from ${listing.offerprice}.` : ''}`}`,
+      keywords: `${listing.name}, ${t(listing.category) || listing.category}, ${listing.location}, North Macedonia business, ${listing.tags || ''}`,
+      canonical: listingUrl,
+      image: listing.images?.[0] || `${baseUrl}/logo.png`,
+      structuredData: {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": listing.name,
+        "description": listing.description,
+        "url": listingUrl,
+        "telephone": listing.contact,
+        "email": listing.userEmail,
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": listing.location,
+          "addressCountry": "MK"
+        },
+        "category": t(listing.category) || listing.category,
+        "priceRange": listing.offerprice || "$",
+        "image": listing.images?.[0] || `${baseUrl}/logo.png`,
+        "geo": {
+          "@type": "GeoCoordinates",
+          "addressCountry": "MK",
+          "addressLocality": listing.location
+        },
+        "aggregateRating": listing.rating ? {
+          "@type": "AggregateRating",
+          "ratingValue": listing.rating,
+          "reviewCount": listing.reviewCount || 1
+        } : undefined,
+        "offers": listing.offerprice ? {
+          "@type": "Offer",
+          "price": listing.offerprice,
+          "priceCurrency": "MKD",
+          "availability": "https://schema.org/InStock"
+        } : undefined
+      }
+    };
+  }, [t]);
 
   const onLogin = useCallback(() => {
     setShowAuthModal(true);
@@ -2226,16 +2354,10 @@ export default function App({ initialListings = [], initialPublicListings = [] }
 
   return (
     <>
+      {/* Dynamic SEO based on current page and selected listing */}
+      <SEOHead {...getSEOData()} />
+      {selectedListing && <SEOHead {...getListingSEOData(selectedListing)} />}
 
-
-      <HeadManager
-        title={seoTitle}
-        description={seoDescription}
-        keywords={seoKeywords}
-        canonical={canonicalUrl}
-        image={ogImage}
-        jsonLd={jsonLdData}
-      />
       {message.text && <div className={`notification ${message.type}`}>{message.text}</div>}
 
       <div className="app">

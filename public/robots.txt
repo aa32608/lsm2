@@ -7,6 +7,7 @@ Disallow: /mylistings
 Disallow: /api/
 Disallow: /*?*
 Disallow: /*.json$
+Disallow: /404
 
 # Allow search engines to crawl main content
 Allow: /listings
@@ -20,4 +21,23 @@ Sitemap: https://www.bizcall.mk/sitemap.xml
 Sitemap: https://bizcall.mk/sitemap.xml
 
 # Crawl delay for respectful crawling
+Crawl-delay: 1
+
+# Specific instructions for major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /account
+Disallow: /mylistings
+Disallow: /api/
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /account
+Disallow: /mylistings
+Disallow: /api/
 Crawl-delay: 1

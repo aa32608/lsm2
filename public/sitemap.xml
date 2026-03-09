@@ -22,7 +22,7 @@
     <loc>https://www.bizcall.mk/about</loc>
     <lastmod>2025-01-01</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.bizcall.mk/guide/listing</loc>
@@ -71,6 +71,12 @@
     <lastmod>2025-01-01</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.bizcall.mk/404</loc>
+    <lastmod>2025-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.1</priority>
   </url>
   <url>
     <loc>https://bizcall.mk/</loc>
