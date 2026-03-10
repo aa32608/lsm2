@@ -76,10 +76,16 @@ export const TRANSLATIONS = {
     allBusinesses: "All Businesses",
     verifiedOnly: "Verified Only",
     
-    // Verification Badge
-    verified: "Verified",
-    pending: "Pending",
-    unverified: "Unverified",
+    // Post Listing Page
+    basicInfo: "Basic Information",
+    enterBusinessName: "Enter your business name",
+    locationInfo: "Location Information",
+    enterPhone: "Enter phone number",
+    enterWebsite: "https://example.com",
+    describeService: "Describe your service in detail...",
+    pricing: "Pricing (Optional)",
+    max4: "Max 4",
+    uploadImages: "Upload Images",
 
     // General
     ",": ",",

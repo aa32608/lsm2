@@ -123,6 +123,12 @@
       "namedRegex": "^/payment\\-success(?:/)?$"
     },
     {
+      "page": "/post-listing",
+      "regex": "^/post\\-listing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/post\\-listing(?:/)?$"
+    },
+    {
       "page": "/pricing",
       "regex": "^/pricing(?:/)?$",
       "routeKeys": {},

@@ -1,11 +1,14 @@
 import React from 'react';
+import { useApp } from '../context/AppContext';
 
 export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
+  const { t } = useApp();
+  
   const getStatusConfig = (status) => {
     switch (status) {
       case 'verified':
         return {
-          text: 'Verified',
+          text: t("verified") || "Verified",
           color: '#10b981',
           bgColor: '#10b981',
           icon: '✓',
@@ -14,7 +17,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
         };
       case 'pending':
         return {
-          text: 'Pending',
+          text: t("pending") || "Pending",
           color: '#f59e0b',
           bgColor: '#f59e0b',
           icon: '⏱',
@@ -23,7 +26,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
         };
       default:
         return {
-          text: 'Unverified',
+          text: t("unverified") || "Unverified",
           color: '#64748b',
           bgColor: '#64748b',
           icon: '○',
