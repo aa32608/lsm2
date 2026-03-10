@@ -1,18 +1,9 @@
 import React from 'react';
+import { safeT } from '../utils/translationHelper';
 
 export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
-  // Safe translation fallback
-  const t = (key, fallback) => {
-    try {
-      // Try to get translation from global context if available
-      if (typeof window !== 'undefined' && window.__BIZCALL_TRANSLATIONS__) {
-        return window.__BIZCALL_TRANSLATIONS__[key] || fallback || key;
-      }
-      return fallback || key;
-    } catch (error) {
-      return fallback || key;
-    }
-  };
+  // Use safe translation function
+  const t = safeT;
   
   const getStatusConfig = (status) => {
     switch (status) {

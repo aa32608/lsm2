@@ -1,5 +1,5 @@
 "use client";
-import React, { lazy, Suspense, useEffect } from "react";
+import React, { lazy, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppProvider, useApp } from "../context/AppContext";
 import Header from "./Header";
@@ -47,18 +47,18 @@ const LayoutContent = ({ children }) => {
     setExtendModalOpen, setExtendTarget, setSelectedExtendPlan
   } = useApp();
 
+  const [expiryBannerDismissed, setExpiryBannerDismissed] = useState(false);
+
+  const dismissExpiryBanner = () => {
+    setExpiryBannerDismissed(true);
+  };
+
   // Expiring listing (≤5 days left) for banner
   const expiringListing = myListingsRaw?.find((l) => {
     if (l.status !== "verified" || !l.expiresAt) return false;
     const days = getDaysUntilExpiry(l.expiresAt);
-    return days !== null && days > 0 && days <= 5;
+    return days <= 5 && days > 0;
   });
-
-  // Load Dodo payments as soon as user enters the website (any tab/page)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    fetch(`${API_BASE}/api/payments-warmup`, { method: "GET", headers: { "Content-Type": "application/json" } }).catch(() => {});
-  }, []);
 
   const openRenewModal = () => {
     if (expiringListing) {
@@ -72,7 +72,7 @@ const LayoutContent = ({ children }) => {
     <div className="app-container">
       <Header sidebarOpen={sidebarOpen} onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      {user && expiringListing && (
+      {user && expiringListing && !expiryBannerDismissed && (
         <div className="expiry-banner" role="alert" style={{ 
           position: "fixed", 
           top: "90px", 
@@ -83,7 +83,7 @@ const LayoutContent = ({ children }) => {
           padding: "0.75rem 1rem", 
           display: "flex", 
           alignItems: "center", 
-          justifyContent: "center", 
+          justifyContent: "space-between",
           gap: "1rem", 
           flexWrap: "wrap",
           zIndex: 1000,
@@ -92,10 +92,31 @@ const LayoutContent = ({ children }) => {
           maxWidth: "90%",
           margin: "0 auto"
         }}>
-          <span>{t("listingExpiresInDays").replace("{{days}}", String(getDaysUntilExpiry(expiringListing.expiresAt)))}</span>
-          <button type="button" className="btn btn-primary btn-sm" onClick={openRenewModal} aria-label={t("renewNow")}>
-            {t("renewNow")}
-          </button>
+          <span style={{ flex: 1, textAlign: "center" }}>
+            {t("listingExpiresInDays").replace("{{days}}", String(getDaysUntilExpiry(expiringListing.expiresAt)))}
+          </span>
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <button type="button" className="btn btn-primary btn-sm" onClick={openRenewModal} aria-label={t("renewNow")}>
+              {t("renewNow")}
+            </button>
+            <button 
+              type="button" 
+              className="btn btn-ghost btn-sm" 
+              onClick={dismissExpiryBanner}
+              aria-label={t("close")}
+              style={{ 
+                background: "rgba(0,0,0,0.1)", 
+                color: "#1f2937", 
+                border: "1px solid rgba(0,0,0,0.2)",
+                padding: "0.25rem 0.5rem",
+                borderRadius: "4px",
+                fontSize: "0.875rem",
+                minWidth: "auto"
+              }}
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
       <main className="main-content">
