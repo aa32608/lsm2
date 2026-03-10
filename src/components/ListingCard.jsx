@@ -116,6 +116,18 @@ const ListingCard = React.memo(({
               className="listing-card-image"
               loading="lazy"
             />
+            <div className="listing-badges">
+              {l.verified && (
+                <VerificationBadge 
+                  status={l.verified} 
+                  compact 
+                  iconOnly={true}
+                />
+              )}
+              {l.featured && (
+                <span className="featured-badge">⭐</span>
+              )}
+            </div>
             {images.length > 1 && (
               <>
                 <button 

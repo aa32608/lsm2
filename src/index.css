@@ -648,11 +648,12 @@ button:focus-visible {
 /* Fix notification positioning under navbar */
 .notification-toast {
   position: fixed;
-  top: 80px;
+  top: 90px;
   right: 20px;
   z-index: 1001;
   transform: translateX(100%);
   transition: transform 0.3s ease;
+  max-width: 400px;
 }
 
 .notification-toast.show {
@@ -661,13 +662,50 @@ button:focus-visible {
 
 @media (max-width: 768px) {
   .notification-toast {
-    top: 70px;
+    top: 80px;
     right: 10px;
     left: 10px;
     transform: translateY(-100%);
+    max-width: none;
   }
   
   .notification-toast.show {
+    transform: translateY(0);
+  }
+}
+
+/* Ensure notifications appear above all content */
+.notification-container {
+  position: fixed;
+  top: 90px;
+  right: 20px;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.notification-container .notification {
+  pointer-events: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  margin-bottom: 10px;
+}
+
+.notification-container .notification.show {
+  transform: translateX(0);
+}
+
+@media (max-width: 768px) {
+  .notification-container {
+    top: 80px;
+    right: 10px;
+    left: 10px;
+  }
+  
+  .notification-container .notification {
+    transform: translateY(-100%);
+  }
+  
+  .notification-container .notification.show {
     transform: translateY(0);
   }
 }
@@ -764,7 +802,50 @@ button:focus-visible {
   box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.3), 0 4px 12px rgba(100, 116, 139, 0.25);
 }
 
-/* Responsive verification badge */
+/* Responsive verification badge - Always icon-only */
+@media (max-width: 1024px) {
+  .verification-badge-compact {
+    padding: 0.125rem;
+    min-width: 20px;
+    min-height: 20px;
+    border-radius: 10px;
+    font-size: 0.5625rem;
+  }
+  
+  .verification-badge-compact .badge-text {
+    display: none;
+  }
+  
+  .verification-badge-compact:not(.icon-only) {
+    position: relative;
+  }
+  
+  .verification-badge-compact:not(.icon-only)::after {
+    content: attr(data-verification-status);
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.5625rem;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .verification-badge-compact:not(.icon-only):hover::after {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 640px) {
   .verification-badge-compact {
     padding: 0.125rem;
