@@ -24,6 +24,36 @@ export const TRANSLATIONS = {
     supportDesc: "Need help? We're here for you.",
     uploadAlt: "Upload",
 
+    // Business Hours
+    businessHours: "Business Hours",
+    openNow: "Open Now",
+    closed: "Closed",
+    opensAt: "Opens at",
+    closesAt: "Closes at",
+    opensOn: "Opens on",
+    
+    // Quick Contact Form
+    sendMessage: "Send Message",
+    contactBusiness: "Contact Business",
+    enterYourMessage: "Enter your message...",
+    messageSentSuccessfully: "Message sent successfully!",
+    errorSendingMessage: "Error sending message. Please try again.",
+    
+    // Enhanced Search Filters
+    priceRange: "Price Range",
+    minPrice: "Min Price",
+    maxPrice: "Max Price",
+    searchRadius: "Search Radius",
+    anyDistance: "Any Distance",
+    businessStatus: "Business Status",
+    allBusinesses: "All Businesses",
+    verifiedOnly: "Verified Only",
+    
+    // Verification Badge
+    verified: "Verified",
+    pending: "Pending",
+    unverified: "Unverified",
+
     // General
     ",": ",",
     noMyListings: "You have no listings yet",
@@ -1269,6 +1299,36 @@ export const TRANSLATIONS = {
     editProfile: "Ndrysho profilin",
     deleteAccountConfirm: "Konfirmoni fshirjen e llogarisë",
 
+    // Business Hours
+    businessHours: "Orari i Punës",
+    openNow: "Hapur Tani",
+    closed: "Mbyllur",
+    opensAt: "Hapet në",
+    closesAt: "Mbyllet në",
+    opensOn: "Hapet në",
+    
+    // Quick Contact Form
+    sendMessage: "Dërgo Mesazh",
+    contactBusiness: "Kontakto Biznesin",
+    enterYourMessage: "Shkruani mesazhin tuaj...",
+    messageSentSuccessfully: "Mesazhi u dërgua me sukses!",
+    errorSendingMessage: "Gabim në dërgim. Provo përsëri.",
+    
+    // Enhanced Search Filters
+    priceRange: "Qmimi i Varion",
+    minPrice: "Qmimi Minimal",
+    maxPrice: "Qmimi Maksimal",
+    searchRadius: "Rrethi i Kërkimit",
+    anyDistance: "Çdo distancë",
+    businessStatus: "Statusi i Biznesit",
+    allBusinesses: "Të gjitha Bizneset",
+    verifiedOnly: "Vetëm të Verifikuara",
+    
+    // Verification Badge
+    verified: "I verifikuar",
+    pending: "Në pritje",
+    unverified: "I paverifikuar",
+
     // General
     ",": ",",
     noMyListings: "Nuk keni asnjë listim ende",
@@ -2398,6 +2458,36 @@ export const TRANSLATIONS = {
     addPhoneInAccountSettings: "Додадете го вашиот телефон во поставките за сметка прво.",
     cookieConsentText: "Користиме колачиња за да се осигураме дека ќе го добиете најдоброто искуство на нашата веб-страница.",
     accept: "Прифати",
+
+    // Business Hours
+    businessHours: "Работно Време",
+    openNow: "Отворено Сега",
+    closed: "Затворено",
+    opensAt: "Отвора во",
+    closesAt: "Затвора во",
+    opensOn: "Отвора во",
+    
+    // Quick Contact Form
+    sendMessage: "Испрати Порака",
+    contactBusiness: "Контактирај Бизнис",
+    enterYourMessage: "Внесете ја вашата порака...",
+    messageSentSuccessfully: "Пораката е испратена успешно!",
+    errorSendingMessage: "Грешка при испраќање. Обидете се повторно.",
+    
+    // Enhanced Search Filters
+    priceRange: "Опсег на Цени",
+    minPrice: "Минимална Цена",
+    maxPrice: "Максимална Цена",
+    searchRadius: "Радиус на Пребарување",
+    anyDistance: "Било кое растојание",
+    businessStatus: "Статус на Бизнис",
+    allBusinesses: "Сите Бизнеси",
+    verifiedOnly: "Само Верификувани",
+    
+    // Verification Badge
+    verified: "Верификуван",
+    pending: "Во Чекање",
+    unverified: "Неверификуван",
 
     // General
     reauthRequired: "Ве молиме одјавете се и најавете се повторно за да ја избришете вашата сметка.",

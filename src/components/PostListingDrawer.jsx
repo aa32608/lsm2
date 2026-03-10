@@ -263,18 +263,18 @@ const PostListingDrawer = () => {
       <AnimatePresence>
         {showPostForm && user && user.emailVerified && (
           <motion.div
-            className="modal-overlay"
+            className="modal-overlay fullscreen-modal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowPostForm(false)}
           >
-            <motion.aside
-              className="modal post-form-drawer"
+            <motion.div
+              className="modal post-form-fullscreen"
               onClick={(e) => e.stopPropagation()}
-              initial={{ x: "100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "100%", opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "tween", duration: 0.3 }}
             >
               <div className="modal-header">
@@ -788,7 +788,7 @@ const PostListingDrawer = () => {
                     </section>
                 </section>
               </div>
-            </motion.aside>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
