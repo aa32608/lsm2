@@ -548,3 +548,171 @@ button:focus-visible {
   50% { opacity: 0.5; }
   100% { opacity: 1; }
 }
+
+/* Business Hours Display */
+.business-hours-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.business-hours-display {
+  font-size: 0.9rem;
+}
+
+.business-hours-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.status-indicator {
+  font-size: 0.8rem;
+}
+
+.business-hours-closes,
+.business-hours-next {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+/* Quick Contact Form */
+.quick-contact-form {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-top: 1rem;
+}
+
+.quick-contact-form h4 {
+  margin-bottom: 1rem;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+
+.quick-contact-form textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+}
+
+.quick-contact-form .btn {
+  margin-top: 1rem;
+}
+
+/* Enhanced Search Filters */
+.search-filters-enhanced {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 2rem;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-weight: 500;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Verification Badge */
+.verification-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.verification-badge.compact {
+  background: #10b981;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.verification-badge.full {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.verification-badge-icon {
+  font-size: 1.2rem;
+}
+
+.verification-badge-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.verification-badge-text {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.verification-badge-description {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Enhanced Listing Card */
+.listing-card-enhanced {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.listing-card-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.listing-card-header {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.listing-card-body {
+  padding: 1rem;
+}
+
+.listing-card-footer {
+  padding: 1rem;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}

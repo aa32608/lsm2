@@ -1,7 +1,8 @@
 "use client";
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
+import { BusinessHoursDisplay } from "../utils/businessHours";
 import { ref as dbRef, get, onValue } from "firebase/database";
 import Link from "next/link";
 import GoogleAd from "./GoogleAd";
@@ -35,6 +36,8 @@ export default function ListingDetailClient({ id, initialListing }) {
   const [showMaximize, setShowMaximize] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactMessage, setContactMessage] = useState("");
   const viewRecordedRef = useRef(false);
 
   // Feedback local state
@@ -184,6 +187,36 @@ export default function ListingDetailClient({ id, initialListing }) {
 
     return () => unsubscribe();
   }, [id, db]);
+
+  // Handle contact form submission
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    if (!contactMessage.trim() || !listing?.userEmail) return;
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/send-contact-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessEmail: listing.userEmail,
+          businessName: listing.name,
+          customerEmail: user?.email,
+          message: contactMessage,
+          listingId: listing.id
+        })
+      });
+      
+      if (response.ok) {
+        showMessage(t("messageSentSuccessfully"), "success");
+        setContactMessage("");
+        setShowContactForm(false);
+      } else {
+        showMessage(t("errorSendingMessage"), "error");
+      }
+    } catch (error) {
+      showMessage(t("errorSendingMessage"), "error");
+    }
+  };
 
   // Determine images to display
   const images = useMemo(() => {
@@ -573,6 +606,16 @@ export default function ListingDetailClient({ id, initialListing }) {
                 </div>
               )}
 
+              {/* Business Hours */}
+              <div className="detail-sidebar-item">
+                <div className="detail-sidebar-label">
+                  <span aria-hidden="true">🕒</span> {t("businessHours")}
+                </div>
+                <div className="detail-sidebar-value">
+                  <BusinessHoursDisplay businessHours={listing.businessHours} compact={true} />
+                </div>
+              </div>
+
               {listing.location && (
                 <div className="detail-sidebar-item">
                   <div className="detail-sidebar-label">
@@ -679,6 +722,34 @@ export default function ListingDetailClient({ id, initialListing }) {
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Quick Contact Form */}
+              {listing.userEmail && (
+                <div className="detail-sidebar-item">
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowContactForm(!showContactForm)}
+                    style={{ width: '100%' }}
+                  >
+                    <span aria-hidden="true">✉️</span> {t("sendMessage")}
+                  </button>
+                  
+                  {showContactForm && (
+                    <form onSubmit={handleContactSubmit} className="quick-contact-form">
+                      <h4>{t("contactBusiness")}</h4>
+                      <textarea
+                        value={contactMessage}
+                        onChange={(e) => setContactMessage(e.target.value)}
+                        placeholder={t("enterYourMessage")}
+                        required
+                      />
+                      <button type="submit" className="btn btn-primary">
+                        {t("sendMessage")}
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
             </div>

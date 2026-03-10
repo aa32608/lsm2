@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import { VerificationBadge } from "./VerificationBadge";
 
 const ListingCard = React.memo(({
   listing: l,
@@ -126,9 +127,7 @@ const ListingCard = React.memo(({
              {isFeatured && <span className="pill pill-featured" title={t("featuredBenefitsTooltip")}>{t("featured")}</span>}
              {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
-           {l.status === "verified" && (
-             <span className="pill pill-verified" style={{ backgroundColor: 'rgba(255,255,255,0.9)', color: 'var(--success)', fontWeight: 'bold' }}>✓ {t("verified")}</span>
-           )}
+           <VerificationBadge status={l.status} compact={true} />
         </div>
       </div>
 
