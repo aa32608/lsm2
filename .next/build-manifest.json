@@ -27,9 +27,9 @@
     ],
     "/post-listing": [
       "static/chunks/f99b1eba5e30a11f.js",
-      "static/chunks/5467ba5cc66cfa08.js",
+      "static/chunks/3120c30bd3c364da.js",
       "static/chunks/20420b03ac330d2c.js",
-      "static/chunks/turbopack-f44e4f269567e1e9.js"
+      "static/chunks/turbopack-908465c10464cd8f.js"
     ]
   },
   "devFiles": [],
@@ -37,8 +37,8 @@
     "static/chunks/a6dad97d9634a72d.js"
   ],
   "lowPriorityFiles": [
-    "static/2a09HoljcK9WGctKAhLS-/_ssgManifest.js",
-    "static/2a09HoljcK9WGctKAhLS-/_buildManifest.js"
+    "static/DyctpDG4OXh0xKDkrhd5O/_ssgManifest.js",
+    "static/DyctpDG4OXh0xKDkrhd5O/_buildManifest.js"
   ],
   "rootMainFiles": [
     "static/chunks/9056b92616072c6b.js",

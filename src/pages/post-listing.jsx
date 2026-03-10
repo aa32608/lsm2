@@ -22,18 +22,6 @@ export default function PostListingPage() {
   const { user, userProfile, showMessage, t } = appContext || {};
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return (
-      <div className="post-listing-page">
-        <div className="loading-map">Loading...</div>
-      </div>
-    );
-  }
   const [form, setForm] = useState({
     name: "",
     category: "",
@@ -54,22 +42,25 @@ export default function PostListingPage() {
     emailVerified: false,
   });
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   // Load user's saved draft (if any)
   useEffect(() => {
-    if (user?.uid) {
-      const draftRef = dbRef(db, `drafts/${user.uid}`);
-      const unsub = onValue(draftRef, (snap) => {
-        if (snap.exists()) {
-          const data = snap.val();
-          setForm((prev) => ({
-            ...prev,
-            ...data,
-            images: data.images || [],
-          }));
-        }
-      });
-      return () => unsub();
-    }
+    if (!user?.uid) return;
+    const draftRef = dbRef(db, `drafts/${user.uid}`);
+    const unsub = onValue(draftRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.val();
+        setForm((prev) => ({
+          ...prev,
+          ...data,
+          images: data.images || [],
+        }));
+      }
+    });
+    return () => unsub();
   }, [user]);
 
   // Save draft periodically
@@ -81,6 +72,14 @@ export default function PostListingPage() {
     }, 2000);
     return () => clearTimeout(timer);
   }, [form, user]);
+
+  if (!isClient) {
+    return (
+      <div className="post-listing-page">
+        <div className="loading-map">Loading...</div>
+      </div>
+    );
+  }
 
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);

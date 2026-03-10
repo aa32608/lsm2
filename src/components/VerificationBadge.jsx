@@ -2,7 +2,14 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 
 export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
-  const { t } = useApp();
+  let t;
+  try {
+    const appContext = useApp();
+    t = appContext.t;
+  } catch (error) {
+    // Fallback if useApp is not available
+    t = (key) => key;
+  }
   
   const getStatusConfig = (status) => {
     switch (status) {
@@ -13,7 +20,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
           bgColor: '#10b981',
           icon: '✓',
           gradient: 'linear-gradient(135deg, #10b981, #059669)',
-          shadow: '0 0 0 2px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.15)'
+          shadow: '0 0 0 1px rgba(16, 185, 129, 0.2), 0 2px 6px rgba(16, 185, 129, 0.15)'
         };
       case 'pending':
         return {
@@ -22,7 +29,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
           bgColor: '#f59e0b',
           icon: '⏱',
           gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
-          shadow: '0 0 0 2px rgba(245, 158, 11, 0.2), 0 4px 12px rgba(245, 158, 11, 0.15)'
+          shadow: '0 0 0 1px rgba(245, 158, 11, 0.2), 0 2px 6px rgba(245, 158, 11, 0.15)'
         };
       default:
         return {
@@ -31,7 +38,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
           bgColor: '#64748b',
           icon: '○',
           gradient: 'linear-gradient(135deg, #64748b, #475569)',
-          shadow: '0 0 0 2px rgba(100, 116, 139, 0.2), 0 4px 12px rgba(100, 116, 139, 0.15)'
+          shadow: '0 0 0 1px rgba(100, 116, 139, 0.2), 0 2px 6px rgba(100, 116, 139, 0.15)'
         };
     }
   };
