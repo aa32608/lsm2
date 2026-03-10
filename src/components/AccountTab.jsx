@@ -532,10 +532,10 @@ const AccountTab = () => {
                   </div>
                   <span className="quick-link-arrow">→</span>
                 </button>
-                <button 
-                  className="action-tile"
-                  style={{ width: '100%', border: 'none', background: 'linear-gradient(135deg, #f8fafc, #ffffff)', padding: '1rem' }}
-                  onClick={() => setShowPostForm(true)}
+                <Link
+                  href="/post-listing"
+                  className="account-action-card"
+                  onClick={onClose}
                 >
                   <span className="action-icon">➕</span>
                   <div style={{ textAlign: 'left' }}>
@@ -543,7 +543,7 @@ const AccountTab = () => {
                     <p className="action-desc">{t("createListingHint")}</p>
                   </div>
                   <span className="quick-link-arrow">→</span>
-                </button>
+                </Link>
                 <Link 
                   href="/terms"
                   className="action-tile"

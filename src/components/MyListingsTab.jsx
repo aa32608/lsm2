@@ -235,15 +235,14 @@ export default function MyListingsTab() {
                 {hasActiveFilters && <span className="filter-badge" aria-label={t("activeFilters")}></span>}
               </button>
               
-              <button
-                type="button"
+              <Link
+                href="/post-listing"
                 className="btn btn-primary"
-                onClick={() => setShowPostForm(true)}
                 aria-label={t("submitListing")}
               >
                 <span aria-hidden="true">➕</span>
                 <span className="btn-text">{t("newListing")}</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -348,15 +347,14 @@ export default function MyListingsTab() {
                 </button>
               )}
               {myListingsRaw.length === 0 && (
-                <button
+                <Link
+                  href="/post-listing"
                   className="btn btn-primary"
-                  onClick={() => setShowPostForm(true)}
-                  type="button"
                   aria-label={t("submitListing")}
                 >
                   <span aria-hidden="true">➕</span>
                   {t("createYourFirstListing")}
-                </button>
+                </Link>
               )}
             </div>
           ) : (

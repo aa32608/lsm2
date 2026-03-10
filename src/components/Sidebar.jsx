@@ -81,19 +81,15 @@ const Sidebar = ({ onClose, isOpen }) => {
           ))}
 
           {user?.emailVerified ? (
-            <button
-              type="button"
+            <Link
+              href="/post-listing"
               className="mobile-drawer-cta"
               style={{ transitionDelay: stagger(links.length) }}
-              onClick={() => {
-                setShowPostForm(true);
-                setForm((f) => ({ ...f, step: 1 }));
-                onClose();
-              }}
+              onClick={onClose}
             >
               <span className="mobile-drawer-cta-icon">➕</span>
               {t("submitListing")}
-            </button>
+            </Link>
           ) : (
             <button
               type="button"

@@ -31,8 +31,7 @@ export default function HomeTab() {
       setAuthMode("login");
       setShowAuthModal(true);
     } else {
-      setShowPostForm(true);
-      setForm((f) => ({ ...f, step: 1 }));
+      router.push('/post-listing');
     }
   };
 
