@@ -8,21 +8,27 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
           text: 'Verified',
           color: '#10b981',
           bgColor: '#10b981',
-          icon: '✅'
+          icon: '✓',
+          gradient: 'linear-gradient(135deg, #10b981, #059669)',
+          shadow: '0 0 0 2px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.15)'
         };
       case 'pending':
         return {
           text: 'Pending',
           color: '#f59e0b',
           bgColor: '#f59e0b',
-          icon: '⏳'
+          icon: '⏱',
+          gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
+          shadow: '0 0 0 2px rgba(245, 158, 11, 0.2), 0 4px 12px rgba(245, 158, 11, 0.15)'
         };
       default:
         return {
           text: 'Unverified',
           color: '#64748b',
           bgColor: '#64748b',
-          icon: '📋'
+          icon: '○',
+          gradient: 'linear-gradient(135deg, #64748b, #475569)',
+          shadow: '0 0 0 2px rgba(100, 116, 139, 0.2), 0 4px 12px rgba(100, 116, 139, 0.15)'
         };
     }
   };
@@ -32,25 +38,24 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
   if (compact) {
     return (
       <span 
-        className={`verification-badge compact ${iconOnly ? 'icon-only' : ''}`}
+        className={`verification-badge-compact ${iconOnly ? 'icon-only' : ''}`}
         data-verification-status={status}
         style={{ 
-          background: status === 'verified' 
-            ? 'linear-gradient(135deg, #10b981, #059669)'
-            : status === 'pending'
-            ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-            : 'linear-gradient(135deg, #64748b, #475569)',
-          color: 'white'
+          background: config.gradient,
+          color: 'white',
+          boxShadow: config.shadow,
+          border: 'none'
         }}
+        title={iconOnly ? config.text : undefined}
       >
-        {config.icon}
+        <span className="badge-icon">{config.icon}</span>
         {!iconOnly && <span className="badge-text">{config.text}</span>}
       </span>
     );
   }
 
   return (
-    <div className="verification-badge full">
+    <div className="verification-badge-full">
       <div className="verification-badge-icon" style={{ color: config.color }}>
         {config.icon}
       </div>
