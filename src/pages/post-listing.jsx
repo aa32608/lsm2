@@ -6,6 +6,7 @@ import { useApp } from "../context/AppContext";
 import DualRangeSlider from "../components/DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
 import { db } from "../firebase";
+import { safeT } from "../utils/translationHelper";
 
 const NorthMacedoniaMap = dynamic(() => import("../NorthMacedoniaMap"), {
   ssr: false,
@@ -20,7 +21,9 @@ const API_BASE =
 export default function PostListingPage() {
   const router = useRouter();
   const appContext = useApp();
-  const { user, userProfile, showMessage, t } = appContext || {};
+  const { user, userProfile, showMessage } = appContext || {};
+  // Safe translation fallback
+  const t = appContext?.t || safeT;
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [form, setForm] = useState({

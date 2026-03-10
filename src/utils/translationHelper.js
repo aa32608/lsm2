@@ -49,6 +49,9 @@ export const defaultTranslations = {
   cancel: "Cancel",
   sendReport: "Send Report",
   maxImagesError: "Maximum 4 images allowed",
+  fillAllFields: "Please fill all required fields",
+  enterValidPhone: "Please enter a valid phone number",
+  listingCreatedSuccessFreeTrial: "Listing created successfully! Free trial activated.",
   // Add more as needed
 };
 
@@ -60,4 +63,16 @@ export const globalT = (key, fallback) => {
   // Always return a string, never undefined
   const result = safeT(key, fallback);
   return typeof result === 'string' ? result : (fallback || key);
+};
+
+// Create a safe t function that can be used as a drop-in replacement
+export const createSafeTFunction = () => {
+  return (key, fallback) => {
+    // Ensure we always return a string
+    const result = globalT(key, fallback);
+    if (typeof result === 'function') {
+      return fallback || key;
+    }
+    return result;
+  };
 };

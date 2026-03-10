@@ -192,7 +192,11 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
     (k) => {
       try {
         const translation = (TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? TRANSLATIONS.en?.[k] ?? k);
-        return typeof translation === 'string' ? translation : String(k || '');
+        // Always ensure we return a string, never a function or undefined
+        if (typeof translation === 'string') {
+          return translation;
+        }
+        return String(k || '');
       } catch (error) {
         return String(k || '');
       }
