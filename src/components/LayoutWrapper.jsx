@@ -82,8 +82,6 @@ const LayoutContent = ({ children }) => {
         <div className="expiry-banner" role="alert" style={{ 
           position: "fixed", 
           top: "90px", 
-          left: "50%", 
-          transform: "translateX(-50%)", 
           background: "var(--warning)", 
           color: "#1f2937", 
           padding: "0.75rem 1rem", 
@@ -95,7 +93,8 @@ const LayoutContent = ({ children }) => {
           zIndex: 1000,
           borderRadius: "8px",
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-          maxWidth: "90%",
+          maxWidth: "100%",
+          width: "100%",
           margin: "0 auto"
         }}>
           <span style={{ flex: 1, textAlign: "center" }}>

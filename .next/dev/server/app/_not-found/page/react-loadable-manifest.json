@@ -1,0 +1,9 @@
+{
+  "[project]/lsm2/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/lsm2/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/b0cef_next_dist_27f0ac17._.js",
+      "static/chunks/b0cef_next_dist_client_app-dir_link_92252deb.js"
+    ]
+  }
+}

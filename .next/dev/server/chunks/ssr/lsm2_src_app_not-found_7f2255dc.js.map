@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Administrator/lsm2/src/app/not-found.js"],"sourcesContent":["\"use client\";\r\nimport Link from 'next/link';\r\nimport { useApp } from '../context/AppContext';\r\n\r\nexport default function NotFound() {\r\n  const { t } = useApp();\r\n  \r\n  return (\r\n    <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>\r\n      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{t(\"pageNotFoundTitle\")}</h1>\r\n      <p style={{ color: '#64748b', marginBottom: '2rem' }}>\r\n        {t(\"pageNotFoundDescription\")}\r\n      </p>\r\n      <Link href=\"/\" className=\"btn btn-primary\" style={{ textDecoration: 'none', display: 'inline-block' }}>\r\n        {t(\"goHome\")}\r\n      </Link>\r\n    </div>\r\n  );\r\n}\r\n"],"names":[],"mappings":";;;;;AACA;AACA;AAFA;;;;AAIe,SAAS;IACtB,MAAM,EAAE,CAAC,EAAE,GAAG,IAAA,8IAAM;IAEpB,qBACE,sPAAC;QAAI,OAAO;YAAE,WAAW;YAAU,SAAS;QAAY;;0BACtD,sPAAC;gBAAG,OAAO;oBAAE,UAAU;oBAAQ,cAAc;gBAAO;0BAAI,EAAE;;;;;;0BAC1D,sPAAC;gBAAE,OAAO;oBAAE,OAAO;oBAAW,cAAc;gBAAO;0BAChD,EAAE;;;;;;0BAEL,sPAAC,+KAAI;gBAAC,MAAK;gBAAI,WAAU;gBAAkB,OAAO;oBAAE,gBAAgB;oBAAQ,SAAS;gBAAe;0BACjG,EAAE;;;;;;;;;;;;AAIX"}}]
+}

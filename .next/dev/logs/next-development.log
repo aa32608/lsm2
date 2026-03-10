@@ -1,0 +1,26 @@
+[00:00:08.964] Server  LOG     ✓ Ready in 6.7s
+[00:00:14.213] Server  LOG     ○ Compiling / ...
+[00:00:28.393] Server  WARN    [Firebase Admin] Missing configuration. Skipping initialization.
+[00:00:28.411] Server  LOG     [Server Cache] Updated 0 verified listings (Admin SDK)
+[00:00:28.420] Server  LOG     [Server Cache] Real-time Firebase listener started (immediate updates)
+[00:00:28.435] Server  WARN    ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+[00:00:28.458] Server  ERROR   (node:5124) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+[00:00:32.709] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:33.307] Browser WARN    Firebase API key missing. Using mock.
+[00:00:33.649] Browser WARN    Firebase auth check failed: {}
+[00:00:33.649] Browser ERROR   uncaughtError: TypeError: __TURBOPACK__imported__module__$5b$project$5d2f$lsm2$2f$src$2f$firebase$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__.auth.onAuthStateChanged is not a function
+[00:00:37.446] Server  LOG     ○ Compiling /_not-found/page ...
+[00:01:39.450] Server  LOG     ✓ Compiled in 235ms
+[00:01:39.483] Server  WARN    ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+[00:01:41.322] Server  WARN    [Firebase Admin] Missing configuration. Skipping initialization.
+[00:01:41.333] Server  LOG     [Server Cache] Updated 0 verified listings (Admin SDK)
+[00:01:41.342] Server  LOG     [Server Cache] Real-time Firebase listener started (immediate updates)
+[00:01:41.350] Server  WARN    ⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+[00:01:43.238] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:43.537] Browser WARN    Firebase API key missing. Using mock.
+[00:01:43.537] Browser WARN    Firebase auth check failed: {}
+[00:01:43.537] Browser ERROR   uncaughtError: TypeError: __TURBOPACK__imported__module__$5b$project$5d2f$lsm2$2f$src$2f$firebase$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__.auth.onAuthStateChanged is not a function
+[00:01:45.088] Server  WARN    [Firebase Admin] Missing configuration. Skipping initialization.
+[00:01:45.107] Server  LOG     [Server Cache] Updated 0 verified listings (Admin SDK)
+[00:01:45.111] Server  LOG     [Server Cache] Real-time Firebase listener started (immediate updates)

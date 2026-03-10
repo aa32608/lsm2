@@ -1,7 +1,7 @@
 import React from 'react';
 import { safeT } from '../utils/translationHelper';
 
-export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
+export const VerificationBadge = ({ status, compact = false }) => {
   // Use safe translation function
   const t = safeT;
   
@@ -42,7 +42,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
   if (compact) {
     return (
       <span 
-        className={`verification-badge-compact ${iconOnly ? 'icon-only' : ''}`}
+        className="verification-badge-compact"
         data-verification-status={status}
         style={{ 
           background: config.gradient,
@@ -53,7 +53,6 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
         title={iconOnly ? config.text : undefined}
       >
         <span className="badge-icon">{config.icon}</span>
-        {!iconOnly && <span className="badge-text">{config.text}</span>}
       </span>
     );
   }

@@ -6,6 +6,7 @@ export const TRANSLATIONS = {
     cookieConsentText: "We use cookies to ensure you get the best experience on our website.",
     accept: "Accept",
     close: "Close",
+    adBlocked: "Ads are blocked by your browser. Please consider supporting us by disabling your ad blocker.",
     
     maxImagesError: "Maximum 4 images allowed",
     // Sidebar

@@ -7,11 +7,13 @@ const GoogleAd = ({ className, style, slot }) => {
   const adRef = useRef(null);
   const adPushed = useRef(false);
   const [adLoaded, setAdLoaded] = React.useState(false);
+  const [adBlocked, setAdBlocked] = React.useState(false);
 
   useEffect(() => {
     // Reset state when slot changes
     adPushed.current = false;
     setAdLoaded(false);
+    setAdBlocked(false);
     let mounted = true;
 
     if (!adRef.current) return;
@@ -125,6 +127,7 @@ const GoogleAd = ({ className, style, slot }) => {
           clearInterval(checkInterval);
           checkInterval = null;
           console.warn('[GoogleAd] AdSense script not loaded after maximum attempts');
+          setAdBlocked(true);
         }
       }, 100); // Check every 100ms
     }, 300); // Initial delay to ensure DOM is ready
@@ -139,6 +142,37 @@ const GoogleAd = ({ className, style, slot }) => {
       }
     };
   }, [slot]); // Re-run if slot changes
+
+  if (adBlocked) {
+    return (
+      <div 
+        className={`google-ad-wrapper ${className || ''}`} 
+        style={{ 
+          ...style, 
+          background: '#f8fafc', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          border: '1px solid #e2e8f0', 
+          borderRadius: '12px', 
+          overflow: 'hidden', 
+          position: 'relative',
+          minHeight: style?.minHeight || '250px'
+        }}
+      >
+        <div 
+          className="ad-placeholder"
+          style={{ 
+            color: '#cbd5e1', 
+            fontSize: '0.75rem', 
+            textAlign: 'center'
+          }}
+        >
+          {t("adBlocked")}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
