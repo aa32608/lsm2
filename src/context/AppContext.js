@@ -189,9 +189,23 @@ export const AppProvider = ({ children, initialListings = [], initialPublicListi
   });
 
   const t = useCallback(
-    (k) => (TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? TRANSLATIONS.en?.[k] ?? k) || String(k),
+    (k) => {
+      try {
+        const translation = (TRANSLATIONS[lang]?.[k] ?? TRANSLATIONS.sq?.[k] ?? TRANSLATIONS.en?.[k] ?? k);
+        return typeof translation === 'string' ? translation : String(k || '');
+      } catch (error) {
+        return String(k || '');
+      }
+    },
     [lang]
   );
+
+  // Set up global translations for components outside context
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.__BIZCALL_TRANSLATIONS__ = TRANSLATIONS[lang] || TRANSLATIONS.en || {};
+    }
+  }, [lang]);
 
   // CRITICAL: Preload Firebase immediately and synchronously
   useEffect(() => {

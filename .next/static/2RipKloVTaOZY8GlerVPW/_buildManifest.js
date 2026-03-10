@@ -12,7 +12,7 @@ self.__BUILD_MANIFEST = {
     "static/chunks/a7f40e85f491b759.js"
   ],
   "/post-listing": [
-    "static/chunks/32c4ea077e2c13e8.js"
+    "static/chunks/dcaff916dd995445.js"
   ],
   "__rewrites": {
     "afterFiles": [],

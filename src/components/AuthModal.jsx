@@ -1,20 +1,30 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "../context/AppContext";
 import { 
   signInWithEmailAndPassword, 
   signInWithPhoneNumber, 
-  RecaptchaVerifier, 
-  PhoneAuthProvider,
-  linkWithCredential,
-  updateProfile,
   sendEmailVerification,
+  updateEmail,
+  updatePassword,
+  reauthenticateWithCredential,
   EmailAuthProvider,
-  getAdditionalUserInfo,
-  sendPasswordResetEmail
+  RecaptchaVerifier,
+  linkWithCredential,
+  linkWithPhoneNumber,
+  updatePhoneNumber,
+  PhoneAuthProvider,
+  updateProfile,
+  deleteUser
 } from "firebase/auth";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 import { ref as dbRef, set } from "firebase/database";
 
 const AuthModal = () => {

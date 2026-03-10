@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useApp } from "../context/AppContext";
 import DualRangeSlider from "../components/DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
+import { db } from "../firebase";
 
 const NorthMacedoniaMap = dynamic(() => import("../NorthMacedoniaMap"), {
   ssr: false,
