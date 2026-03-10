@@ -73,7 +73,25 @@ const LayoutContent = ({ children }) => {
       <Header sidebarOpen={sidebarOpen} onMenuToggle={() => setSidebarOpen((prev) => !prev)} />
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {user && expiringListing && (
-        <div className="expiry-banner" role="alert" style={{ background: "var(--warning)", color: "#1f2937", padding: "0.75rem 1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+        <div className="expiry-banner" role="alert" style={{ 
+          position: "fixed", 
+          top: "90px", 
+          left: "50%", 
+          transform: "translateX(-50%)", 
+          background: "var(--warning)", 
+          color: "#1f2937", 
+          padding: "0.75rem 1rem", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center", 
+          gap: "1rem", 
+          flexWrap: "wrap",
+          zIndex: 1000,
+          borderRadius: "8px",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          maxWidth: "90%",
+          margin: "0 auto"
+        }}>
           <span>{t("listingExpiresInDays").replace("{{days}}", String(getDaysUntilExpiry(expiringListing.expiresAt)))}</span>
           <button type="button" className="btn btn-primary btn-sm" onClick={openRenewModal} aria-label={t("renewNow")}>
             {t("renewNow")}

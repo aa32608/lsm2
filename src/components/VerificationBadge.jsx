@@ -1,21 +1,24 @@
 import React from 'react';
-import { useApp } from '../context/AppContext';
 
 export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
-  let t;
-  try {
-    const appContext = useApp();
-    t = appContext.t;
-  } catch (error) {
-    // Fallback if useApp is not available
-    t = (key) => key;
-  }
+  // Safe translation fallback
+  const t = (key, fallback) => {
+    try {
+      // Try to get translation from global context if available
+      if (typeof window !== 'undefined' && window.__BIZCALL_TRANSLATIONS__) {
+        return window.__BIZCALL_TRANSLATIONS__[key] || fallback || key;
+      }
+      return fallback || key;
+    } catch (error) {
+      return fallback || key;
+    }
+  };
   
   const getStatusConfig = (status) => {
     switch (status) {
       case 'verified':
         return {
-          text: t("verified") || "Verified",
+          text: t("verified", "Verified"),
           color: '#10b981',
           bgColor: '#10b981',
           icon: '✓',
@@ -24,7 +27,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
         };
       case 'pending':
         return {
-          text: t("pending") || "Pending",
+          text: t("pending", "Pending"),
           color: '#f59e0b',
           bgColor: '#f59e0b',
           icon: '⏱',
@@ -33,7 +36,7 @@ export const VerificationBadge = ({ status, compact = false, iconOnly = false })
         };
       default:
         return {
-          text: t("unverified") || "Unverified",
+          text: t("unverified", "Unverified"),
           color: '#64748b',
           bgColor: '#64748b',
           icon: '○',

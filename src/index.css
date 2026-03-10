@@ -710,15 +710,15 @@ button:focus-visible {
   }
 }
 
-/* Modern Verification Badge - Smaller Version */
+/* Modern Verification Badge - Icon-Only on ALL Screens */
 .verification-badge-compact {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   background: linear-gradient(135deg, #10b981, #059669);
   color: white;
-  padding: 0.1875rem 0.5rem;
-  border-radius: 12px;
+  padding: 0.1875rem;
+  border-radius: 50%;
   font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -730,6 +730,9 @@ button:focus-visible {
   overflow: hidden;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  min-width: 24px;
+  min-height: 24px;
+  justify-content: center;
 }
 
 .verification-badge-compact::before {
@@ -748,16 +751,12 @@ button:focus-visible {
 }
 
 .verification-badge-compact:hover {
-  transform: translateY(-1px) scale(1.02);
+  transform: translateY(-1px) scale(1.05);
   box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 4px 12px rgba(16, 185, 129, 0.25);
 }
 
-.verification-badge-compact.icon-only {
-  padding: 0.1875rem;
-  min-width: 24px;
-  min-height: 24px;
-  justify-content: center;
-  border-radius: 50%;
+.verification-badge-compact .badge-text {
+  display: none !important;
 }
 
 .verification-badge-compact .badge-icon {
@@ -767,11 +766,6 @@ button:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.verification-badge-compact .badge-text {
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 /* Status-specific styles */
@@ -802,90 +796,49 @@ button:focus-visible {
   box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.3), 0 4px 12px rgba(100, 116, 139, 0.25);
 }
 
-/* Responsive verification badge - Always icon-only */
-@media (max-width: 1024px) {
-  .verification-badge-compact {
-    padding: 0.125rem;
-    min-width: 20px;
-    min-height: 20px;
-    border-radius: 10px;
-    font-size: 0.5625rem;
-  }
-  
-  .verification-badge-compact .badge-text {
-    display: none;
-  }
-  
-  .verification-badge-compact:not(.icon-only) {
-    position: relative;
-  }
-  
-  .verification-badge-compact:not(.icon-only)::after {
-    content: attr(data-verification-status);
-    position: absolute;
-    bottom: -24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    font-size: 0.5625rem;
-    font-weight: 500;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    z-index: 1000;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-  
-  .verification-badge-compact:not(.icon-only):hover::after {
-    opacity: 1;
-  }
+/* Tooltip for all screens */
+.verification-badge-compact {
+  position: relative;
 }
 
+.verification-badge-compact::after {
+  content: attr(data-verification-status);
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.625rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.verification-badge-compact:hover::after {
+  opacity: 1;
+}
+
+/* Mobile adjustments */
 @media (max-width: 640px) {
   .verification-badge-compact {
     padding: 0.125rem;
     min-width: 20px;
     min-height: 20px;
-    border-radius: 10px;
+    border-radius: 50%;
     font-size: 0.5625rem;
   }
   
-  .verification-badge-compact .badge-text {
-    display: none;
-  }
-  
-  .verification-badge-compact:not(.icon-only) {
-    position: relative;
-  }
-  
-  .verification-badge-compact:not(.icon-only)::after {
-    content: attr(data-verification-status);
-    position: absolute;
+  .verification-badge-compact::after {
     bottom: -24px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
     font-size: 0.5625rem;
-    font-weight: 500;
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    z-index: 1000;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-  
-  .verification-badge-compact:not(.icon-only):hover::after {
-    opacity: 1;
   }
 }
 
@@ -929,6 +882,46 @@ button:focus-visible {
   font-size: 0.875rem;
   color: #64748b;
   line-height: 1.4;
+}
+
+/* Expiry Banner - Fixed Positioning */
+.expiry-banner {
+  position: fixed !important;
+  top: 90px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 1000 !important;
+  background: var(--warning) !important;
+  color: #1f2937 !important;
+  padding: 0.75rem 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1rem !important;
+  flex-wrap: wrap !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  max-width: 90% !important;
+  margin: 0 auto !important;
+}
+
+@media (max-width: 768px) {
+  .expiry-banner {
+    top: 80px !important;
+    left: 10px !important;
+    right: 10px !important;
+    transform: none !important;
+    max-width: none !important;
+    border-radius: 8px 8px 0 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .expiry-banner {
+    top: 70px !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+  }
 }
 
 /* Enhanced Listing Card */
