@@ -2,7 +2,12 @@
 import React, { useState, useEffect } from "react";
 import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 import { useApp } from "../context/AppContext";
 import { 
   updateProfile, 

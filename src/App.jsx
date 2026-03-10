@@ -45,7 +45,13 @@ import SEOHead from "./components/SEOHead";
 import { TRANSLATIONS } from "./translations";
 import { MK_CITIES } from "./mkCities";
 import { categories, categoryIcons, categoryGroups, countryCodes, currencyOptions, mkSpotlightCities, PLANS, FEATURED_DURATION_DAYS, sortFeaturedFirst, isFeatured } from "./constants";
-import Link from "next/link";
+import dynamic from "next/dynamic";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import("next/link").then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 import { TermsModal, PrivacyModal } from "./components/LegalModals";
 import CookieConsent from "./components/CookieConsent";
 

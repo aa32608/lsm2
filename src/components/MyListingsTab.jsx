@@ -1,6 +1,13 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useApp } from '../context/AppContext';
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 import Filtersheet from './Filtersheet';
 import MyListingCard from './MyListingCard';
 
