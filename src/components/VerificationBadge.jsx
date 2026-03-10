@@ -33,8 +33,13 @@ export const VerificationBadge = ({ status, compact = false }) => {
     return (
       <span 
         className="verification-badge compact"
+        data-status={status}
         style={{ 
-          background: config.bgColor,
+          background: status === 'verified' 
+            ? 'linear-gradient(135deg, #10b981, #059669)'
+            : status === 'pending'
+            ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+            : 'linear-gradient(135deg, #64748b, #475569)',
           color: 'white'
         }}
       >

@@ -7,9 +7,11 @@ import GoogleAd from "./GoogleAd";
 import ListingsSkeleton from "./ListingsSkeleton";
 
 export default function ListingsTab(props = {}) {
+  // Enhanced filter states
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [searchRadius, setSearchRadius] = useState('');
   const [businessStatus, setBusinessStatus] = useState('all');
+  
   // Get all values from context if props not provided (Next.js route usage)
   let context;
   try {
@@ -105,55 +107,6 @@ export default function ListingsTab(props = {}) {
           <p className="listings-page-subtitle">
             {t("exploreSubtitle")}
           </p>
-        </div>
-      </div>
-
-      {/* Enhanced Search Filters */}
-      <div className="search-filters-enhanced">
-        <div className="filter-row">
-          <div className="filter-group">
-            <label>{t("priceRange")}</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                type="number"
-                placeholder={t("minPrice")}
-                value={priceRange.min}
-                onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
-              />
-              <input
-                type="number"
-                placeholder={t("maxPrice")}
-                value={priceRange.max}
-                onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
-              />
-            </div>
-          </div>
-          
-          <div className="filter-group">
-            <label>{t("searchRadius")}</label>
-            <select
-              value={searchRadius}
-              onChange={(e) => setSearchRadius(e.target.value)}
-            >
-              <option value="">{t("anyDistance")}</option>
-              <option value="5">5 km</option>
-              <option value="10">10 km</option>
-              <option value="25">25 km</option>
-              <option value="50">50 km</option>
-            </select>
-          </div>
-          
-          <div className="filter-group">
-            <label>{t("businessStatus")}</label>
-            <select
-              value={businessStatus}
-              onChange={(e) => setBusinessStatus(e.target.value)}
-            >
-              <option value="all">{t("allBusinesses")}</option>
-              <option value="verified">{t("verifiedOnly")}</option>
-              <option value="open">{t("openNow")}</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -404,6 +357,13 @@ export default function ListingsTab(props = {}) {
         categoryIcons={categoryIcons}
         allLocations={allLocations}
         setPage={setPage}
+        // Enhanced filters
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+        searchRadius={searchRadius}
+        setSearchRadius={setSearchRadius}
+        businessStatus={businessStatus}
+        setBusinessStatus={setBusinessStatus}
       />
     </div>
   );

@@ -23,18 +23,31 @@ const Filtersheet = React.memo(({
   setStatusFilter,
   expiryFilter,
   setExpiryFilter,
+  // Enhanced filters
+  priceRange,
+  setPriceRange,
+  searchRadius,
+  setSearchRadius,
+  businessStatus,
+  setBusinessStatus,
 }) => {
   // Local states for debouncing
   const [localSearch, setLocalSearch] = useState(q);
   const [localCat, setLocalCat] = useState(catFilter);
   const [localLoc, setLocalLoc] = useState(locFilter);
   const [localSort, setLocalSort] = useState(sortBy);
+  const [localPriceRange, setLocalPriceRange] = useState(priceRange || { min: '', max: '' });
+  const [localSearchRadius, setLocalSearchRadius] = useState(searchRadius || '');
+  const [localBusinessStatus, setLocalBusinessStatus] = useState(businessStatus || 'all');
 
   // Sync local state when props change (e.g. from outside reset)
   useEffect(() => { setLocalSearch(q); }, [q]);
   useEffect(() => { setLocalCat(catFilter); }, [catFilter]);
   useEffect(() => { setLocalLoc(locFilter); }, [locFilter]);
   useEffect(() => { setLocalSort(sortBy); }, [sortBy]);
+  useEffect(() => { setLocalPriceRange(priceRange || { min: '', max: '' }); }, [priceRange]);
+  useEffect(() => { setLocalSearchRadius(searchRadius || ''); }, [searchRadius]);
+  useEffect(() => { setLocalBusinessStatus(businessStatus || 'all'); }, [businessStatus]);
 
   // Debounce all filters and reset page to 1 when filters change
   useEffect(() => {
@@ -57,14 +70,25 @@ const Filtersheet = React.memo(({
         setSortBy(localSort);
         filtersChanged = true;
       }
+      if (JSON.stringify(localPriceRange) !== JSON.stringify(priceRange || { min: '', max: '' })) {
+        setPriceRange && setPriceRange(localPriceRange);
+        filtersChanged = true;
+      }
+      if (localSearchRadius !== (searchRadius || '')) {
+        setSearchRadius && setSearchRadius(localSearchRadius);
+        filtersChanged = true;
+      }
+      if (localBusinessStatus !== (businessStatus || 'all')) {
+        setBusinessStatus && setBusinessStatus(localBusinessStatus);
+        filtersChanged = true;
+      }
       
-      // Reset page to 1 when any filter changes
       if (filtersChanged && setPage) {
         setPage(1);
       }
-    }, 400); // 400ms debounce for smoother experience
+    }, 400);
     return () => clearTimeout(timer);
-  }, [localSearch, localCat, localLoc, localSort, q, catFilter, locFilter, sortBy, setQ, setCatFilter, setLocFilter, setSortBy, setPage]);
+  }, [localSearch, localCat, localLoc, localSort, localPriceRange, localSearchRadius, localBusinessStatus, q, catFilter, locFilter, sortBy, priceRange, searchRadius, businessStatus, setQ, setCatFilter, setLocFilter, setSortBy, setPriceRange, setSearchRadius, setBusinessStatus, setPage]);
 
   if (!filtersOpen) return null;
 
@@ -267,6 +291,81 @@ const Filtersheet = React.memo(({
                     <option value="expiring">⏰ {t("sortExpiring")}</option>
                     <option value="az">🔤 {t("sortAZ")}</option>
                     {setExpiryFilter && <option value="oldest">📅 {t("sortOldest")}</option>}
+                  </select>
+                  <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Enhanced Filters */}
+            <div className="filter-group">
+              <div className="filter-group-header">
+                <span className="filter-group-icon">💰</span>
+                <span className="filter-group-title">{t("priceRange")}</span>
+              </div>
+              <div className="filter-group-content">
+                <div className="filter-price-range">
+                  <input
+                    type="number"
+                    className="filter-price-input"
+                    placeholder={t("minPrice")}
+                    value={localPriceRange.min}
+                    onChange={(e) => setLocalPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                  />
+                  <span className="filter-price-separator">-</span>
+                  <input
+                    type="number"
+                    className="filter-price-input"
+                    placeholder={t("maxPrice")}
+                    value={localPriceRange.max}
+                    onChange={(e) => setLocalPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <div className="filter-group-header">
+                <span className="filter-group-icon">📍</span>
+                <span className="filter-group-title">{t("searchRadius")}</span>
+              </div>
+              <div className="filter-group-content">
+                <div className="filter-select-wrapper">
+                  <select
+                    className="filter-select-field"
+                    value={localSearchRadius}
+                    onChange={(e) => setLocalSearchRadius(e.target.value)}
+                  >
+                    <option value="">{t("anyDistance")}</option>
+                    <option value="5">5 km</option>
+                    <option value="10">10 km</option>
+                    <option value="25">25 km</option>
+                    <option value="50">50 km</option>
+                  </select>
+                  <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <div className="filter-group-header">
+                <span className="filter-group-icon">✅</span>
+                <span className="filter-group-title">{t("businessStatus")}</span>
+              </div>
+              <div className="filter-group-content">
+                <div className="filter-select-wrapper">
+                  <select
+                    className="filter-select-field"
+                    value={localBusinessStatus}
+                    onChange={(e) => setLocalBusinessStatus(e.target.value)}
+                  >
+                    <option value="all">{t("allBusinesses")}</option>
+                    <option value="verified">{t("verifiedOnly")}</option>
+                    <option value="open">{t("openNow")}</option>
                   </select>
                   <svg className="filter-select-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="6 9 12 15 18 9"></polyline>
