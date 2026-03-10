@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { useRouter } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import { 

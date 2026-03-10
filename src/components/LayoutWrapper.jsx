@@ -1,6 +1,6 @@
 "use client";
 import React, { lazy, Suspense, useEffect, useState } from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { AppProvider, useApp } from "../context/AppContext";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -8,6 +8,12 @@ import NotificationToast from "./NotificationToast";
 import CookieConsent from "./CookieConsent";
 import FirebaseLoader from "./FirebaseLoader";
 import { AnimatePresence } from "framer-motion";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:5000"

@@ -1,0 +1,3 @@
+module.exports=[13565,(a,b,c)=>{"use strict";b.exports=a.r(40482).vendored["react-ssr"].ReactServerDOMTurbopackClient},88235,a=>{"use strict";var b=a.i(89748),c=a.i(92261),d=a.i(57107);function e(){let{t:a}=(0,d.useApp)();return(0,b.jsxs)("div",{style:{textAlign:"center",padding:"4rem 1rem"},children:[(0,b.jsx)("h1",{style:{fontSize:"2rem",marginBottom:"1rem"},children:a("pageNotFoundTitle")}),(0,b.jsx)("p",{style:{color:"#64748b",marginBottom:"2rem"},children:a("pageNotFoundDescription")}),(0,b.jsx)(c.default,{href:"/",className:"btn btn-primary",style:{textDecoration:"none",display:"inline-block"},children:a("goHome")})]})}a.s(["default",()=>e])}];
+
+//# sourceMappingURL=lsm2-1_ad6543d8._.js.map

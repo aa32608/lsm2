@@ -1,9 +1,15 @@
 "use client";
 import React from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 const Header = ({ sidebarOpen, onMenuToggle }) => {
   const {

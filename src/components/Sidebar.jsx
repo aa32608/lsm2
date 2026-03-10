@@ -1,8 +1,14 @@
 "use client";
 import React, { useMemo } from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 /**
  * Mobile nav: top-down drawer with handle, synced with hamburger.

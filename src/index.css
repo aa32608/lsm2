@@ -888,8 +888,8 @@ button:focus-visible {
 .expiry-banner {
   position: fixed !important;
   top: 90px !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+  /* left: 50% !important;
+  transform: translateX(-50%) !important; */
   z-index: 1000 !important;
   background: var(--warning) !important;
   color: #1f2937 !important;
@@ -901,7 +901,8 @@ button:focus-visible {
   flex-wrap: wrap !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  max-width: 90% !important;
+  max-width: 100% !important;
+  width: 100% !important;
   margin: 0 auto !important;
 }
 

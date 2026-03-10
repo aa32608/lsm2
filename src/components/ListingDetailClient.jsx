@@ -1,11 +1,17 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from 'next/dynamic';
 import { useApp } from "../context/AppContext";
 import { BusinessHoursDisplay } from "../utils/businessHours";
 import { ref as dbRef, get, onValue } from "firebase/database";
-import Link from "next/link";
 import GoogleAd from "./GoogleAd";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:5000"

@@ -1,8 +1,14 @@
 "use client";
 import React, { useState } from 'react';
-import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 export default function HomeTab() {
   const {

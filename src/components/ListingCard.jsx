@@ -1,7 +1,13 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import dynamic from 'next/dynamic';
 import { VerificationBadge } from "./VerificationBadge";
+
+// Dynamically import Link to avoid SSR issues
+const Link = dynamic(() => import('next/link').then(mod => mod.default), {
+  ssr: false,
+  loading: () => null
+});
 
 const ListingCard = React.memo(({
   listing: l,
