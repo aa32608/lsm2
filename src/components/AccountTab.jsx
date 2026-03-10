@@ -541,7 +541,6 @@ const AccountTab = () => {
                 <Link
                   href="/post-listing"
                   className="account-action-card"
-                  onClick={onClose}
                 >
                   <span className="action-icon">➕</span>
                   <div style={{ textAlign: 'left' }}>

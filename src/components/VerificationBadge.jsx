@@ -1,7 +1,7 @@
 import React from 'react';
 import { safeT } from '../utils/translationHelper';
 
-export const VerificationBadge = ({ status, compact = false }) => {
+export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
   // Use safe translation function
   const t = safeT;
   

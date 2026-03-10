@@ -8,7 +8,8 @@ import DualRangeSlider from "../components/DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
 import { db } from "../firebase";
 import { safeT } from "../utils/translationHelper";
-import { PLANS, categoryGroups, categoryIcons, currencyOptions, MK_CITIES } from "../constants";
+import { PLANS, categoryGroups, categoryIcons, currencyOptions } from "../constants";
+import { MK_CITIES } from "../mkCities";
 
 const NorthMacedoniaMap = dynamic(() => import("../NorthMacedoniaMap"), {
   ssr: false,
