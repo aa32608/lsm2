@@ -4,11 +4,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useApp } from '../context/AppContext';
 
-// Dynamically import Link to avoid SSR issues
-const Link = dynamic(() => import('next/link').then(mod => mod.default), {
-  ssr: false,
-  loading: () => null
-});
+import Link from 'next/link';
 
 export default function HomeTab() {
   const {

@@ -5,11 +5,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../context/AppContext";
 import logo from "../assets/logo.png";
 
-// Dynamically import Link to avoid SSR issues
-const Link = dynamic(() => import('next/link').then(mod => mod.default), {
-  ssr: false,
-  loading: () => null
-});
+import Link from 'next/link';
 
 const Header = ({ sidebarOpen, onMenuToggle }) => {
   const {

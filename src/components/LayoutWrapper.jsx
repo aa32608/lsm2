@@ -9,11 +9,7 @@ import CookieConsent from "./CookieConsent";
 import FirebaseLoader from "./FirebaseLoader";
 import { AnimatePresence } from "framer-motion";
 
-// Dynamically import Link to avoid SSR issues
-const Link = dynamic(() => import('next/link').then(mod => mod.default), {
-  ssr: false,
-  loading: () => null
-});
+import Link from 'next/link';
 
 const API_BASE = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
   ? "http://localhost:5000"

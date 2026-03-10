@@ -3,24 +3,20 @@ import React, { useState, useEffect, useRef, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { useApp } from "../context/AppContext";
-import DualRangeSlider from "../components/DualRangeSlider";
+import { useApp } from "../../context/AppContext";
+import DualRangeSlider from "../../components/DualRangeSlider";
 import { ref as dbRef, set, remove, onValue } from "firebase/database";
-import { db } from "../firebase";
-import { safeT } from "../utils/translationHelper";
-import { PLANS, categoryGroups, categoryIcons, currencyOptions } from "../constants";
-import { MK_CITIES } from "../mkCities";
+import { db } from "../../firebase";
+import { safeT } from "../../utils/translationHelper";
+import { PLANS, categoryGroups, categoryIcons, currencyOptions } from "../../constants";
+import { MK_CITIES } from "../../mkCities";
 
-const NorthMacedoniaMap = dynamic(() => import("../NorthMacedoniaMap"), {
+const NorthMacedoniaMap = dynamic(() => import("../../NorthMacedoniaMap"), {
   ssr: false,
   loading: () => <div className="loading-map">Loading map...</div>
 });
 
-// Dynamically import Link to avoid SSR issues
-const Link = dynamic(() => import('next/link').then(mod => mod.default), {
-  ssr: false,
-  loading: () => null
-});
+import Link from "next/link";
 
 const API_BASE =
   (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
