@@ -17,6 +17,19 @@ const ListingCard = React.memo(({
 }) => {
   const stats = getListingStats ? getListingStats(l) : { avgRating: 0, feedbackCount: 0, engagement: 0, views: 0, contacts: 0 };
   const [imgIndex, setImgIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  React.useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 640);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Determine images to display
   const images = l.images && l.images.length > 0 
@@ -127,7 +140,7 @@ const ListingCard = React.memo(({
              {isFeatured && <span className="pill pill-featured" title={t("featuredBenefitsTooltip")}>{t("featured")}</span>}
              {l.offerprice && <span className="pill pill-price" style={{ background: 'var(--accent)', color: 'white' }}>{l.offerprice}</span>}
            </div>
-           <VerificationBadge status={l.status} compact={true} />
+           <VerificationBadge status={l.status} compact={true} iconOnly={isMobile} />
         </div>
       </div>
 

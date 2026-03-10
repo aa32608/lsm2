@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const VerificationBadge = ({ status, compact = false }) => {
+export const VerificationBadge = ({ status, compact = false, iconOnly = false }) => {
   const getStatusConfig = (status) => {
     switch (status) {
       case 'verified':
@@ -32,7 +32,7 @@ export const VerificationBadge = ({ status, compact = false }) => {
   if (compact) {
     return (
       <span 
-        className="verification-badge compact"
+        className={`verification-badge compact ${iconOnly ? 'icon-only' : ''}`}
         data-status={status}
         style={{ 
           background: status === 'verified' 
@@ -43,7 +43,8 @@ export const VerificationBadge = ({ status, compact = false }) => {
           color: 'white'
         }}
       >
-        {config.icon} {config.text}
+        {config.icon}
+        {!iconOnly && <span className="badge-text">{config.text}</span>}
       </span>
     );
   }
