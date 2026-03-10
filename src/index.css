@@ -684,19 +684,19 @@ button:focus-visible {
 }
 
 /* Status-specific colors */
-.verification-badge.compact[data-status="verified"] {
+.verification-badge.compact[data-verification-status="verified"] {
   background: linear-gradient(135deg, #10b981, #059669);
   border-color: rgba(16, 185, 129, 0.3);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
-.verification-badge.compact[data-status="pending"] {
+.verification-badge.compact[data-verification-status="pending"] {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border-color: rgba(245, 158, 11, 0.3);
   box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
-.verification-badge.compact[data-status="unverified"] {
+.verification-badge.compact[data-verification-status="unverified"] {
   background: linear-gradient(135deg, #64748b, #475569);
   border-color: rgba(100, 116, 139, 0.3);
   box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
@@ -719,7 +719,7 @@ button:focus-visible {
   }
   
   .verification-badge.compact:not(.icon-only)::after {
-    content: attr(data-status);
+    content: attr(data-verification-status);
     position: absolute;
     bottom: -24px;
     left: 50%;
