@@ -52,7 +52,15 @@ function toAbsoluteUrl(url) {
   }
 
   try {
-    return new URL(url, SITE_URL).toString();
+    const parsed = new URL(url, SITE_URL);
+
+    // Social crawlers ignore/deny non-http(s) image URLs (e.g. data:, blob:, gs:).
+    // Returning only fetchable web URLs prevents broken cards where no image appears.
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsed.toString();
   } catch {
     return null;
   }
