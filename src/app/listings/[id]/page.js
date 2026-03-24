@@ -1,10 +1,11 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
 import ListingDetailClient from '../../../components/ListingDetailClient';
 
 // Disable static generation for this route to prevent build issues
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+const SITE_URL = 'https://bizcall.mk';
+const FALLBACK_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 // Helper to fetch listing data for metadata
 async function getListing(id) {
@@ -45,6 +46,18 @@ async function getListing(id) {
   }
 }
 
+function toAbsoluteUrl(url) {
+  if (!url || typeof url !== 'string') {
+    return null;
+  }
+
+  try {
+    return new URL(url, SITE_URL).toString();
+  } catch {
+    return null;
+  }
+}
+
 export async function generateMetadata({ params }) {
   // In Next.js 15+, params might be a Promise
   const resolvedParams = await params;
@@ -72,6 +85,13 @@ export async function generateMetadata({ params }) {
     ? `${listing.location.city || ''}${listing.location.city && listing.location.extra ? ' - ' : ''}${listing.location.extra || ''}`.trim()
     : 'North Macedonia';
 
+  const normalizedImages = Array.isArray(listing.images)
+    ? listing.images
+        .map(toAbsoluteUrl)
+        .filter(Boolean)
+    : [];
+  const socialImages = normalizedImages.length > 0 ? normalizedImages : [FALLBACK_OG_IMAGE];
+
   return {
     title: `${listing.name} - ${listing.category} | BizCall MK`,
     description,
@@ -80,25 +100,25 @@ export async function generateMetadata({ params }) {
       title: listing.name,
       description,
       type: 'website',
-      url: `https://bizcall.mk/listings/${encodeURIComponent(listingId)}`,
+      url: `${SITE_URL}/listings/${encodeURIComponent(listingId)}`,
       siteName: 'BizCall MK',
-      images: listing.images && listing.images.length > 0 
-        ? listing.images.slice(0, 4).map(img => ({
-            url: img,
-            width: 1200,
-            height: 630,
-            alt: listing.name,
-          }))
-        : [],
+      images: socialImages.slice(0, 4).map((img, index) => ({
+        url: img,
+        width: 1200,
+        height: 630,
+        alt: normalizedImages.length > 0
+          ? `${listing.name} photo ${index + 1}`
+          : `${listing.name} on BizCall MK`,
+      })),
     },
     twitter: {
       card: 'summary_large_image',
       title: listing.name,
       description,
-      images: listing.images && listing.images.length > 0 ? [listing.images[0]] : [],
+      images: [socialImages[0]],
     },
     alternates: {
-      canonical: `https://bizcall.mk/listings/${encodeURIComponent(listingId)}`,
+      canonical: `${SITE_URL}/listings/${encodeURIComponent(listingId)}`,
     },
   };
 }
