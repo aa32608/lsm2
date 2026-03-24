@@ -58,6 +58,51 @@ function toAbsoluteUrl(url) {
   }
 }
 
+function normalizeImageValue(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return toAbsoluteUrl(value);
+  if (typeof value === 'object') {
+    // Support common image payload shapes from Firebase.
+    return (
+      toAbsoluteUrl(value.url) ||
+      toAbsoluteUrl(value.src) ||
+      toAbsoluteUrl(value.image) ||
+      toAbsoluteUrl(value.data) ||
+      null
+    );
+  }
+  return null;
+}
+
+function extractListingImages(listing) {
+  if (!listing || typeof listing !== 'object') return [];
+
+  const imageCandidates = [];
+  const fields = [listing.imageData, listing.images];
+
+  fields.forEach((field) => {
+    if (Array.isArray(field)) {
+      field.forEach((item) => {
+        const normalized = normalizeImageValue(item);
+        if (normalized) imageCandidates.push(normalized);
+      });
+      return;
+    }
+
+    if (field && typeof field === 'object') {
+      Object.values(field).forEach((item) => {
+        const normalized = normalizeImageValue(item);
+        if (normalized) imageCandidates.push(normalized);
+      });
+    }
+  });
+
+  const preview = normalizeImageValue(listing.imagePreview);
+  if (preview) imageCandidates.push(preview);
+
+  return [...new Set(imageCandidates)];
+}
+
 export async function generateMetadata({ params }) {
   // In Next.js 15+, params might be a Promise
   const resolvedParams = await params;
@@ -85,11 +130,7 @@ export async function generateMetadata({ params }) {
     ? `${listing.location.city || ''}${listing.location.city && listing.location.extra ? ' - ' : ''}${listing.location.extra || ''}`.trim()
     : 'North Macedonia';
 
-  const normalizedImages = Array.isArray(listing.images)
-    ? listing.images
-        .map(toAbsoluteUrl)
-        .filter(Boolean)
-    : [];
+  const normalizedImages = extractListingImages(listing);
   const socialImages = normalizedImages.length > 0 ? normalizedImages : [FALLBACK_OG_IMAGE];
 
   return {
@@ -145,12 +186,14 @@ export default async function ListingPage({ params }) {
   const listing = await getListing(listingId);
 
   // Generate structured data for SEO (JSON-LD)
+  const listingImages = listing ? extractListingImages(listing) : [];
+
   const structuredData = listing ? {
     '@context': 'https://schema.org',
     '@type': 'LocalBusiness',
     name: listing.name,
     description: listing.description || '',
-    image: listing.images && listing.images.length > 0 ? listing.images : undefined,
+    image: listingImages.length > 0 ? listingImages : undefined,
     address: {
       '@type': 'PostalAddress',
       addressLocality: listing.location?.city || '',
