@@ -139,7 +139,9 @@ export async function generateMetadata({ params }) {
     : 'North Macedonia';
 
   const normalizedImages = extractListingImages(listing);
-  const socialImages = normalizedImages.length > 0 ? normalizedImages : [FALLBACK_OG_IMAGE];
+  const primaryCoverImage = `${SITE_URL}/api/listings/${encodeURIComponent(listingId)}/cover`;
+  const additionalImages = normalizedImages.filter((img) => img !== normalizedImages[0]).slice(0, 3);
+  const socialImages = [primaryCoverImage, ...additionalImages];
 
   return {
     title: `${listing.name} - ${listing.category} | BizCall MK`,
@@ -164,7 +166,7 @@ export async function generateMetadata({ params }) {
       card: 'summary_large_image',
       title: listing.name,
       description,
-      images: [socialImages[0]],
+      images: [socialImages[0] || FALLBACK_OG_IMAGE],
     },
     alternates: {
       canonical: `${SITE_URL}/listings/${encodeURIComponent(listingId)}`,
